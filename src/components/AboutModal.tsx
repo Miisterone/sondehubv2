@@ -59,7 +59,7 @@ const FAQ: [string, ReactNode][] = [
         SondeHub
       </a>
       , qui les met librement à disposition. Les trajectoires et points d’atterrissage prévus sont calculés par le modèle Tawhiri (CUSF) à partir
-      des prévisions de vent. SondeTrack ne fait qu’afficher ces données.
+      des prévisions de vent. SondeHub V2 ne fait qu’afficher ces données.
     </>,
   ],
   [
@@ -81,7 +81,7 @@ const FAQ: [string, ReactNode][] = [
   [
     'Comment être alerté ?',
     <>
-      Activez votre position, puis les alertes d’atterrissage dans le panneau des couches (à droite de la carte). SondeTrack vous prévient quand un
+      Activez votre position, puis les alertes d’atterrissage dans le panneau des couches (à droite de la carte). SondeHub V2 vous prévient quand un
       atterrissage est prévu près de chez vous, tant que la page reste ouverte.
     </>,
   ],
@@ -101,7 +101,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
         <DialogHeader className="mb-4 flex-row items-center gap-3 pr-8 text-left">
           <Logo className="size-11 shrink-0" />
           <div className="min-w-0 space-y-1">
-            <DialogTitle>SondeTrack</DialogTitle>
+            <DialogTitle>SondeHub V2</DialogTitle>
             <DialogDescription>Suivi des radiosondes météo en temps réel</DialogDescription>
           </div>
         </DialogHeader>

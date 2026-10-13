@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
 
 /** Window event asking the sidebar to switch to its "Près de moi" mode. */
-const NEARBY_EVENT = 'sondetrack:nearby';
+const NEARBY_EVENT = 'sondehubv2:nearby';
 /** Grace period after the first data load, so the card doesn't flash in while the map settles. */
 const SHOW_DELAY_MS = 1000;
 const LEAVE_MS = 160;
@@ -102,7 +102,7 @@ export function WelcomeCard() {
     >
       <section
         role="region"
-        aria-label="Bienvenue sur SondeTrack"
+        aria-label="Bienvenue sur SondeHub V2"
         className={cx(
           'glass animate-in pointer-events-auto relative w-full max-w-[440px] rounded-lg p-3.5 text-[12.5px] md:p-5 md:text-[13px] transition-[opacity,transform] duration-150',
           leaving && 'translate-y-1 opacity-0',
@@ -118,7 +118,7 @@ export function WelcomeCard() {
           <X className="size-4" />
         </Button>
 
-        <h2 className="pr-8 text-[14.5px] font-semibold tracking-tight md:text-[15px]">Bienvenue sur SondeTrack</h2>
+        <h2 className="pr-8 text-[14.5px] font-semibold tracking-tight md:text-[15px]">Bienvenue sur SondeHub V2</h2>
         <p className="text-muted-foreground mt-1 leading-snug md:mt-1.5 md:leading-relaxed">
           Les radiosondes sont de petits capteurs lâchés sous des ballons météo, environ deux fois par jour, par les services météorologiques. Elles
           montent au-delà de 30 km puis retombent en parachute&nbsp;; des radioamateurs les suivent ici en direct.

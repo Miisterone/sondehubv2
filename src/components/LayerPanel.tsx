@@ -86,7 +86,7 @@ function AlertsSection() {
       ? 'Bloquées par le navigateur — autorisez-les dans les réglages du site'
       : perm === 'unsupported'
         ? 'Non prises en charge par ce navigateur'
-        : 'Quand SondeTrack est en arrière-plan';
+        : 'Quand SondeHub V2 est en arrière-plan';
 
   return (
     <section aria-labelledby="alerts-title">

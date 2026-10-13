@@ -111,7 +111,7 @@ export default function App() {
     else p.delete('s');
     history.replaceState(null, '', `#${p.toString().replace(/%2C/g, ',')}`);
     if (!selected) return;
-    document.title = `${selected} — SondeTrack`;
+    document.title = `${selected} — SondeHub V2`;
     const ctrl = new AbortController();
     if (!useStore.getState().sondes[selected]?.detailed) {
       fetchSondeHistory(selected, ctrl.signal)
@@ -120,7 +120,7 @@ export default function App() {
     }
     return () => {
       ctrl.abort();
-      document.title = 'SondeTrack — Radiosondes en temps réel';
+      document.title = 'SondeHub V2 — Radiosondes en temps réel';
     };
   }, [selected]);
 

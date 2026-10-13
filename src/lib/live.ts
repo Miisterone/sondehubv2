@@ -24,7 +24,7 @@ export function startLiveFeed(): () => void {
   let paused = false;
 
   const client = mqtt.connect(WS_URL, {
-    clientId: `sondetrack-${Math.random().toString(16).slice(2, 12)}`,
+    clientId: `sondehubv2-${Math.random().toString(16).slice(2, 12)}`,
     reconnectPeriod: 3000,
     connectTimeout: 15_000,
     keepalive: 60,

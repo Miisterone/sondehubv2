@@ -13,9 +13,9 @@ import { disableAlerts, enableAlerts } from '@/lib/alerts';
 import type { LaunchSite, Listener, Sonde } from '@/lib/types';
 
 /** Window event other UI elements dispatch to open the palette. */
-export const COMMAND_EVENT = 'sondetrack:command';
+export const COMMAND_EVENT = 'sondehubv2:command';
 /** Window event asking the sidebar to switch to its "Près de moi" mode. */
-const NEARBY_EVENT = 'sondetrack:nearby';
+const NEARBY_EVENT = 'sondehubv2:nearby';
 
 const MAX_SONDES = 8;
 const MAX_FLYING = 6;
@@ -300,7 +300,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         run: () => setLayer(key, !on),
       });
     }
-    list.push({ id: 'about', group: 'Aide', label: 'À propos de SondeTrack', keywords: 'a propos aide info credits sondehub faq questions', icon: <Info />, run: onAbout });
+    list.push({ id: 'about', group: 'Aide', label: 'À propos de SondeHub V2', keywords: 'a propos aide info credits sondehub faq questions', icon: <Info />, run: onAbout });
     list.push({
       id: 'intro',
       group: 'Aide',

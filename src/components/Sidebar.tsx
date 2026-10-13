@@ -51,7 +51,7 @@ const MAX_ROWS = 300;
 const RADII = [25, 50, 100, 200] as const;
 const ALL_TYPES = '__all';
 
-export const NEARBY_EVENT = 'sondetrack:nearby';
+export const NEARBY_EVENT = 'sondehubv2:nearby';
 
 type Tab = 'nearby' | 'flying' | 'following';
 type GeoState = 'idle' | 'locating' | 'failed';
@@ -772,7 +772,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         <div className="flex items-center gap-3">
           <Logo className="size-8 shrink-0 md:size-9" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-[19px] leading-tight font-semibold">SondeTrack</h1>
+            <h1 className="text-[19px] leading-tight font-semibold">SondeHub V2</h1>
             <p className="truncate text-[13px] leading-snug">Suivi des ballons météo</p>
           </div>
           <StatusPill />

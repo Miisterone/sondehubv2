@@ -538,7 +538,7 @@ async function share(sonde: Sonde, landing: PredictionPoint | null, now: number,
       : `Radiosonde ${sonde.serial} — signal perdu ${ago(sonde.lastTime, now)}`;
   if (typeof navigator.share === 'function') {
     try {
-      await navigator.share({ title: `${sonde.serial} · SondeTrack`, text, url });
+      await navigator.share({ title: `${sonde.serial} · SondeHub V2`, text, url });
       return;
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;

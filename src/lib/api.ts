@@ -192,7 +192,7 @@ export async function submitRecovery(report: RecoveryReport): Promise<void> {
   const res = await fetch(`${API}/recovered`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Date: new Date().toUTCString() },
-    body: JSON.stringify({ ...report, recovery_software: 'SondeTrack' }),
+    body: JSON.stringify({ ...report, recovery_software: 'SondeHubV2' }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');

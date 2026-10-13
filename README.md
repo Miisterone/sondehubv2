@@ -1,4 +1,4 @@
-# SondeTrack
+# SondeHub V2
 
 Suivi en temps réel des radiosondes météo, construit sur les données ouvertes de [SondeHub](https://sondehub.org).
 Une réinterprétation moderne de [sondehub-tracker](https://github.com/projecthorus/sondehub-tracker) : carte vectorielle fluide,

@@ -34,7 +34,7 @@ export function MapControls() {
   return (
     <div className="pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
       <div className={group}>
-        <IconButton label={`Rechercher (${PALETTE_SHORTCUT})`} onClick={() => window.dispatchEvent(new Event('sondetrack:command'))}>
+        <IconButton label={`Rechercher (${PALETTE_SHORTCUT})`} onClick={() => window.dispatchEvent(new Event('sondehubv2:command'))}>
           <Search size={18} />
         </IconButton>
       </div>
