@@ -15,7 +15,7 @@ export const DURATION_MS: Record<Duration, number> = {
 };
 
 export type BasemapId = 'dark' | 'liberty' | 'positron' | 'satellite' | 'topo' | 'osm';
-export type SortKey = 'recent' | 'altitude' | 'serial' | 'distance';
+export type SortKey = 'recent' | 'altitude' | 'serial' | 'distance' | 'landing';
 export type ConnState = 'connecting' | 'live' | 'offline';
 
 export interface Layers {
@@ -52,6 +52,7 @@ export interface Settings {
   callsign: string;
   /** Set once the welcome card has been dismissed. */
   onboarded: boolean;
+  expert: boolean;
 }
 
 /** Imperial units for locales that use them (US, Liberia, Myanmar); metric elsewhere. */
@@ -83,6 +84,7 @@ const DEFAULT_SETTINGS: Settings = {
   alerts: { enabled: false, radiusKm: 50, favourites: true, system: true },
   callsign: '',
   onboarded: false,
+  expert: false,
   duration: '3h',
   terrain3d: false,
   layers: {
@@ -283,6 +285,7 @@ interface State {
   follow: boolean;
   query: string;
   phaseFilter: Record<FlightPhase, boolean>;
+  typeFilter: string | null;
   sort: SortKey;
   userLocation: UserLocation | null;
 
@@ -312,6 +315,8 @@ interface State {
   setFollow: (v: boolean) => void;
   setQuery: (q: string) => void;
   togglePhase: (p: FlightPhase) => void;
+  setTypeFilter: (t: string | null) => void;
+  setExpert: (v: boolean) => void;
   setSort: (s: SortKey) => void;
   setUserLocation: (l: UserLocation | null) => void;
   setConn: (c: ConnState, rate?: number) => void;
@@ -333,6 +338,7 @@ export const useStore = create<State>((set, get) => ({
   follow: false,
   query: '',
   phaseFilter: { ascending: true, descending: true, landed: true, lost: true },
+  typeFilter: null,
   sort: 'recent',
   userLocation: null,
 
@@ -442,6 +448,11 @@ export const useStore = create<State>((set, get) => ({
   setFollow: (follow) => set({ follow }),
   setQuery: (query) => set({ query }),
   togglePhase: (p) => set({ phaseFilter: { ...get().phaseFilter, [p]: !get().phaseFilter[p] } }),
+  setTypeFilter: (typeFilter) => set({ typeFilter }),
+  setExpert: (expert) => {
+    get().setSettings({ expert });
+    if (!expert) set({ typeFilter: null, sort: 'recent' });
+  },
   setSort: (sort) => set({ sort }),
   setUserLocation: (userLocation) => set({ userLocation }),
   setConn: (conn, rate) => set({ conn, msgRate: rate ?? get().msgRate }),

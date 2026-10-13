@@ -382,14 +382,14 @@ export function MapView() {
       frame = 0;
       if (!map.isStyleLoaded() && !map.getSource('sondes')) return;
       const s = useStore.getState();
-      const { sondes, selected, predictions, listeners, sites, recoveries, settings, query, phaseFilter, userLocation, now } = s;
+      const { sondes, selected, predictions, listeners, sites, recoveries, settings, query, phaseFilter, typeFilter, userLocation, now } = s;
       const L = settings.layers;
       const sel = selected ? sondes[selected] : undefined;
       // Sondes and their tracks: diffed per sonde, only when the inputs changed at all.
-      const inputs = [sondes, selected, query, phaseFilter];
+      const inputs = [sondes, selected, query, phaseFilter, typeFilter];
       if (!lastSondeInputs.every((v, i) => v === inputs[i]) || lastSondeInputs.length === 0) {
         lastSondeInputs = inputs;
-        const visible = makeVisible(query, phaseFilter);
+        const visible = makeVisible(query, phaseFilter, typeFilter);
         const points = new Map<string, Entry>();
         const lines = new Map<string, Entry>();
         for (const so of Object.values(sondes)) {

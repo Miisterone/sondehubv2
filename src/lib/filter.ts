@@ -1,9 +1,14 @@
 import type { FlightPhase, Prediction, Sonde } from './types';
 
-export function makeVisible(query: string, phases: Record<FlightPhase, boolean>) {
+export function typeKey(s: Pick<Sonde, 'type' | 'manufacturer'>): string {
+  return s.type || s.manufacturer || 'Inconnu';
+}
+
+export function makeVisible(query: string, phases: Record<FlightPhase, boolean>, type: string | null = null) {
   const q = query.trim().toLowerCase();
   return (s: Sonde) => {
     if (!phases[s.phase]) return false;
+    if (type && typeKey(s) !== type) return false;
     if (!q) return true;
     return (
       s.serial.toLowerCase().includes(q) ||

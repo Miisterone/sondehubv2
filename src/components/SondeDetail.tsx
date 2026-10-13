@@ -26,6 +26,10 @@ import {
   Hash,
   Timer,
   Ruler,
+  Compass,
+  Radio,
+  SlidersHorizontal,
+  Wind,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
@@ -81,7 +85,8 @@ export function SondeDetail({ serial }: { serial: string }) {
   const sites = useStore((s) => s.sites);
   const favourite = useStore((s) => s.settings.favourites.includes(serial));
   const recovery = useStore((s) => s.recoveries[serial]);
-  const { select, setFollow, requestFly, toggleFavourite } = useStore.getState();
+  const expert = useStore((s) => s.settings.expert);
+  const { select, setFollow, requestFly, toggleFavourite, setExpert } = useStore.getState();
   const [allReceivers, setAllReceivers] = useState(false);
   const [reporting, setReporting] = useState(false);
 
@@ -127,7 +132,10 @@ export function SondeDetail({ serial }: { serial: string }) {
   const flying = sonde.phase === 'ascending' || sonde.phase === 'descending';
   const target = landing ? { lat: landing.lat, lon: landing.lon } : { lat: f.lat, lon: f.lon };
   const fromMe = me ? { d: distance(me.lat, me.lon, target.lat, target.lon), b: bearing(me.lat, me.lon, target.lat, target.lon) } : null;
-  const meToSonde = me ? { d: distance(me.lat, me.lon, f.lat, f.lon), el: elevation(me.lat, me.lon, me.alt ?? 0, f.lat, f.lon, f.alt) } : null;
+  const meToSonde = me
+    ? { d: distance(me.lat, me.lon, f.lat, f.lon), az: bearing(me.lat, me.lon, f.lat, f.lon), el: elevation(me.lat, me.lon, me.alt ?? 0, f.lat, f.lon, f.alt) }
+    : null;
+  const model = [sonde.manufacturer, sonde.type].filter((v, i, a) => v && a.indexOf(v) === i).join(' ');
   const burstAlt = sonde.phase !== 'ascending' && sonde.maxAlt - f.alt > 500 ? sonde.maxAlt : null;
 
   const receivers = Object.values(sonde.receivers).sort((a, b) => b.lastHeard - a.lastHeard);
@@ -144,6 +152,46 @@ export function SondeDetail({ serial }: { serial: string }) {
     else toast.success('Sonde suivie — elle restera en haut de la liste', { id: 'fav' });
   };
 
+  const shareBlock = (
+    <>
+      <div className="flex gap-2">
+        <Button size="sm" className="h-8 flex-1 text-xs" onClick={() => share(sonde, landing, now, units)}>
+          <Share2 /> Partager
+        </Button>
+        {expert && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 flex-1 text-xs">
+                <Download /> Exporter <ChevronDown className="opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56" onEscapeKeyDown={keepSelection}>
+              <DropdownMenuItem className="text-[13px]" onSelect={() => downloadKML(sonde, prediction)}>
+                <FileCode2 /> Fichier KML
+                <span className="text-muted-foreground ml-auto text-[11px]">Google Earth</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-[13px]" onSelect={() => downloadCSV(sonde)}>
+                <FileSpreadsheet /> Fichier CSV
+                <span className="text-muted-foreground ml-auto text-[11px]">Tableur</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="text-[13px]">
+                <a href={`https://sondehub.org/${encodeURIComponent(sonde.serial)}`} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Voir sur SondeHub
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+      {!recoverable && (
+        <Button variant="link" size="xs" className="text-muted-foreground hover:text-foreground h-auto px-0 text-[11.5px] font-normal" onClick={() => setReporting(true)}>
+          <PackageCheck /> Vous avez trouvé cette sonde ? Signaler une récupération
+        </Button>
+      )}
+    </>
+  );
+
   return (
     <div className="animate-in flex h-full min-h-0 flex-col">
       {/* Header */}
@@ -156,10 +204,14 @@ export function SondeDetail({ serial }: { serial: string }) {
         </span>
         <div className="ml-0.5 min-w-0 flex-1">
           <h2 className="truncate font-mono text-[15px] font-bold tracking-tight">{sonde.serial}</h2>
-          <div className="text-muted-foreground flex min-w-0 text-[11.5px]" title={[sonde.manufacturer, sonde.subtype ?? sonde.type].filter(Boolean).join(' · ')}>
-            <span className="truncate">{sonde.subtype ?? sonde.type ?? sonde.manufacturer}</span>
-            {f.frequency ? <span className="tabular shrink-0 whitespace-pre"> · {f.frequency.toFixed(3)} MHz</span> : null}
-          </div>
+          {expert ? (
+            <div className="text-muted-foreground flex min-w-0 text-[11.5px]" title={[sonde.manufacturer, sonde.subtype ?? sonde.type].filter(Boolean).join(' · ')}>
+              <span className="truncate">{sonde.subtype ?? sonde.type ?? sonde.manufacturer}</span>
+              {f.frequency ? <span className="tabular shrink-0 whitespace-pre"> · {f.frequency.toFixed(3)} MHz</span> : null}
+            </div>
+          ) : (
+            <div className="text-muted-foreground truncate text-[11.5px]">{model ? `Radiosonde ${model}` : 'Radiosonde météo'}</div>
+          )}
         </div>
         <IconButton label="Centrer sur la sonde" side="bottom" className="size-8" onClick={() => requestFly(f.lon, f.lat, 11)}>
           <Crosshair />
@@ -229,12 +281,28 @@ export function SondeDetail({ serial }: { serial: string }) {
                 {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />)}
                 {fmtVSpeed(vv, units)}
               </div>
-              <div className="text-muted-foreground tabular mt-1 font-mono text-[11.5px]">
-                {fmtHSpeed(f.vel_h, units)}
-                {f.heading !== undefined ? ` · ${compass(f.heading)} ${Math.round(f.heading)}°` : ''}
-              </div>
+              {expert ? (
+                <div className="text-muted-foreground tabular mt-1 font-mono text-[11.5px]">
+                  {fmtHSpeed(f.vel_h, units)}
+                  {f.heading !== undefined ? ` · ${compass(f.heading)} ${Math.round(f.heading)}°` : ''}
+                </div>
+              ) : (
+                <div className="text-muted-foreground mt-1 flex items-center justify-end gap-1 text-[11.5px]">
+                  {flying ? (vv !== undefined && vv < 0 ? 'vitesse de chute' : 'vitesse de montée') : 'vitesse verticale'}
+                  <HelpHint title={HELP.vspeed.title} align="end">
+                    {HELP.vspeed.text}
+                  </HelpHint>
+                </div>
+              )}
             </div>
           </div>
+
+          {!expert && flying && f.vel_h !== undefined && (
+            <p className="text-muted-foreground -mt-2 text-[12px]">
+              Poussée par le vent à <span className="text-foreground font-medium">{fmtHSpeed(f.vel_h, units)}</span>
+              {f.heading !== undefined ? ` vers le ${COMPASS_WORD[compass(f.heading)] ?? compass(f.heading)}` : ''}.
+            </p>
+          )}
 
           {/* Prediction / landing */}
           {(landing || sonde.phase === 'landed' || sonde.phase === 'lost') && (
@@ -358,6 +426,7 @@ export function SondeDetail({ serial }: { serial: string }) {
             </div>
             {/* Altitude ramp legend for the coloured trajectory. */}
             <div className="pt-0.5">
+              <div className="text-muted-foreground mb-1 text-[11px]">Couleur du tracé sur la carte selon l’altitude</div>
               <div className="h-1.5 rounded-full" style={{ background: `linear-gradient(90deg, ${ALT_RAMP.map(([a, c]) => `${c} ${(a / 38000) * 100}%`).join(',')})` }} />
               <div className="text-faint mt-1 flex justify-between font-mono text-[10px]">
                 <span>0</span>
@@ -371,53 +440,80 @@ export function SondeDetail({ serial }: { serial: string }) {
 
           <div className="space-y-2">
             <h3 className="text-faint flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase">
-              Courbes
+              {expert ? 'Courbes' : 'Altitude au fil du vol'}
               <HelpHint title="Lire les courbes">
                 <span className="block">
                   <b className="text-foreground font-medium">Altitude</b> : trait plein = mesurée ; pointillés = prédiction du modèle Tawhiri (vents prévus), recalculée au fil du vol.
                 </span>
-                <span className="mt-1 block">
-                  <b className="text-foreground font-medium">Sondage T° / HR</b> : {HELP.profile.text}
-                </span>
+                {expert && (
+                  <span className="mt-1 block">
+                    <b className="text-foreground font-medium">Sondage T° / HR</b> : {HELP.profile.text}
+                  </span>
+                )}
               </HelpHint>
             </h3>
-            <SondeCharts sonde={sonde} prediction={prediction} units={units} />
+            <SondeCharts sonde={sonde} prediction={prediction} units={units} simple={!expert} />
           </div>
 
           <Separator />
 
-          {/* Sensors */}
-          <Section title="Capteurs & télémesure" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>}>
-            <div className="grid grid-cols-3 gap-2">
-              <Stat icon={<Thermometer />} label="Temp." value={fmtTemp(f.temp, units)} />
-              <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %')} />
-              <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa')} />
-              <Stat icon={<BatteryMedium />} label="Batterie" value={fmtNum(f.batt, ' V', 2)} />
-              <Stat icon={<Satellite />} label="Satellites" value={fmtNum(f.sats, '', 0)} />
-              <Stat icon={<Hash />} label="Trame" value={f.frame !== undefined ? `#${f.frame}` : '—'} />
-            </div>
-            {meToSonde && (
-              <div className="grid grid-cols-2 gap-2">
-                <Stat icon={<Ruler />} label="Distance" value={fmtDist(meToSonde.d, units)} />
-                <HintStat label="Élévation" help={HELP.elevation} value={`${meToSonde.el.toFixed(1)}°`} sub={meToSonde.el < 0 ? 'sous l’horizon' : undefined} />
+          {expert ? (
+            <Section title="Capteurs & télémesure" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>}>
+              <div className="grid grid-cols-3 gap-2">
+                <Stat icon={<Thermometer />} label="Temp." value={fmtTemp(f.temp, units)} />
+                <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %')} />
+                <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa')} />
+                <Stat icon={<BatteryMedium />} label="Batterie" value={fmtNum(f.batt, ' V', 2)} />
+                <Stat icon={<Satellite />} label="Satellites" value={fmtNum(f.sats, '', 0)} />
+                <Stat icon={<Hash />} label="Trame" value={f.frame !== undefined ? `#${f.frame}` : '—'} />
+                <Stat icon={<Radio />} label="Fréquence" value={f.frequency ? f.frequency.toFixed(3) : '—'} sub={f.frequency ? 'MHz' : undefined} />
+                <Stat icon={<Wind />} label="Vit. horiz." value={fmtHSpeed(f.vel_h, units)} />
+                <Stat icon={<Compass />} label="Cap" value={f.heading !== undefined ? `${Math.round(f.heading)}°` : '—'} sub={f.heading !== undefined ? compass(f.heading) : undefined} />
               </div>
-            )}
-            <div className="text-faint font-mono text-[11px]">
-              {fmtCoord(f.lat, f.lon)} · {fmtClock(sonde.lastTime)}
-            </div>
-          </Section>
+              {meToSonde && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-faint flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase">
+                    Pointage depuis votre position
+                    <HelpHint title={HELP.elevation.title}>{HELP.elevation.text}</HelpHint>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Stat icon={<Ruler />} label="Distance" value={fmtDist(meToSonde.d, units)} />
+                    <Stat icon={<Compass />} label="Azimut" value={`${Math.round(meToSonde.az)}°`} sub={compass(meToSonde.az)} />
+                    <Stat label="Élévation" value={`${meToSonde.el.toFixed(1)}°`} sub={meToSonde.el < 0 ? 'sous l’horizon' : undefined} />
+                  </div>
+                </div>
+              )}
+              <div className="text-faint font-mono text-[11px]">
+                {fmtCoord(f.lat, f.lon)} · {fmtClock(sonde.lastTime)}
+              </div>
+            </Section>
+          ) : (
+            <Section title="Ce que mesure la sonde" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>}>
+              <div className="grid grid-cols-3 gap-2">
+                <Stat icon={<Thermometer />} label="Temp." value={fmtTemp(f.temp, units)} sub="de l’air" />
+                <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />
+                <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa', 0)} sub={pressureSub(f.pressure)} />
+              </div>
+              {meToSonde && (
+                <p className="text-muted-foreground text-[12px]">
+                  Elle se trouve à <span className="text-foreground font-medium">{fmtDist(meToSonde.d, units)}</span> de vous, vers le{' '}
+                  {COMPASS_WORD[compass(meToSonde.az)] ?? compass(meToSonde.az)}.
+                </p>
+              )}
+            </Section>
+          )}
 
           <Separator />
 
           {/* Receivers */}
           <Section
-            title={`Récepteurs (${receivers.length})`}
+            title={expert ? `Récepteurs (${receivers.length})` : 'Qui reçoit son signal ?'}
             right={
               <span className="text-faint flex items-center gap-2.5 text-[11px] font-semibold tracking-wider uppercase">
                 <HelpHint title={HELP.receivers.title} align="end">
                   {HELP.receivers.text}
                 </HelpHint>
-                {receivers.some((r) => r.snr !== undefined) && (
+                {expert && receivers.some((r) => r.snr !== undefined) && (
                   <span className="flex items-center gap-1">
                     SNR
                     <HelpHint title={HELP.snr.title} align="end">
@@ -428,9 +524,16 @@ export function SondeDetail({ serial }: { serial: string }) {
               </span>
             }
           >
+            {!expert && receivers.length > 0 && (
+              <p className="text-muted-foreground text-[12px] leading-snug">
+                {receivers.length === 1 ? 'Une station' : `${receivers.length} stations`} de passionnés{' '}
+                {receivers.length === 1 ? 'a capté' : 'ont capté'} cette sonde par radio et partagent sa position. Dernière réception{' '}
+                {ago(receivers[0].lastHeard, now)}.
+              </p>
+            )}
             {receivers.length === 0 ? (
               <div className="text-muted-foreground text-[11.5px]">Aucun récepteur connu.</div>
-            ) : (
+            ) : !expert && !allReceivers ? null : (
               <ul className="space-y-1">
                 {shownReceivers.map((r) => {
                   const pos = r.position ?? (listeners[r.callsign] ? [listeners[r.callsign].lat, listeners[r.callsign].lon] : undefined);
@@ -444,16 +547,29 @@ export function SondeDetail({ serial }: { serial: string }) {
                         <div className="text-faint truncate text-[11px]">
                           {ago(r.lastHeard, now)}
                           {d !== undefined ? ` · ${fmtDist(d, units)}` : ''}
-                          {r.software ? ` · ${r.software}` : ''}
+                          {expert && r.software ? ` · ${r.software}` : ''}
                         </div>
                       </div>
-                      {r.snr !== undefined && <SnrBar snr={r.snr} />}
+                      {expert && r.snr !== undefined && <SnrBar snr={r.snr} />}
                     </li>
                   );
                 })}
               </ul>
             )}
-            {hiddenReceivers > 0 && (
+            {!expert && receivers.length > 0 && (
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-7 w-full text-xs" onClick={() => setAllReceivers((v) => !v)}>
+                {allReceivers ? (
+                  <>
+                    <ChevronUp /> Masquer les stations
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown /> Voir les stations
+                  </>
+                )}
+              </Button>
+            )}
+            {expert && hiddenReceivers > 0 && (
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-7 w-full text-xs" onClick={() => setAllReceivers((v) => !v)}>
                 {allReceivers ? (
                   <>
@@ -471,41 +587,23 @@ export function SondeDetail({ serial }: { serial: string }) {
           <Separator />
 
           {/* Actions */}
-          <Section title="Partager & exporter">
-            <div className="flex gap-2">
-              <Button size="sm" className="h-8 flex-1 text-xs" onClick={() => share(sonde, landing, now, units)}>
-                <Share2 /> Partager
+          {expert ? <Section title="Partager & exporter">{shareBlock}</Section> : <div className="space-y-2">{shareBlock}</div>}
+
+          {expert ? (
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-8 w-full text-xs" onClick={() => setExpert(false)}>
+              <SlidersHorizontal /> Revenir à la vue simple
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3 rounded-xl border px-3 py-2.5">
+              <p className="min-w-0 flex-1 text-[12px] leading-snug">
+                <span className="font-medium">Données techniques</span>
+                <span className="text-muted-foreground block text-[11.5px]">Fréquence radio, batterie, GPS, qualité de réception, pointage d’antenne, export KML/CSV.</span>
+              </p>
+              <Button variant="outline" size="sm" className="h-7 shrink-0 rounded-lg px-2.5 text-[12px]" onClick={() => setExpert(true)}>
+                Vue expert
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 flex-1 text-xs">
-                    <Download /> Exporter <ChevronDown className="opacity-70" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56" onEscapeKeyDown={keepSelection}>
-                  <DropdownMenuItem className="text-[13px]" onSelect={() => downloadKML(sonde, prediction)}>
-                    <FileCode2 /> Fichier KML
-                    <span className="text-muted-foreground ml-auto text-[11px]">Google Earth</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-[13px]" onSelect={() => downloadCSV(sonde)}>
-                    <FileSpreadsheet /> Fichier CSV
-                    <span className="text-muted-foreground ml-auto text-[11px]">Tableur</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="text-[13px]">
-                    <a href={`https://sondehub.org/${encodeURIComponent(sonde.serial)}`} target="_blank" rel="noreferrer">
-                      <ExternalLink /> Voir sur SondeHub
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-            {!recoverable && (
-              <Button variant="link" size="xs" className="text-muted-foreground hover:text-foreground h-auto px-0 text-[11.5px] font-normal" onClick={() => setReporting(true)}>
-                <PackageCheck /> Vous avez trouvé cette sonde ? Signaler une récupération
-              </Button>
-            )}
-          </Section>
+          )}
         </div>
       </ScrollArea>
       <RecoveryDialog serial={sonde.serial} open={reporting} onOpenChange={setReporting} />
@@ -530,6 +628,31 @@ function HintStat({ label, value, sub, accent, help }: Omit<ComponentProps<typeo
       {sub && <div className="text-dim truncate text-[11px]">{sub}</div>}
     </div>
   );
+}
+
+const COMPASS_WORD: Record<string, string> = {
+  N: 'nord',
+  NNE: 'nord-nord-est',
+  NE: 'nord-est',
+  ENE: 'est-nord-est',
+  E: 'est',
+  ESE: 'est-sud-est',
+  SE: 'sud-est',
+  SSE: 'sud-sud-est',
+  S: 'sud',
+  SSO: 'sud-sud-ouest',
+  SO: 'sud-ouest',
+  OSO: 'ouest-sud-ouest',
+  O: 'ouest',
+  ONO: 'ouest-nord-ouest',
+  NO: 'nord-ouest',
+  NNO: 'nord-nord-ouest',
+};
+
+function pressureSub(hPa: number | undefined): string | undefined {
+  if (hPa === undefined || !Number.isFinite(hPa) || hPa <= 0) return undefined;
+  const pct = (hPa / 1013.25) * 100;
+  return pct >= 95 ? 'comme au sol' : `${pct < 10 ? pct.toFixed(1).replace('.', ',') : Math.round(pct)} % du sol`;
 }
 
 function sondeLink(serial: string) {

@@ -13,7 +13,7 @@ const nn = (v: number) => (Number.isFinite(v) ? v : null);
 const timeFmt = (_: uPlot, ticks: number[]) =>
   ticks.map((t) => new Date(t * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
 
-export function SondeCharts({ sonde, prediction, units }: { sonde: Sonde; prediction?: Prediction; units: Units }) {
+export function SondeCharts({ sonde, prediction, units, simple = false }: { sonde: Sonde; prediction?: Prediction; units: Units; simple?: boolean }) {
   const [tab, setTab] = useState<Tab>('altitude');
   const hasProfile = sonde.track.some((p) => Number.isFinite(p[4]) || Number.isFinite(p[5]));
   const altK = units === 'metric' ? 1 / 1000 : 3.28084 / 1000;
@@ -118,6 +118,24 @@ export function SondeCharts({ sonde, prediction, units }: { sonde: Sonde; predic
   // Radix unmounts inactive tab panels, so each chart is (re)created while visible and sized to its container.
   const value = tab === 'profile' && !hasProfile ? 'altitude' : tab;
 
+  const altitudeLegend = (
+    <Legend
+      items={[
+        { label: simple ? 'Altitude mesurée' : 'Mesurée', swatch: <span className="h-0.5 w-4 rounded bg-[#818cf8]" /> },
+        ...(prediction && sonde.phase !== 'landed' ? [{ label: simple ? 'Suite prévue du vol' : 'Prédiction', swatch: <span className="h-0 w-4 border-t-2 border-dashed border-[#fb7185]" /> }] : []),
+      ]}
+    />
+  );
+
+  if (simple) {
+    return (
+      <div className="bg-chip rounded-xl p-2">
+        <Chart data={altData} makeOptions={altOpts} />
+        {altitudeLegend}
+      </div>
+    );
+  }
+
   return (
     <Tabs value={value} onValueChange={(v) => setTab(v as Tab)} className="gap-2">
       <TabsList className="h-8! w-full">
@@ -135,12 +153,7 @@ export function SondeCharts({ sonde, prediction, units }: { sonde: Sonde; predic
       </TabsList>
       <TabsContent value="altitude" className="bg-chip rounded-xl p-2">
         <Chart data={altData} makeOptions={altOpts} />
-        <Legend
-          items={[
-            { label: 'Mesurée', swatch: <span className="h-0.5 w-4 rounded bg-[#818cf8]" /> },
-            ...(prediction && sonde.phase !== 'landed' ? [{ label: 'Prédiction', swatch: <span className="h-0 w-4 border-t-2 border-dashed border-[#fb7185]" /> }] : []),
-          ]}
-        />
+        {altitudeLegend}
       </TabsContent>
       {hasProfile && (
         <TabsContent value="profile" className="bg-chip rounded-xl p-2">

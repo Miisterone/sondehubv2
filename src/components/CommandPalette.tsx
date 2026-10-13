@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed, MapPinned, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed, MapPinned, Moon, Mountain, RotateCcw, SlidersHorizontal, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
@@ -246,6 +246,15 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         const basemap = b === 'dark' && next === 'light' ? 'positron' : (b === 'positron' || b === 'liberty') && next === 'dark' ? 'dark' : b;
         setSettings({ theme: next, basemap });
       },
+    });
+    list.push({
+      id: 'expert',
+      group: 'Affichage',
+      label: settings.expert ? 'Passer en vue simple' : 'Passer en vue expert',
+      keywords: 'vue simple expert avance technique debutant niveau detail donnees frequence',
+      icon: <SlidersHorizontal />,
+      active: settings.expert,
+      run: () => useStore.getState().setExpert(!settings.expert),
     });
     list.push({
       id: 'terrain',

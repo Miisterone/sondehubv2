@@ -3,7 +3,9 @@ import {
   ArrowDownUp,
   Bell,
   BellRing,
+  Clock,
   Command,
+  Cpu,
   Info,
   LoaderCircle,
   MapPin,
@@ -22,7 +24,7 @@ import { toast } from 'sonner';
 import type { MapMouseEvent } from 'maplibre-gl';
 import { DURATION_MS, useStore, type Duration, type SortKey } from '@/store/useStore';
 import type { FlightPhase, Sonde } from '@/lib/types';
-import { makeVisible, usefulPrediction } from '@/lib/filter';
+import { makeVisible, typeKey, usefulPrediction } from '@/lib/filter';
 import { ago, fmtAltShort, fmtDist, fmtVSpeed, relative, type Units, fmtRadius } from '@/lib/format';
 import { PALETTE_SHORTCUT } from '@/lib/platform';
 import { bearing, compass, distance } from '@/lib/geo';
@@ -41,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { IconButton, Logo, MapIcon, Segmented, Sparkline, cx } from './ui';
 import { SondeDetail } from './SondeDetail';
 import { StatusPill } from './StatusPill';
+import { FlightGuide } from './FlightGuide';
 import { getMap } from './MapView';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
@@ -68,6 +71,24 @@ const TAPPABLE_LAYERS = [
 /** Rows rendered in the "Toutes" list (the rest is reachable through the search). */
 const MAX_ROWS = 400;
 const RADII = [25, 50, 100, 200] as const;
+const ALL_TYPES = '__all';
+
+const DURATION_LABEL: Record<Duration, string> = { '1h': '1 h', '3h': '3 h', '6h': '6 h', '12h': '12 h', '1d': '24 h' };
+const DURATION_TITLE: Record<Duration, string> = {
+  '1h': 'la dernière heure',
+  '3h': 'les 3 dernières heures',
+  '6h': 'les 6 dernières heures',
+  '12h': 'les 12 dernières heures',
+  '1d': 'les dernières 24 heures',
+};
+
+const SORT_LABEL: Record<SortKey, string> = {
+  recent: 'Plus récentes',
+  landing: 'Atterrissage proche',
+  altitude: 'Altitude',
+  distance: 'Distance',
+  serial: 'N° de série',
+};
 
 /** Event dispatched (command palette, welcome card…) to open the "Près de moi" list. */
 export const NEARBY_EVENT = 'sondetrack:nearby';
@@ -273,6 +294,9 @@ function useIsMobile() {
   return m;
 }
 
+const OPTION_TRIGGER =
+  "bg-muted/60 dark:bg-muted/50 dark:hover:bg-muted text-muted-foreground hover:text-foreground h-7! w-full min-w-0 justify-start gap-1.5 rounded-lg border-transparent px-2 text-[11.5px] shadow-none [&_svg:not([class*='size-'])]:size-3.5 [&>svg:last-child]:ml-auto [&>[data-slot=select-value]]:min-w-0 [&>[data-slot=select-value]]:truncate";
+
 const openCommandPalette = () => window.dispatchEvent(new Event('sondetrack:command'));
 const rowId = (serial: string) => `sonde-row-${serial}`;
 const isTouch = () => window.matchMedia('(hover: none)').matches;
@@ -311,11 +335,13 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
   const units = useStore((s) => s.settings.units);
   const favourites = useStore((s) => s.settings.favourites);
   const alerts = useStore((s) => s.settings.alerts);
+  const expert = useStore((s) => s.settings.expert);
+  const typeFilter = useStore((s) => s.typeFilter);
   const loading = useStore((s) => s.loading);
   const error = useStore((s) => s.error);
   const me = useStore((s) => s.userLocation);
   const now = useStore((s) => s.now);
-  const { setQuery, togglePhase, setSort, setSettings, setAlerts, select } = useStore.getState();
+  const { setQuery, togglePhase, setSort, setSettings, setAlerts, setExpert, setTypeFilter, select } = useStore.getState();
   const searchRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<string | null>(null);
 
@@ -338,7 +364,7 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
     return c;
   }, [sondes]);
 
-  const visible = useMemo(() => makeVisible(query, phaseFilter), [query, phaseFilter]);
+  const visible = useMemo(() => makeVisible(query, phaseFilter, typeFilter), [query, phaseFilter, typeFilter]);
 
   // Followed sondes: pinned on top whatever the phase filters, but still searchable.
   const favRows = useMemo(() => {
@@ -351,12 +377,33 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
     });
   }, [favourites, sondes, query]);
 
+  const landingTime = useCallback(
+    (s: Sonde) => {
+      if (s.phase !== 'ascending' && s.phase !== 'descending') return undefined;
+      const p = predictions[s.serial];
+      return usefulPrediction(s, p) && p.landing ? p.landing.time * 1000 : undefined;
+    },
+    [predictions],
+  );
+
+  const types = useMemo(() => {
+    const m = new Map<string, { count: number; maker?: string }>();
+    for (const s of Object.values(sondes)) {
+      const k = typeKey(s);
+      const e = m.get(k);
+      if (e) e.count++;
+      else m.set(k, { count: 1, maker: s.manufacturer && s.manufacturer !== k ? s.manufacturer : undefined });
+    }
+    return [...m.entries()].sort((a, b) => b[1].count - a[1].count);
+  }, [sondes]);
+
   const list = useMemo(() => {
     if (mode !== 'all') return [];
     const favSet = new Set(favourites);
     const arr = Object.values(sondes).filter((s) => !favSet.has(s.serial) && visible(s));
     const cmp: Record<SortKey, (a: Sonde, b: Sonde) => number> = {
       recent: (a, b) => b.lastTime - a.lastTime,
+      landing: (a, b) => (landingTime(a) ?? Infinity) - (landingTime(b) ?? Infinity) || b.lastTime - a.lastTime,
       altitude: (a, b) => b.last.alt - a.last.alt,
       serial: (a, b) => a.serial.localeCompare(b.serial),
       distance: me
@@ -364,7 +411,7 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
         : (a, b) => b.lastTime - a.lastTime,
     };
     return arr.sort(cmp[sort]);
-  }, [mode, sondes, favourites, visible, sort, me]);
+  }, [mode, sondes, favourites, visible, sort, me, landingTime]);
 
   const nearby = useMemo(() => {
     if (mode !== 'nearby' || !me) return [];
@@ -435,10 +482,11 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
 
   const total = Object.keys(sondes).length;
   const shown = list.length + favRows.filter((f) => f.sonde).length;
-  const filtered = query !== '' || PHASES.some((p) => !phaseFilter[p]);
+  const filtered = query !== '' || typeFilter !== null || PHASES.some((p) => !phaseFilter[p]);
   const resetFilters = useCallback(() => {
     const st = useStore.getState();
     st.setQuery('');
+    st.setTypeFilter(null);
     for (const p of PHASES) if (!st.phaseFilter[p]) st.togglePhase(p);
   }, []);
 
@@ -470,6 +518,8 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
                 sonde={f.sonde}
                 units={units}
                 now={now}
+                expert={expert}
+                landingTime={landingTime(f.sonde)}
                 active={active === f.serial}
                 distanceM={me ? distance(me.lat, me.lon, f.sonde.last.lat, f.sonde.last.lon) : undefined}
               />
@@ -493,6 +543,8 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
               sonde={s}
               units={units}
               now={now}
+              expert={expert}
+              landingTime={landingTime(s)}
               active={active === s.serial}
               distanceM={me ? distance(me.lat, me.lon, s.last.lat, s.last.lon) : undefined}
             />
@@ -522,7 +574,7 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
           />
         )
       ) : (
-        nearby.map(({ sonde, info }) => <SondeRow key={sonde.serial} sonde={sonde} units={units} now={now} active={active === sonde.serial} near={info} />)
+        nearby.map(({ sonde, info }) => <SondeRow key={sonde.serial} sonde={sonde} units={units} now={now} expert={expert} active={active === sonde.serial} near={info} />)
       )}
     </>
   );
@@ -534,7 +586,7 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
           <Logo className="size-8 shrink-0" />
           <div className="min-w-0 flex-1">
             <h1 className="text-[15px] leading-tight font-bold tracking-tight">SondeTrack</h1>
-            <p className="text-muted-foreground text-[11px] leading-tight">Radiosondes en temps réel</p>
+            <p className="text-muted-foreground text-[11px] leading-tight">Ballons météo en temps réel</p>
           </div>
           <StatusPill />
           <IconButton label="À propos" side="bottom" className="-mr-1.5 size-8" onClick={onAbout}>
@@ -553,7 +605,7 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
               onFocus={onFocusSearch}
               onBlur={() => setActive(null)}
               onKeyDown={onSearchKey}
-              placeholder="Numéro de série, type, récepteur…"
+              placeholder={expert ? 'Série, type, récepteur…' : 'Rechercher une sonde…'}
               aria-label="Rechercher une sonde"
               aria-controls="sonde-list"
               aria-activedescendant={active ? rowId(active) : undefined}
@@ -624,49 +676,89 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <Segmented<Duration>
-            size="sm"
-            value={duration}
-            onChange={(d) => setSettings({ duration: d })}
-            options={(Object.keys(DURATION_MS) as Duration[]).map((d) => ({
-              value: d,
-              label: d.replace('d', 'j'),
-              title: `Historique : ${d.replace('d', ' jour').replace('h', ' h')}`,
-            }))}
-          />
-          {mode === 'nearby' ? (
-            <span className="text-muted-foreground flex h-7 items-center gap-1.5 px-2 text-[11.5px]">
-              <ArrowDownUp className="size-3.5" />
-              Par proximité
-            </span>
-          ) : (
-            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-              <SelectTrigger
+          <div role="group" aria-label="Niveau de détail">
+            <Segmented<'simple' | 'expert'>
+              size="sm"
+              value={expert ? 'expert' : 'simple'}
+              onChange={(v) => setExpert(v === 'expert')}
+              options={[
+                { value: 'simple', label: 'Vue simple', title: 'L’essentiel, expliqué sans jargon' },
+                { value: 'expert', label: 'Vue expert', title: 'Données techniques, filtres et tris avancés' },
+              ]}
+            />
+          </div>
+          {expert ? (
+            <div role="group" aria-label="Période affichée" className="flex items-center gap-1.5">
+              <Clock className="text-muted-foreground size-3.5" aria-hidden />
+              <Segmented<Duration>
                 size="sm"
-                aria-label="Trier"
-                className="bg-muted/60 dark:bg-muted/50 dark:hover:bg-muted text-muted-foreground hover:text-foreground h-7! gap-1.5 rounded-lg border-transparent px-2 text-[11.5px] shadow-none [&_svg:not([class*='size-'])]:size-3.5"
-              >
-                <ArrowDownUp />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper" align="end" className="min-w-40 rounded-xl">
-                <SelectItem value="recent" className="text-[12.5px]">
-                  Plus récentes
-                </SelectItem>
-                <SelectItem value="altitude" className="text-[12.5px]">
-                  Altitude
-                </SelectItem>
-                <SelectItem value="serial" className="text-[12.5px]">
-                  N° de série
-                </SelectItem>
-                <SelectItem value="distance" disabled={!me} className="text-[12.5px]">
-                  Distance
-                  {!me && <span className="text-muted-foreground ml-auto text-[11px]">GPS requis</span>}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                value={duration}
+                onChange={(d) => setSettings({ duration: d })}
+                className="[&>button]:px-1.5"
+                options={(Object.keys(DURATION_MS) as Duration[]).map((d) => ({
+                  value: d,
+                  label: DURATION_LABEL[d],
+                  title: `Sondes entendues pendant ${DURATION_TITLE[d]}`,
+                }))}
+              />
+            </div>
+          ) : (
+            <FlightGuide className="-mr-1.5" />
           )}
         </div>
+
+        {expert && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {mode === 'nearby' ? (
+              <span className="bg-muted/60 dark:bg-muted/50 text-muted-foreground flex h-7 items-center gap-1.5 rounded-lg px-2 text-[11.5px]">
+                <ArrowDownUp className="size-3.5" />
+                Par proximité
+              </span>
+            ) : (
+              <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+                <SelectTrigger size="sm" aria-label="Trier" className={OPTION_TRIGGER}>
+                  <ArrowDownUp />
+                  <span className="text-faint">Tri</span>
+                  <SelectValue>{SORT_LABEL[sort]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent position="popper" align="start" className="min-w-44 rounded-xl">
+                  {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+                    <SelectItem key={k} value={k} disabled={k === 'distance' && !me} className="text-[12.5px] *:[span]:last:flex-1">
+                      {SORT_LABEL[k]}
+                      {k === 'distance' && !me && <span className="text-muted-foreground ml-auto text-[11px]">GPS requis</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={typeFilter ?? ALL_TYPES} onValueChange={(v) => setTypeFilter(v === ALL_TYPES ? null : v)}>
+              <SelectTrigger size="sm" aria-label="Type de sonde" className={cx(OPTION_TRIGGER, typeFilter && 'text-foreground ring-primary/40 ring-1')}>
+                <Cpu />
+                <span className="text-faint">Type</span>
+                <SelectValue>{typeFilter ?? 'Tous'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent position="popper" align="end" className="max-h-72 min-w-52 rounded-xl">
+                <SelectItem value={ALL_TYPES} className="text-[12.5px]">
+                  Tous
+                </SelectItem>
+                {typeFilter && !types.some(([k]) => k === typeFilter) && (
+                  <SelectItem value={typeFilter} className="text-[12.5px]">
+                    {typeFilter}
+                  </SelectItem>
+                )}
+                {types.map(([k, t]) => (
+                  <SelectItem key={k} value={k} className="text-[12.5px] *:[span]:last:flex-1">
+                    {k}
+                    <span className="text-muted-foreground ml-auto pl-3 text-[11px]">
+                      {t.maker ? `${t.maker} · ` : ''}
+                      <span className="tabular font-mono">{t.count}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="text-muted-foreground flex min-h-9 items-center justify-between gap-2 border-t px-3 py-1 text-[11px]">
@@ -685,11 +777,18 @@ function SondeList({ onAbout, onFocusSearch, scrollLocked, mode, onMode, geo, on
             </div>
           )
         ) : (
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2" title={`Sondes entendues pendant ${DURATION_TITLE[duration]}`}>
             {loading && <span className="bg-primary size-1.5 animate-pulse rounded-full" aria-label="Chargement…" />}
-            <span>
-              <span className="tabular text-foreground font-mono font-medium">{shown}</span> / <span className="tabular font-mono">{total}</span> sondes
-            </span>
+            {filtered ? (
+              <span>
+                <span className="tabular text-foreground font-mono font-medium">{shown}</span> sur <span className="tabular font-mono">{total}</span> sondes
+              </span>
+            ) : (
+              <span>
+                <span className="tabular text-foreground font-mono font-medium">{total}</span> sondes
+                {expert && <> · {DURATION_LABEL[duration]}</>}
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -1004,6 +1103,20 @@ function Direction({ deg }: { deg: number }) {
   );
 }
 
+function plainLine(s: Sonde, units: Units, now: number, landingTime?: number): string {
+  const alt = fmtAltShort(s.last.alt, units);
+  switch (s.phase) {
+    case 'ascending':
+      return `Monte · ${alt} d’altitude`;
+    case 'descending':
+      return landingTime !== undefined && landingTime > now ? `Redescend · atterrit ${relative(landingTime, now)}` : `Redescend · ${alt} d’altitude`;
+    case 'landed':
+      return `Au sol · dernier signal ${ago(s.lastTime, now)}`;
+    case 'lost':
+      return `Signal perdu ${ago(s.lastTime, now)}`;
+  }
+}
+
 const SondeRow = memo(function SondeRow({
   sonde: s,
   units,
@@ -1011,6 +1124,8 @@ const SondeRow = memo(function SondeRow({
   distanceM,
   active = false,
   near,
+  expert,
+  landingTime,
 }: {
   sonde: Sonde;
   units: Units;
@@ -1018,13 +1133,16 @@ const SondeRow = memo(function SondeRow({
   distanceM?: number;
   active?: boolean;
   near?: NearbyInfo;
+  expert: boolean;
+  landingTime?: number;
 }) {
   const hovered = useStore((st) => st.hovered === s.serial);
   const { select, setHovered } = useStore.getState();
   const colour = PHASE_COLOUR[s.phase];
   const vv = s.last.vel_v;
   const flying = s.phase !== 'landed' && s.phase !== 'lost';
-  const alts = useMemo(() => s.track.map((p) => p[2]), [s.track, s.track.length]);
+  const alts = useMemo(() => (expert ? s.track.map((p) => p[2]) : []), [expert, s.track, s.track.length]);
+  const soon = landingTime !== undefined && landingTime > now && landingTime - now < 3_600_000;
   return (
     <div
       className={rowWrapper(hovered || active, active)}
@@ -1032,7 +1150,7 @@ const SondeRow = memo(function SondeRow({
       onPointerLeave={(e) => e.pointerType === 'mouse' && setHovered(null)}
     >
       <button type="button" id={rowId(s.serial)} data-testid="sonde-row" data-nav-row onClick={() => select(s.serial, true)} className={ROW_BUTTON}>
-        <span className="relative grid size-9 shrink-0 place-items-center rounded-xl" style={{ background: `${colour}1c` }}>
+        <span className="relative grid size-9 shrink-0 place-items-center rounded-xl" style={{ background: `${colour}1c` }} title={PHASE_LABEL[s.phase]}>
           <MapIcon id={`sonde-${s.phase}`} size={22} />
           {flying && now - s.lastTime < 60_000 && (
             <span className="live-dot absolute -top-0.5 -right-0.5 size-2 rounded-full bg-emerald-400 ring-2 ring-[var(--panel-solid)]" />
@@ -1041,13 +1159,14 @@ const SondeRow = memo(function SondeRow({
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <span className="truncate font-mono text-[13px] font-semibold">{s.serial}</span>
-            <span className="text-muted-foreground truncate text-[11px]">{s.subtype ?? s.type}</span>
+            {expert && <span className="text-muted-foreground truncate text-[11px]">{s.subtype ?? s.type}</span>}
+            {expert && s.last.frequency ? <span className="tabular text-faint shrink-0 font-mono text-[10.5px]">{s.last.frequency.toFixed(3)}</span> : null}
           </span>
           {near ? (
             <span className={cx('block truncate text-[11.5px]', near.landing && near.landing.time > now ? 'text-foreground/85 font-medium' : 'text-muted-foreground')}>
               {nearbyLine(s, near, units, now)}
             </span>
-          ) : (
+          ) : expert ? (
             <span className="text-muted-foreground flex items-center gap-1.5 text-[11.5px] whitespace-nowrap">
               <span className="tabular text-foreground shrink-0 font-mono font-medium">{fmtAltShort(s.last.alt, units)}</span>
               {vv !== undefined && flying && (
@@ -1056,11 +1175,16 @@ const SondeRow = memo(function SondeRow({
                 </span>
               )}
               <span className="min-w-0 truncate">· {ago(s.lastTime, now)}</span>
-              {distanceM !== undefined && <span className="tabular shrink-0">· {(distanceM / 1000).toFixed(0)} km</span>}
+              {distanceM !== undefined && <span className="tabular shrink-0">· {fmtDist(distanceM, units)}</span>}
+            </span>
+          ) : (
+            <span className={cx('block truncate text-[11.5px]', soon ? 'text-foreground/85 font-medium' : 'text-muted-foreground')}>
+              {plainLine(s, units, now, landingTime)}
+              {distanceM !== undefined && <span className="text-muted-foreground font-normal"> · à {fmtDist(distanceM, units)}</span>}
             </span>
           )}
         </span>
-        {near ? <Direction deg={near.bearing} /> : <Sparkline values={alts} colour={colour} />}
+        {near ? <Direction deg={near.bearing} /> : expert ? <Sparkline values={alts} colour={colour} /> : null}
       </button>
       <FavButton serial={s.serial} />
     </div>
