@@ -262,7 +262,17 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         group: 'Fond de carte',
         label: `Fond de carte : ${b.label}`,
         keywords: `fond carte basemap ${b.id}`,
-        icon: <span className="size-4 shrink-0 rounded-[5px] ring-1 ring-black/10 dark:ring-white/15" style={{ background: b.swatch }} />,
+        icon: (
+          <img
+            src={b.preview}
+            alt=""
+            width={16}
+            height={16}
+            decoding="async"
+            className="size-4 shrink-0 rounded-[4px] object-cover ring-1 ring-black/10 dark:ring-white/15"
+            style={{ background: b.swatch }}
+          />
+        ),
         active: settings.basemap === b.id,
         run: () => setSettings({ basemap: b.id }),
       });
