@@ -90,6 +90,7 @@
   --text: #425466;
   --text-dim: #425466;
   --text-faint: #66748a;
+  --chart-pred: #7d8796;
   color-scheme: light;
 }
 .dark {
@@ -121,6 +122,7 @@
   --text: #a3adba;
   --text-dim: #a3adba;
   --text-faint: #7d8796;
+  --chart-pred: #6e7783;
   color-scheme: dark;
 }
 
@@ -277,6 +279,26 @@ body,
 }
 .u-select {
   background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.st-chart .uplot .u-cursor-x {
+  border-right: 1px solid var(--muted-foreground);
+  opacity: 0.55;
+}
+.st-chart .u-cursor-pt {
+  box-sizing: border-box;
+}
+.key-solid {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primary);
+}
+.key-dashed {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  border-top: 2px dashed var(--chart-pred);
 }
 
 input[type='search']::-webkit-search-cancel-button {

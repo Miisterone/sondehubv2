@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Bell, BellRing, ChevronDown, Info, LoaderCircle, MapPin, MapPinOff, Navigation2, Radar, RotateCw, Search, SearchX, SlidersHorizontal, Star, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bell, BellRing, ChevronDown, Info, LoaderCircle, MapPin, MapPinOff, Navigation2, Radar, RotateCw, Search, SearchX, SlidersHorizontal, Star, X } from 'lucide-react';
 import { Drawer as DrawerPrimitive } from 'vaul';
 import { toast } from 'sonner';
 import type { MapMouseEvent } from 'maplibre-gl';
@@ -25,7 +25,6 @@ import { IconButton, Logo, MapIcon, Segmented, cx } from './ui';
 import { SondeDetail } from './SondeDetail';
 import { StatusPill } from './StatusPill';
 import { FlightGuide } from './FlightGuide';
-import { NavMenu } from './NavMenu';
 import { getMap } from './MapView';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
@@ -302,9 +301,9 @@ function describe(s: Sonde, landing: PredictionPoint | null, me: UserLocation | 
   const base = { serial: s.serial, sonde: s };
   switch (s.phase) {
     case 'ascending':
-      return { ...base, status: `Monte, à ${alt} d’altitude${away(s.last.lat, s.last.lon)}` };
+      return { ...base, status: `En montée${away(s.last.lat, s.last.lon)}` };
     case 'descending': {
-      if (!landing) return { ...base, status: `Redescend, à ${alt} d’altitude${away(s.last.lat, s.last.lon)}` };
+      if (!landing) return { ...base, status: `Redescend sous parachute${away(s.last.lat, s.last.lon)}` };
       const t = landing.time * 1000;
       return {
         ...base,
@@ -1119,8 +1118,8 @@ function SondeItem({
         <FavButton serial={serial} />
       </div>
       {s && (
-        <div className="-mt-1.5 flex flex-wrap items-center gap-2 pr-5 pb-3.5 pl-[64px]">
-          {item.target && <NavMenu target={item.target} heading={item.targetHeading ?? 'Itinéraire'} className="h-7 px-2.5 text-[12.5px]" />}
+        <div className="-mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pr-5 pb-3.5 pl-[64px]">
+          {(s.phase === 'ascending' || s.phase === 'descending') && <FlightMetrics sonde={s} units={units} />}
           <button
             type="button"
             aria-expanded={expanded}
@@ -1135,6 +1134,21 @@ function SondeItem({
       )}
       {s && expanded && <TechList id={techId} sonde={s} units={units} now={now} />}
     </li>
+  );
+}
+
+function FlightMetrics({ sonde: s, units }: { sonde: Sonde; units: Units }) {
+  const vv = s.last.vel_v;
+  return (
+    <span className="tabular flex items-center gap-2 text-[12.5px]">
+      <span className="text-foreground font-semibold">{fmtAltShort(s.last.alt, units)}</span>
+      {vv !== undefined && Number.isFinite(vv) && (
+        <span className="flex items-center gap-0.5">
+          {vv >= 0 ? <ArrowUp aria-hidden className="size-3" /> : <ArrowDown aria-hidden className="size-3" />}
+          {fmtVSpeed(vv, units)}
+        </span>
+      )}
+    </span>
   );
 }
 

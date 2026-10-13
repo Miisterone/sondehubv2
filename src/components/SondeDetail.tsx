@@ -28,13 +28,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
-import { ago, fmtAlt, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtDuration, fmtFreq, fmtHSpeed, fmtNum, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
+import { ago, fmtAlt, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtFreq, fmtHSpeed, fmtNum, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import type { Prediction, PredictionPoint, Sonde } from '@/lib/types';
-import { bearing, compass, distance, elevation } from '@/lib/geo';
+import { bearing, compass, distance, elevation, towards } from '@/lib/geo';
+import { buildFlight, buildSounding } from '@/lib/flight';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
 import { ALT_RAMP } from './MapView';
-import { IconButton, MapIcon, PhaseBadge, Section, Stat, cx } from './ui';
+import { GroundTrack } from './GroundTrack';
+import { FlightTimeline } from './FlightTimeline';
+import { IconButton, MapIcon, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
 import { NavMenu } from './NavMenu';
@@ -44,32 +47,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const SondeCharts = lazy(() => import('./SondeCharts').then((m) => ({ default: m.SondeCharts })));
+const charts = () => import('./FlightCharts');
+const AltitudeChart = lazy(() => charts().then((m) => ({ default: m.AltitudeChart })));
+const SpeedChart = lazy(() => charts().then((m) => ({ default: m.SpeedChart })));
+const ProfileChart = lazy(() => charts().then((m) => ({ default: m.ProfileChart })));
+const SoundingCharts = lazy(() => charts().then((m) => ({ default: m.SoundingCharts })));
+const FlightTable = lazy(() => charts().then((m) => ({ default: m.FlightTable })));
 
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
 
 const RECEIVERS_PREVIEW = 8;
 
-const COMPASS_WORD: Record<string, string> = {
-  N: 'nord',
-  NNE: 'nord-nord-est',
-  NE: 'nord-est',
-  ENE: 'est-nord-est',
-  E: 'est',
-  ESE: 'est-sud-est',
-  SE: 'sud-est',
-  SSE: 'sud-sud-est',
-  S: 'sud',
-  SSO: 'sud-sud-ouest',
-  SO: 'sud-ouest',
-  OSO: 'ouest-sud-ouest',
-  O: 'ouest',
-  ONO: 'ouest-nord-ouest',
-  NO: 'nord-ouest',
-  NNO: 'nord-nord-ouest',
-};
-
-const towards = (deg: number) => COMPASS_WORD[compass(deg)] ?? compass(deg);
+type TrackView = 'plan' | 'profile';
 
 async function copyText(text: string, success: string) {
   try {
@@ -96,6 +85,7 @@ export function SondeDetail({ serial }: { serial: string }) {
   const [showReceivers, setShowReceivers] = useState(false);
   const [allReceivers, setAllReceivers] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [trackView, setTrackView] = useState<TrackView>('plan');
 
   const launch = useMemo(() => {
     if (!sonde?.track.length) return null;
@@ -109,7 +99,16 @@ export function SondeDetail({ serial }: { serial: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sonde?.track[0], sites]);
 
-  if (!sonde) {
+  const flight = useMemo(
+    () => (sonde ? buildFlight(sonde, usefulPrediction(sonde, prediction) ? prediction : null) : null),
+    [sonde?.track.length, sonde?.lastTime, sonde?.phase, sonde?.maxAltIdx, sonde?.detailed, prediction],
+  );
+  const sounding = useMemo(
+    () => (sonde ? buildSounding(sonde) : { alt: [], temp: [], hum: [] }),
+    [sonde?.track.length, sonde?.maxAltIdx, sonde?.detailed],
+  );
+
+  if (!sonde || !flight) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-2 border-b px-3 py-3">
@@ -132,7 +131,8 @@ export function SondeDetail({ serial }: { serial: string }) {
 
   const f = sonde.last;
   const vv = f.vel_v;
-  const landing = usefulPrediction(sonde, prediction) ? prediction.landing : null;
+  const useful = usefulPrediction(sonde, prediction);
+  const landing = useful ? prediction.landing : null;
   const flying = sonde.phase === 'ascending' || sonde.phase === 'descending';
   const target = landing ? { lat: landing.lat, lon: landing.lon } : { lat: f.lat, lon: f.lon };
   const fromMe = me ? { d: distance(me.lat, me.lon, target.lat, target.lon), b: bearing(me.lat, me.lon, target.lat, target.lon) } : null;
@@ -146,6 +146,11 @@ export function SondeDetail({ serial }: { serial: string }) {
   const falling = vv !== undefined && vv < -0.5;
   const recoverable = sonde.phase === 'landed' || sonde.phase === 'lost' || (sonde.phase === 'descending' && f.alt < 3000);
   const showLanding = landing || sonde.phase === 'landed' || sonde.phase === 'lost';
+  const syncKey = `vol-${sonde.serial}`;
+  const hasSounding = sounding.alt.length > 1;
+  const launchPt = flight.x.length ? { lat: flight.lat[0], lon: flight.lon[0] } : null;
+  const toLanding = landing ? distance(f.lat, f.lon, landing.lat, landing.lon) : null;
+  const drift = launchPt ? distance(launchPt.lat, launchPt.lon, f.lat, f.lon) : 0;
 
   const toggleFav = () => {
     toggleFavourite(sonde.serial);
@@ -205,10 +210,59 @@ export function SondeDetail({ serial }: { serial: string }) {
       </div>
 
       <ScrollArea className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:block!">
-        <div className="space-y-6 px-5 pt-5 pb-10">
-          <div className="space-y-3">
-            <PhaseBadge phase={sonde.phase} />
-            <p className="text-[14px] leading-relaxed">{summarise(sonde, launch, landing, prediction, now, units)}</p>
+        <div className="space-y-8 px-5 pt-5 pb-10">
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <PhaseBadge phase={sonde.phase} />
+              <span className="flex items-center gap-2 text-[12.5px]">
+                <span className={cx('relative size-2 shrink-0 rounded-full', live ? 'live-dot bg-live' : 'bg-faint')} />
+                {live ? 'En direct' : 'Dernier signal'} · {ago(sonde.lastTime, now)}
+              </span>
+            </div>
+
+            <div>
+              <div className="text-[12.5px]">Altitude</div>
+              <div className="font-heading tabular text-foreground text-[36px] leading-none font-semibold">{fmtAlt(f.alt, units)}</div>
+              <div className="mt-1.5 flex items-center gap-1 text-[12.5px]">
+                <span className="min-w-0 truncate">
+                  {burstAlt
+                    ? `Éclatement à ${fmtAltShort(burstAlt, units)}`
+                    : sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt
+                      ? `Éclatement prévu vers ${fmtAltShort(prediction.burstAltitude, units)}`
+                      : `Maximum atteint ${fmtAltShort(sonde.maxAlt, units)}`}
+                </span>
+                <HelpHint title={burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
+                  {burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
+                </HelpHint>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1 text-[12.5px]">
+                  <span className="truncate">{flying ? (falling ? 'Vitesse de chute' : 'Vitesse de montée') : 'Vitesse verticale'}</span>
+                  <HelpHint title={HELP.vspeed.title}>{HELP.vspeed.text}</HelpHint>
+                </div>
+                <div className="font-heading tabular text-foreground mt-0.5 flex items-center gap-1 text-[22px] leading-tight font-semibold">
+                  {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />)}
+                  {fmtVSpeed(vv, units)}
+                </div>
+                <div className="text-faint truncate text-[12px]">{flying ? (falling ? 'sous parachute' : 'portée par le ballon') : 'à la dernière mesure'}</div>
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1 text-[12.5px]">
+                  <span className="truncate">Vitesse horizontale</span>
+                  <HelpHint title={HELP.hspeed.title} align="end">
+                    {HELP.hspeed.text}
+                  </HelpHint>
+                </div>
+                <div className="font-heading tabular text-foreground mt-0.5 text-[22px] leading-tight font-semibold">{fmtHSpeed(f.vel_h, units)}</div>
+                <div className="text-faint truncate text-[12px]">{f.heading !== undefined ? `vers le ${towards(f.heading)}` : 'poussée par le vent'}</div>
+              </div>
+            </div>
+
+            <p className="text-[13.5px] leading-relaxed">{summarise(sonde, launch, landing, prediction, now, units)}</p>
+
             {recovery && (
               <div className="flex gap-3 rounded-md border px-3 py-2.5 text-[13px] leading-snug">
                 <PackageCheck className="text-foreground mt-0.5 size-4 shrink-0" />
@@ -224,58 +278,118 @@ export function SondeDetail({ serial }: { serial: string }) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-end justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-[12.5px]">Altitude</div>
-                <div className="font-heading tabular text-foreground text-[34px] leading-none font-semibold">{fmtAlt(f.alt, units)}</div>
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="flex items-center justify-end gap-1 text-[12.5px]">
-                  {flying ? (falling ? 'Vitesse de chute' : 'Vitesse de montée') : 'Vitesse verticale'}
-                  <HelpHint title={HELP.vspeed.title} align="end">
-                    {HELP.vspeed.text}
-                  </HelpHint>
-                </div>
-                <div className="font-heading tabular text-foreground flex items-center justify-end gap-1 text-[20px] leading-tight font-semibold">
-                  {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />)}
-                  {fmtVSpeed(vv, units)}
-                </div>
-              </div>
+          <Section
+            title={
+              <>
+                Altitude
+                <HelpHint title="Lire la courbe">
+                  Trait plein : altitude mesurée. Pointillés : suite du vol prévue par le modèle Tawhiri. Survolez ou faites glisser le doigt sur la courbe pour lire
+                  les valeurs à chaque instant.
+                </HelpHint>
+              </>
+            }
+            className="border-t pt-6"
+          >
+            <Suspense fallback={<div className="h-[318px]" />}>
+              <AltitudeChart d={flight} units={units} now={now} live={live} syncKey={syncKey} />
+            </Suspense>
+          </Section>
+
+          <Section
+            title={
+              <>
+                Vitesse
+                <HelpHint title={HELP.vspeed.title}>{HELP.vspeed.text}</HelpHint>
+              </>
+            }
+            className="border-t pt-6"
+          >
+            <Suspense fallback={<div className="h-[360px]" />}>
+              <SpeedChart d={flight} units={units} now={now} live={live} syncKey={syncKey} />
+              <FlightTable d={flight} units={units} />
+            </Suspense>
+          </Section>
+
+          <Section
+            title={
+              <>
+                Trajectoire
+                <HelpHint title={HELP.trajectory.title}>{HELP.trajectory.text}</HelpHint>
+              </>
+            }
+            className="border-t pt-6"
+          >
+            <div className="grid grid-cols-3 gap-4">
+              <Stat label="Parcourue" value={fmtDist(flight.path[flight.last] ?? 0, units)} sub="depuis le lâcher" />
+              {toLanding !== null && flying ? (
+                <Stat label="Reste" value={fmtDist(toLanding, units)} sub="avant d’atterrir" />
+              ) : (
+                <Stat label="Du lâcher" value={fmtDist(drift, units)} sub="à vol d’oiseau" />
+              )}
+              <Stat label="Cap" value={f.heading !== undefined ? `${Math.round(f.heading)}°` : '—'} sub={f.heading !== undefined ? `vers le ${compass(f.heading)}` : undefined} />
             </div>
-            <div className="flex items-center gap-2 text-[12.5px]">
-              <span className={cx('relative size-2 shrink-0 rounded-full', live ? 'live-dot bg-live' : 'bg-faint')} />
-              {live ? 'En direct' : 'Dernier signal'} · {ago(sonde.lastTime, now)}
-            </div>
-            {flying && f.vel_h !== undefined && (
-              <p className="text-[13px]">
-                Poussée par le vent à <span className="text-foreground font-semibold">{fmtHSpeed(f.vel_h, units)}</span>
-                {f.heading !== undefined ? ` vers le ${towards(f.heading)}` : ''}.
-              </p>
+            <Segmented<TrackView>
+              size="sm"
+              value={trackView}
+              onChange={setTrackView}
+              className="w-full [&>*]:flex-1"
+              options={[
+                { value: 'plan', label: 'Vue de dessus', title: 'Le trajet au sol, nord en haut' },
+                { value: 'profile', label: 'Profil', title: 'L’altitude selon la distance parcourue' },
+              ]}
+            />
+            {trackView === 'plan' ? (
+              <GroundTrack d={flight} units={units} now={now} live={live} />
+            ) : (
+              <Suspense fallback={<div className="h-[290px]" />}>
+                <ProfileChart d={flight} units={units} now={now} live={live} />
+              </Suspense>
             )}
-          </div>
+            <AltitudeLegend units={units} />
+          </Section>
+
+          <Section
+            title={
+              <>
+                {useful && flying ? 'Prévision du vol' : 'Déroulé du vol'}
+                <HelpHint title={HELP.prediction.title}>{HELP.prediction.text}</HelpHint>
+              </>
+            }
+            className="border-t pt-6"
+          >
+            <FlightTimeline d={flight} phase={sonde.phase} prediction={useful ? prediction : null} units={units} now={now} launch={launch} />
+          </Section>
+
+          <Section title="Ce que mesure la sonde" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>} className="border-t pt-6">
+            <div className="grid grid-cols-3 gap-4">
+              <Stat icon={<Thermometer />} label="Température" value={fmtTemp(f.temp, units)} sub="de l’air" />
+              <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />
+              <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa', 0)} sub={pressureSub(f.pressure)} />
+            </div>
+            {hasSounding && (
+              <Suspense fallback={<div className="h-[340px]" />}>
+                <SoundingCharts s={sounding} units={units} syncKey={`sondage-${sonde.serial}`} />
+              </Suspense>
+            )}
+          </Section>
 
           {showLanding && (
-            <section className="space-y-3 rounded-lg border p-4">
+            <Section title={flying ? 'Où va-t-elle tomber ?' : 'Où se trouve-t-elle ?'} className="border-t pt-6">
               <div className="flex items-start gap-3">
-                <MapIcon id="landing" size={24} className="mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold">
-                      <span className="truncate">
-                        {landing ? (flying ? 'Atterrissage prévu' : 'Atterrissage estimé') : sonde.phase === 'landed' ? 'Position au sol' : 'Dernière position connue'}
-                      </span>
-                      {landing ? (
-                        <HelpHint title={HELP.landing.title}>{HELP.landing.text}</HelpHint>
-                      ) : sonde.phase === 'lost' ? (
-                        <HelpHint title={HELP.lost.title}>{HELP.lost.text}</HelpHint>
-                      ) : null}
-                    </h3>
-                    {landing && flying && (
-                      <span className="tabular text-foreground shrink-0 text-[14px] font-semibold">{relative(landing.time * 1000, now)}</span>
-                    )}
+                <MapIcon id="landing" size={22} className="mt-0.5" />
+                <div className="min-w-0 flex-1 text-[13px] leading-relaxed">
+                  <div className="text-foreground flex items-center gap-1.5 font-semibold">
+                    <span className="truncate">
+                      {landing ? (flying ? 'Atterrissage prévu' : 'Atterrissage estimé') : sonde.phase === 'landed' ? 'Position au sol' : 'Dernière position connue'}
+                      {landing && flying ? ` ${relative(landing.time * 1000, now)}` : ''}
+                    </span>
+                    {landing ? (
+                      <HelpHint title={HELP.landing.title}>{HELP.landing.text}</HelpHint>
+                    ) : sonde.phase === 'lost' ? (
+                      <HelpHint title={HELP.lost.title}>{HELP.lost.text}</HelpHint>
+                    ) : null}
                   </div>
-                  <div className="text-[13px]">
+                  <div>
                     {landing && flying && <>vers {fmtClock(landing.time * 1000).slice(0, 5)}</>}
                     {landing && !flying && (
                       <>
@@ -285,83 +399,37 @@ export function SondeDetail({ serial }: { serial: string }) {
                     {!landing && ago(sonde.lastTime, now)}
                     {fromMe && <> · à {fmtDist(fromMe.d, units)} de vous, vers le {towards(fromMe.b)}</>}
                   </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="tabular text-muted-foreground hover:text-foreground -ml-2 text-[12.5px] font-normal"
+                        onClick={() => copyText(`${target.lat.toFixed(5)}, ${target.lon.toFixed(5)}`, 'Coordonnées copiées')}
+                      >
+                        {fmtCoord(target.lat, target.lon)}
+                        <Copy />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Copier les coordonnées</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <NavMenu
-                  target={target}
-                  variant="default"
-                  heading={landing ? 'Itinéraire vers l’atterrissage' : 'Itinéraire vers la sonde'}
-                  className="h-9 flex-1 text-[13.5px]"
-                />
-                <Button variant="outline" className="h-9 flex-1 text-[13.5px]" onClick={() => requestFly(target.lon, target.lat, 12)}>
+                <Button variant="outline" size="sm" className="text-[13px]" onClick={() => requestFly(target.lon, target.lat, 12)}>
                   <Crosshair /> Voir sur la carte
                 </Button>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="tabular text-muted-foreground hover:text-foreground -ml-2 text-[12.5px] font-normal"
-                    onClick={() => copyText(`${target.lat.toFixed(5)}, ${target.lon.toFixed(5)}`, 'Coordonnées copiées')}
-                  >
-                    {fmtCoord(target.lat, target.lon)}
-                    <Copy />
+                <NavMenu target={target} heading={landing ? 'Itinéraire vers l’atterrissage' : 'Itinéraire vers la sonde'} className="text-[13px]" />
+                {recoverable && (
+                  <Button variant="ghost" size="sm" className="text-[13px]" onClick={() => setReporting(true)}>
+                    <PackageCheck /> Je l’ai trouvée
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Copier les coordonnées</TooltipContent>
-              </Tooltip>
-            </section>
+                )}
+              </div>
+            </Section>
           )}
 
-          {recoverable && (
-            <Button variant="outline" className="h-9 w-full text-[13.5px]" onClick={() => setReporting(true)}>
-              <PackageCheck /> J’ai trouvé cette sonde
-            </Button>
-          )}
-
-          <Section title="Le vol" className="border-t pt-6">
-            <div className="grid grid-cols-3 gap-4">
-              <Stat
-                label={<HintLabel label={burstAlt ? 'Éclatement' : 'Alt. max'} help={burstAlt || sonde.phase === 'ascending' ? HELP.burst : HELP.maxAlt} />}
-                value={fmtAltShort(burstAlt ?? sonde.maxAlt, units)}
-                sub={!burstAlt && prediction && sonde.phase === 'ascending' ? `prévu ${fmtAltShort(prediction.burstAltitude, units)}` : undefined}
-              />
-              <Stat
-                label="Durée"
-                value={launch ? `${launch.fromGround ? '' : '≥ '}${fmtDuration(sonde.lastTime - launch.t)}` : '—'}
-                sub={launch ? (launch.fromGround ? `depuis ${fmtClock(launch.t).slice(0, 5)}` : `reçue dès ${fmtClock(launch.t).slice(0, 5)}`) : undefined}
-              />
-              <Stat
-                label={<HintLabel label={sonde.phase === 'ascending' ? 'Montée' : 'Descente'} help={HELP.rate} />}
-                value={prediction ? fmtVSpeed(sonde.phase === 'ascending' ? prediction.ascentRate : -prediction.descentRate, units) : '—'}
-                sub={prediction ? 'en moyenne' : undefined}
-              />
-            </div>
-          </Section>
-
-          <Section title={<>Altitude au fil du vol <HelpHint title="Lire la courbe">Trait plein : altitude mesurée. Pointillés : suite du vol prévue par le modèle Tawhiri, recalculée régulièrement.</HelpHint></>}>
-            <Suspense fallback={<div className="h-[180px]" />}>
-              <SondeCharts sonde={sonde} prediction={prediction} units={units} simple />
-            </Suspense>
-            <AltitudeLegend units={units} />
-          </Section>
-
-          <Section title="Ce que mesure la sonde" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>}>
-            <div className="grid grid-cols-3 gap-4">
-              <Stat icon={<Thermometer />} label="Température" value={fmtTemp(f.temp, units)} sub="de l’air" />
-              <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />
-              <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa', 0)} sub={pressureSub(f.pressure)} />
-            </div>
-            {meToSonde && (
-              <p className="text-[13px]">
-                La sonde est à <span className="text-foreground font-semibold">{fmtDist(meToSonde.d, units)}</span> de vous, vers le {towards(meToSonde.az)}.
-              </p>
-            )}
-          </Section>
-
-          <Section title="Qui reçoit son signal ?" right={<HelpHint title={HELP.receivers.title} align="end">{HELP.receivers.text}</HelpHint>}>
+          <Section title="Qui reçoit son signal ?" right={<HelpHint title={HELP.receivers.title} align="end">{HELP.receivers.text}</HelpHint>} className="border-t pt-6">
             {receivers.length === 0 ? (
               <p className="text-[13px]">Aucune station ne l’a encore captée sur la période affichée.</p>
             ) : (
@@ -383,7 +451,7 @@ export function SondeDetail({ serial }: { serial: string }) {
             <Button variant="outline" className="h-9 w-full text-[13.5px]" onClick={() => share(sonde, landing, now, units)}>
               <Share2 /> Partager cette sonde
             </Button>
-            {!recoverable && (
+            {!showLanding && (
               <Button variant="link" size="xs" className="-ml-2 h-auto text-[13px] font-normal" onClick={() => setReporting(true)}>
                 Vous avez trouvé cette sonde ? Signalez-le
               </Button>
@@ -400,7 +468,7 @@ export function SondeDetail({ serial }: { serial: string }) {
             >
               <span className="min-w-0 flex-1">
                 <span className="font-heading text-foreground block text-[15px] font-semibold">Détails techniques</span>
-                <span className="block text-[12.5px]">Fréquence, batterie, GPS, pointage d’antenne, réception, courbes, export</span>
+                <span className="block text-[12.5px]">Fréquence, batterie, GPS, pointage d’antenne, réception, export</span>
               </span>
               <ChevronDown className={cx('text-muted-foreground size-5 transition-transform', techOpen && 'rotate-180')} />
             </button>
@@ -432,16 +500,6 @@ export function SondeDetail({ serial }: { serial: string }) {
                     </div>
                   </div>
                 )}
-
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-1.5 text-[14px] font-semibold">
-                    Courbes détaillées
-                    <HelpHint title={HELP.profile.title}>{HELP.profile.text}</HelpHint>
-                  </h4>
-                  <Suspense fallback={<div className="h-[228px]" />}>
-                    <SondeCharts sonde={sonde} prediction={prediction} units={units} />
-                  </Suspense>
-                </div>
 
                 {receivers.length > 0 && (
                   <div className="space-y-3">
@@ -494,15 +552,6 @@ export function SondeDetail({ serial }: { serial: string }) {
       </ScrollArea>
       <RecoveryDialog serial={sonde.serial} open={reporting} onOpenChange={setReporting} />
     </div>
-  );
-}
-
-function HintLabel({ label, help }: { label: string; help: { title: string; text: string } }) {
-  return (
-    <span className="flex min-w-0 items-center gap-1">
-      <span className="truncate">{label}</span>
-      <HelpHint title={help.title}>{help.text}</HelpHint>
-    </span>
   );
 }
 

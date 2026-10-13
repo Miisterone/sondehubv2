@@ -82,7 +82,15 @@ export const HELP = {
   },
   vspeed: {
     title: 'Vitesse verticale',
-    text: 'Vitesse instantanée à laquelle la sonde monte (+) ou descend (−). La seconde ligne indique la vitesse et la direction de déplacement horizontal, poussée par le vent.',
+    text: 'Vitesse à laquelle la sonde monte (+) ou descend (−). Le ballon monte vers 5 m/s ; juste après l’éclatement, la sonde chute très vite dans l’air raréfié, puis ralentit sous son parachute à l’approche du sol.',
+  },
+  hspeed: {
+    title: 'Vitesse horizontale',
+    text: 'Vitesse de déplacement au-dessus du sol, imposée par le vent. Elle culmine souvent vers 10 à 12 km d’altitude, dans le courant-jet. Elle est calculée à partir des positions GPS successives.',
+  },
+  trajectory: {
+    title: 'Trajectoire',
+    text: 'Chemin suivi par la sonde depuis son lâcher, vu de dessus (nord en haut) ou de profil (altitude selon la distance parcourue). Les pointillés montrent la suite prévue jusqu’à l’atterrissage.',
   },
   sensors: {
     title: 'Capteurs & télémesure',

@@ -33,6 +33,29 @@ export function compass(deg: number): string {
   return COMPASS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
 }
 
+const COMPASS_WORD: Record<string, string> = {
+  N: 'nord',
+  NNE: 'nord-nord-est',
+  NE: 'nord-est',
+  ENE: 'est-nord-est',
+  E: 'est',
+  ESE: 'est-sud-est',
+  SE: 'sud-est',
+  SSE: 'sud-sud-est',
+  S: 'sud',
+  SSO: 'sud-sud-ouest',
+  SO: 'sud-ouest',
+  OSO: 'ouest-sud-ouest',
+  O: 'ouest',
+  ONO: 'ouest-nord-ouest',
+  NO: 'nord-ouest',
+  NNO: 'nord-nord-ouest',
+};
+
+export function towards(deg: number): string {
+  return COMPASS_WORD[compass(deg)] ?? compass(deg);
+}
+
 export function parseLatLon(v: unknown): [number, number] | undefined {
   if (Array.isArray(v) && v.length >= 2) {
     const lat = Number(v[0]);

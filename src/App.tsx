@@ -93,12 +93,13 @@ export default function App() {
     const serial = parseHash().get('s');
     if (serial) {
       useStore.getState().select(serial);
+      let done = false;
       const unsub = useStore.subscribe((s) => {
         const sonde = s.sondes[serial];
-        if (sonde) {
-          s.requestFly(sonde.last.lon, sonde.last.lat, 10);
-          unsub();
-        }
+        if (!sonde || done) return;
+        done = true;
+        unsub();
+        s.requestFly(sonde.last.lon, sonde.last.lat, 10);
       });
       return unsub;
     }
