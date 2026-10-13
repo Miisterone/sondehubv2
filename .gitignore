@@ -150,3 +150,4 @@ vite.config.ts.timestamp-*
 
 # SondeTrack
 .DS_Store
+.vercel
