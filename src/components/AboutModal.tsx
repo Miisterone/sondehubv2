@@ -88,7 +88,7 @@ const FAQ: [string, ReactNode][] = [
 ];
 
 function Heading({ children }: { children: ReactNode }) {
-  return <h3 className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wider uppercase">{children}</h3>;
+  return <h3 className="mb-2 text-[14px] font-semibold">{children}</h3>;
 }
 
 export function AboutModal({ onClose }: { onClose: () => void }) {
@@ -96,7 +96,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="glass glass-strong scroll-thin max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto rounded-2xl p-5 sm:max-w-lg sm:p-6"
+        className="glass scroll-thin max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto rounded-lg p-5 sm:max-w-lg sm:p-6"
       >
         <DialogHeader className="mb-4 flex-row items-center gap-3 pr-8 text-left">
           <Logo className="size-11 shrink-0" />
@@ -167,7 +167,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-[13px] sm:grid-cols-2">
             {SHORTCUTS.map(([key, label]) => (
               <div key={key} className="text-muted-foreground grid grid-cols-[3.75rem_1fr] items-center gap-1">
-                <Kbd className="bg-chip text-foreground justify-self-start font-mono">{key}</Kbd>
+                <Kbd className="bg-chip text-foreground justify-self-start tabular">{key}</Kbd>
                 {label}
               </div>
             ))}

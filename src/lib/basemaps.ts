@@ -26,9 +26,9 @@ export interface Basemap {
 }
 
 export const BASEMAPS: Basemap[] = [
-  { id: 'dark', label: 'Nuit', dark: true, style: 'https://tiles.openfreemap.org/styles/dark', swatch: 'linear-gradient(135deg,#1b2233,#0b0f17)' },
-  { id: 'liberty', label: 'Plan', dark: false, style: 'https://tiles.openfreemap.org/styles/liberty', swatch: 'linear-gradient(135deg,#f3efe6,#bfd8c2)' },
-  { id: 'positron', label: 'Clair', dark: false, style: 'https://tiles.openfreemap.org/styles/positron', swatch: 'linear-gradient(135deg,#fafafa,#dfe3e8)' },
+  { id: 'dark', label: 'Nuit', dark: true, style: 'https://tiles.openfreemap.org/styles/dark', swatch: '#1b2233' },
+  { id: 'liberty', label: 'Plan', dark: false, style: 'https://tiles.openfreemap.org/styles/liberty', swatch: '#f3efe6' },
+  { id: 'positron', label: 'Clair', dark: false, style: 'https://tiles.openfreemap.org/styles/positron', swatch: '#fafafa' },
   {
     id: 'satellite',
     label: 'Satellite',
@@ -37,7 +37,7 @@ export const BASEMAPS: Basemap[] = [
       ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       'Imagerie © Esri, Maxar, Earthstar Geographics',
     ),
-    swatch: 'linear-gradient(135deg,#2f4a2a,#5b6b4a 50%,#1d3346)',
+    swatch: '#2f4a2a',
   },
   {
     id: 'topo',
@@ -48,14 +48,14 @@ export const BASEMAPS: Basemap[] = [
       '© OpenStreetMap, SRTM | Style © OpenTopoMap (CC-BY-SA)',
       17,
     ),
-    swatch: 'linear-gradient(135deg,#e8e0c8,#a9c48f)',
+    swatch: '#e8e0c8',
   },
   {
     id: 'osm',
     label: 'OSM',
     dark: false,
     style: raster(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], '© les contributeurs OpenStreetMap'),
-    swatch: 'linear-gradient(135deg,#f2efe9,#aad3df)',
+    swatch: '#f2efe9',
   },
 ];
 

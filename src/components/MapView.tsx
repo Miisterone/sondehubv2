@@ -356,7 +356,7 @@ export function MapView() {
     // Keep camera targets clear of the side panel (desktop) or the bottom sheet (mobile).
     const applyPadding = () => {
       const mobile = window.innerWidth < 768;
-      map.setPadding(mobile ? { top: 0, right: 0, left: 0, bottom: Math.round(window.innerHeight * 0.45) } : { top: 0, right: 56, bottom: 0, left: 392 });
+      map.setPadding(mobile ? { top: 0, right: 0, left: 0, bottom: Math.round(window.innerHeight * 0.45) } : { top: 0, right: 56, bottom: 0, left: 380 });
     };
     applyPadding();
     window.addEventListener('resize', applyPadding);

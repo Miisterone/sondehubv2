@@ -150,7 +150,7 @@ export default function App() {
         <CommandPalette onAbout={() => setAbout(true)} />
         <Notifiers />
         <WelcomeCard />
-        <Toaster position="bottom-center" richColors closeButton />
+        <Toaster position="bottom-center" closeButton />
       </div>
     </TooltipProvider>
   );

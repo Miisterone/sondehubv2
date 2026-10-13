@@ -7,7 +7,7 @@ import { PALETTE_SHORTCUT } from '@/lib/platform';
 import { IconButton } from './ui';
 import { LayerPanel, setTheme } from './LayerPanel';
 
-const group = 'glass pointer-events-auto flex flex-col gap-0.5 rounded-2xl p-1';
+const group = 'bg-background pointer-events-auto flex flex-col gap-0.5 rounded-lg border p-1';
 
 export function MapControls() {
   const theme = useStore((s) => s.settings.theme);

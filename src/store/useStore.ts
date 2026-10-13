@@ -15,7 +15,6 @@ export const DURATION_MS: Record<Duration, number> = {
 };
 
 export type BasemapId = 'dark' | 'liberty' | 'positron' | 'satellite' | 'topo' | 'osm';
-export type SortKey = 'recent' | 'altitude' | 'serial' | 'distance' | 'landing';
 export type ConnState = 'connecting' | 'live' | 'offline';
 
 export interface Layers {
@@ -52,7 +51,7 @@ export interface Settings {
   callsign: string;
   /** Set once the welcome card has been dismissed. */
   onboarded: boolean;
-  expert: boolean;
+  techOpen: boolean;
 }
 
 /** Imperial units for locales that use them (US, Liberia, Myanmar); metric elsewhere. */
@@ -65,26 +64,15 @@ function localeUnits(): Units {
   }
 }
 
-/** Follows the OS preference on first visit. */
-function systemTheme(): 'dark' | 'light' {
-  try {
-    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  } catch {
-    return 'dark';
-  }
-}
-
-const FIRST_THEME = systemTheme();
-
 const DEFAULT_SETTINGS: Settings = {
-  theme: FIRST_THEME,
-  basemap: FIRST_THEME === 'light' ? 'positron' : 'dark',
+  theme: 'light',
+  basemap: 'positron',
   units: localeUnits(),
   favourites: [],
   alerts: { enabled: false, radiusKm: 50, favourites: true, system: true },
   callsign: '',
   onboarded: false,
-  expert: false,
+  techOpen: false,
   duration: '3h',
   terrain3d: false,
   layers: {
@@ -286,7 +274,6 @@ interface State {
   query: string;
   phaseFilter: Record<FlightPhase, boolean>;
   typeFilter: string | null;
-  sort: SortKey;
   userLocation: UserLocation | null;
 
   loading: boolean;
@@ -316,8 +303,6 @@ interface State {
   setQuery: (q: string) => void;
   togglePhase: (p: FlightPhase) => void;
   setTypeFilter: (t: string | null) => void;
-  setExpert: (v: boolean) => void;
-  setSort: (s: SortKey) => void;
   setUserLocation: (l: UserLocation | null) => void;
   setConn: (c: ConnState, rate?: number) => void;
   setLoading: (v: boolean, error?: string | null) => void;
@@ -339,7 +324,6 @@ export const useStore = create<State>((set, get) => ({
   query: '',
   phaseFilter: { ascending: true, descending: true, landed: true, lost: true },
   typeFilter: null,
-  sort: 'recent',
   userLocation: null,
 
   loading: true,
@@ -449,11 +433,6 @@ export const useStore = create<State>((set, get) => ({
   setQuery: (query) => set({ query }),
   togglePhase: (p) => set({ phaseFilter: { ...get().phaseFilter, [p]: !get().phaseFilter[p] } }),
   setTypeFilter: (typeFilter) => set({ typeFilter }),
-  setExpert: (expert) => {
-    get().setSettings({ expert });
-    if (!expert) set({ typeFilter: null, sort: 'recent' });
-  },
-  setSort: (sort) => set({ sort }),
   setUserLocation: (userLocation) => set({ userLocation }),
   setConn: (conn, rate) => set({ conn, msgRate: rate ?? get().msgRate }),
   setLoading: (loading, error = null) => set({ loading, error }),

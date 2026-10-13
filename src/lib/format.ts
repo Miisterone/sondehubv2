@@ -44,6 +44,13 @@ export function fmtNum(v: number | undefined, suffix = '', digits = 1): string {
   return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: digits }).format(v)}${suffix}`;
 }
 
+const nf3 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+
+export function fmtFreq(mhz: number | undefined, unit = true): string {
+  if (mhz === undefined || !Number.isFinite(mhz) || mhz <= 0) return '—';
+  return unit ? `${nf3.format(mhz)} MHz` : nf3.format(mhz);
+}
+
 export function fmtCoord(lat: number, lon: number): string {
   return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 }

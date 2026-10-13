@@ -30,7 +30,7 @@ export function setTheme(next: 'dark' | 'light') {
 }
 
 function SectionTitle({ children }: { children: string }) {
-  return <h3 className="text-muted-foreground mb-2 px-0.5 text-[11px] font-semibold tracking-wider uppercase">{children}</h3>;
+  return <h3 className="mb-2 px-0.5 text-[14px] font-semibold">{children}</h3>;
 }
 
 const RADII = [25, 50, 100, 200] as const;
@@ -90,7 +90,7 @@ function AlertsSection() {
 
   return (
     <section aria-labelledby="alerts-title">
-      <h3 id="alerts-title" className="text-muted-foreground mb-2 flex items-center gap-1.5 px-0.5 text-[11px] font-semibold tracking-wider uppercase">
+      <h3 id="alerts-title" className="mb-2 flex items-center gap-1.5 px-0.5 text-[14px] font-semibold">
         <Bell className="size-3.5" aria-hidden /> Alertes d’atterrissage
       </h3>
       <div className="-mx-1.5">
@@ -100,7 +100,7 @@ function AlertsSection() {
           label={busy ? 'Activation…' : 'M’alerter des atterrissages'}
           hint="Quand une sonde doit tomber près de vous"
           swatch={
-            <span className={cx('grid size-8 shrink-0 place-items-center rounded-lg', alerts.enabled ? 'bg-amber-500/15 text-amber-500' : 'bg-chip text-muted-foreground')}>
+            <span className={cx('grid size-8 shrink-0 place-items-center rounded-lg', alerts.enabled ? 'bg-primary/10 text-primary' : 'bg-chip text-muted-foreground')}>
               {alerts.enabled ? <BellRing className="size-4" /> : <Bell className="size-4" />}
             </span>
           }
@@ -174,7 +174,7 @@ export function LayerPanel() {
         sideOffset={10}
         collisionPadding={12}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="glass scroll-thin w-[320px] max-w-[calc(100vw-5rem)] overflow-y-auto rounded-2xl p-3"
+        className="glass scroll-thin w-[320px] max-w-[calc(100vw-5rem)] overflow-y-auto rounded-lg p-3"
         style={{ maxHeight: 'var(--radix-popover-content-available-height)' }}
       >
         <SectionTitle>Fond de carte</SectionTitle>

@@ -183,7 +183,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
       <DialogHeader className="border-b px-5 pt-5 pb-4 text-left">
         <DialogTitle className="text-base">Signaler une récupération</DialogTitle>
         <DialogDescription className="text-[12.5px]">
-          Sonde <span className="text-foreground font-mono font-medium">{serial}</span> — indiquez aux autres chasseurs ce qu’il en est.
+          Sonde <span className="text-foreground tabular font-medium">{serial}</span> — indiquez aux autres chasseurs ce qu’il en est.
         </DialogDescription>
       </DialogHeader>
 
@@ -260,7 +260,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
             {source || 'Saisie manuelle'}
             {offset !== null && offset >= 50 && (
               // Far from where the sonde was last heard: likely a typo or swapped lat/lon.
-              <span className={cn(offset > 30_000 && 'font-medium text-amber-600 dark:text-amber-400')}>
+              <span className={cn(offset > 30_000 && 'text-foreground font-semibold')}>
                 {' '}
                 · à {fmtDist(offset, 'metric')} de la dernière position reçue{offset > 30_000 ? ' — vérifiez les coordonnées' : ''}
               </span>
@@ -288,8 +288,8 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
         </div>
 
         {/* Public warning */}
-        <div className="flex gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[12px] leading-snug">
-          <Globe className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        <div className="bg-surface flex gap-2.5 rounded-md border px-3 py-2.5 text-[12.5px] leading-snug">
+          <Globe className="text-foreground mt-0.5 size-4 shrink-0" />
           <p>
             <span className="font-semibold">Ce signalement est public.</span> Il sera publié sur SondeHub avec votre indicatif, la position et la description, et
             restera visible par tout le monde.
@@ -351,7 +351,7 @@ function CoordField({
         onPaste={onPaste}
         autoComplete="off"
         spellCheck={false}
-        className="h-8 px-2 font-mono text-[13px]"
+        className="h-8 px-2 tabular text-[13px]"
         aria-invalid={invalid}
       />
     </div>

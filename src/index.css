@@ -1,17 +1,13 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
-@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
+@import '@fontsource-variable/open-sans';
 
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
-/* shadcn/ui tokens → Tailwind colours. */
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -31,87 +27,114 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-faint: var(--text-faint);
 }
 
 @theme {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-sans: 'Open Sans Variable', system-ui, sans-serif;
+  --font-heading: 'Atkinson Hyperlegible', system-ui, sans-serif;
 
-  /* Domain colours (flight phases, map entities). */
+  --radius-xs: 4px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgb(10 10 10 / 0.04);
+  --shadow-md: 0 1px 2px rgb(10 10 10 / 0.04), 0 4px 12px -2px rgb(10 10 10 / 0.08);
+  --shadow-lg: 0 1px 3px rgb(10 10 10 / 0.05), 0 8px 24px -6px rgb(10 10 10 / 0.12);
+  --shadow-xl: var(--shadow-lg);
+  --shadow-2xl: var(--shadow-lg);
+
   --color-asc: #38bdf8;
   --color-desc: #fbbf24;
   --color-landed: #34d399;
   --color-lost: #94a3b8;
   --color-landing: #fb7185;
   --color-listener: #a78bfa;
+  --color-live: #12a150;
 }
 
 :root {
-  --radius: 0.75rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.21 0.03 265);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.03 265);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.03 265);
-  --primary: oklch(0.585 0.233 277);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.01 265);
-  --secondary-foreground: oklch(0.25 0.03 265);
-  --muted: oklch(0.96 0.01 265);
-  --muted-foreground: oklch(0.52 0.03 265);
-  --accent: oklch(0.95 0.015 270);
-  --accent-foreground: oklch(0.25 0.03 265);
-  --destructive: oklch(0.62 0.22 25);
-  --border: oklch(0.21 0.03 265 / 9%);
-  --input: oklch(0.21 0.03 265 / 12%);
-  --ring: oklch(0.585 0.233 277);
+  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #3451d1;
+  --primary-foreground: #ffffff;
+  --secondary: #f6f8fa;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f6f8fa;
+  --muted-foreground: #425466;
+  --accent: #f6f8fa;
+  --accent-foreground: #0a0a0a;
+  --destructive: #c0362c;
+  --border: #e6e8eb;
+  --input: #e6e8eb;
+  --ring: #3451d1;
 
-  /* App surfaces (translucent panels floating over the map). */
-  --panel: rgba(255, 255, 255, 0.86);
+  --panel: #ffffff;
   --panel-solid: #ffffff;
-  --panel-border: rgba(15, 23, 42, 0.08);
-  --panel-hover: rgba(15, 23, 42, 0.045);
-  --chip: rgba(15, 23, 42, 0.06);
-  --text: var(--foreground);
-  --text-dim: var(--muted-foreground);
-  --text-faint: #94a3b8;
-  --shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.25), 0 2px 8px -2px rgba(15, 23, 42, 0.12);
+  --panel-border: #e6e8eb;
+  --panel-hover: #f6f8fa;
+  --surface: #f6f8fa;
+  --chip: #f6f8fa;
+  --text: #425466;
+  --text-dim: #425466;
+  --text-faint: #66748a;
   color-scheme: light;
 }
 .dark {
-  --background: oklch(0.16 0.02 268);
-  --foreground: oklch(0.95 0.01 260);
-  --card: oklch(0.2 0.024 268);
-  --card-foreground: oklch(0.95 0.01 260);
-  --popover: oklch(0.19 0.024 268);
-  --popover-foreground: oklch(0.95 0.01 260);
-  --primary: oklch(0.66 0.2 277);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.26 0.025 268);
-  --secondary-foreground: oklch(0.95 0.01 260);
-  --muted: oklch(0.26 0.025 268);
-  --muted-foreground: oklch(0.7 0.03 260);
-  --accent: oklch(0.28 0.03 268);
-  --accent-foreground: oklch(0.95 0.01 260);
-  --destructive: oklch(0.65 0.2 22);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 13%);
-  --ring: oklch(0.66 0.2 277);
+  --background: #0e1013;
+  --foreground: #f6f8fa;
+  --card: #0e1013;
+  --card-foreground: #f6f8fa;
+  --popover: #15181c;
+  --popover-foreground: #f6f8fa;
+  --primary: #8199f0;
+  --primary-foreground: #0a0a0a;
+  --secondary: #16191d;
+  --secondary-foreground: #f6f8fa;
+  --muted: #16191d;
+  --muted-foreground: #a3adba;
+  --accent: #1c2025;
+  --accent-foreground: #f6f8fa;
+  --destructive: #ef6a5f;
+  --border: #262a30;
+  --input: #2c3137;
+  --ring: #8199f0;
 
-  --panel: rgba(13, 17, 28, 0.78);
-  --panel-solid: #0d111c;
-  --panel-border: rgba(148, 163, 184, 0.12);
-  --panel-hover: rgba(148, 163, 184, 0.08);
-  --chip: rgba(148, 163, 184, 0.1);
-  --text-faint: #5b6b82;
-  --shadow: 0 12px 48px -12px rgba(0, 0, 0, 0.7), 0 2px 10px -2px rgba(0, 0, 0, 0.4);
+  --panel: #0e1013;
+  --panel-solid: #0e1013;
+  --panel-border: #262a30;
+  --panel-hover: #16191d;
+  --surface: #16191d;
+  --chip: #16191d;
+  --text: #a3adba;
+  --text-dim: #a3adba;
+  --text-faint: #7d8796;
   color-scheme: dark;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    color: var(--foreground);
+    letter-spacing: 0;
   }
 }
 
@@ -127,17 +150,13 @@ body,
   -webkit-font-smoothing: antialiased;
 }
 
-.glass {
-  background: var(--panel);
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  border: 1px solid var(--panel-border);
-  box-shadow: var(--shadow);
+.font-heading {
+  font-family: var(--font-heading);
 }
 
-/* Bottom sheet sits over busy map labels: less see-through. */
-.glass-strong {
-  background: color-mix(in srgb, var(--panel-solid) 94%, transparent);
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
 }
 
 .text-dim {
@@ -161,16 +180,12 @@ body,
 
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--chip) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
-/* Little "live" heartbeat dot. */
 @keyframes ping-soft {
-  0% { transform: scale(1); opacity: 0.7; }
-  80%, 100% { transform: scale(2.6); opacity: 0; }
-}
-.live-dot {
-  position: relative;
+  0% { transform: scale(1); opacity: 0.6; }
+  80%, 100% { transform: scale(2.4); opacity: 0; }
 }
 .live-dot::after {
   content: '';
@@ -178,36 +193,41 @@ body,
   inset: 0;
   border-radius: 9999px;
   background: inherit;
-  animation: ping-soft 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: ping-soft 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 @keyframes slide-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
 }
 .animate-in {
-  animation: slide-in 0.22s ease-out both;
+  animation: slide-in 0.18s ease-out both;
 }
 
 @keyframes flash {
-  0% { background: rgba(99, 102, 241, 0.18); }
+  0% { background: color-mix(in srgb, var(--primary) 12%, transparent); }
   100% { background: transparent; }
 }
 .flash {
   animation: flash 1.2s ease-out;
 }
 
-/* MapLibre popups restyled to match the panels. */
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after,
+  .animate-in,
+  .flash {
+    animation: none;
+  }
+}
+
 .maplibregl-popup.st-popup .maplibregl-popup-content {
-  background: var(--panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--popover);
   color: var(--text);
   border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
   padding: 10px 14px;
-  font: 12.5px/1.5 var(--font-sans);
+  font: 13px/1.5 var(--font-sans);
 }
 .maplibregl-popup.st-popup .maplibregl-popup-tip {
   display: none;
@@ -219,10 +239,11 @@ body,
   top: 2px;
 }
 .st-popup .pp-title {
-  font-weight: 650;
-  font-size: 13.5px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--foreground);
   margin-bottom: 2px;
-  font-family: var(--font-mono);
 }
 .st-popup .pp-row {
   color: var(--text-dim);
@@ -235,20 +256,19 @@ body,
 }
 
 .maplibregl-ctrl-attrib {
-  font-size: 10.5px;
+  font-size: 11px;
 }
 .dark .maplibregl-ctrl-attrib.maplibregl-compact {
-  background: rgba(13, 17, 28, 0.8);
-  color: #94a3b8;
+  background: var(--panel);
+  color: var(--text-dim);
 }
 .dark .maplibregl-ctrl-attrib a {
-  color: #cbd5e1;
+  color: var(--foreground);
 }
 .dark .maplibregl-ctrl-attrib-button {
   filter: invert(1);
 }
 
-/* uPlot */
 .uplot {
   font-family: var(--font-sans);
 }
@@ -256,14 +276,13 @@ body,
   font-size: 11px;
 }
 .u-select {
-  background: rgba(99, 102, 241, 0.12);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 input[type='search']::-webkit-search-cancel-button {
   display: none;
 }
 
-/* Selected sonde: pulsing rings, animated on the compositor rather than by repainting the map. */
 .sel-ring {
   width: 44px;
   height: 44px;
@@ -275,8 +294,7 @@ input[type='search']::-webkit-search-cancel-button {
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  border: 2px solid #fff;
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+  border: 2px solid var(--primary);
   animation: sel-pulse 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
 }
 .sel-ring::after {

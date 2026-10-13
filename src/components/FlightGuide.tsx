@@ -19,39 +19,39 @@ export function FlightGuide({ className }: { className?: string }) {
         <button
           type="button"
           className={cx(
-            'text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 data-[state=open]:text-foreground flex h-6 items-center gap-1 rounded-md px-1.5 text-[11.5px] font-medium transition-colors outline-none focus-visible:ring-2',
+            'text-primary focus-visible:ring-ring/50 flex h-7 items-center gap-1.5 rounded-md px-1.5 text-[13px] font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2',
             className,
           )}
         >
-          <CircleHelp className="size-3.5" />
+          <CircleHelp className="size-4" />
           Comment ça marche ?
         </button>
       </PopoverTrigger>
-      <PopoverContent side="bottom" align="end" collisionPadding={12} className="w-[300px] p-4" onEscapeKeyDown={keepSelection}>
-        <h2 className="text-[13.5px] font-semibold">Le vol d’une radiosonde</h2>
-        <p className="text-muted-foreground mt-1 text-[12px] leading-snug">
+      <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[320px] p-5" onEscapeKeyDown={keepSelection}>
+        <h2 className="text-[16px] font-semibold">Le vol d’une radiosonde</h2>
+        <p className="mt-1.5 text-[13px] leading-relaxed">
           Chaque jour, des stations météo lâchent des ballons qui emportent une petite sonde. Elle mesure la température, l’humidité et le vent en montant, et
           envoie ses données par radio.
         </p>
-        <ol className="mt-3 space-y-2.5">
+        <ol className="mt-4 space-y-3">
           {STEPS.map((s, i) => (
-            <li key={s.title} className="flex gap-2.5">
-              <span className="bg-chip relative grid size-8 shrink-0 place-items-center rounded-lg">
-                <MapIcon id={s.icon} size={20} />
-                <span className="bg-background text-muted-foreground absolute -top-1 -left-1 grid size-4 place-items-center rounded-full border text-[9.5px] font-semibold">
-                  {i + 1}
-                </span>
+            <li key={s.title} className="flex gap-3">
+              <span className="bg-surface grid size-9 shrink-0 place-items-center rounded-md border">
+                <MapIcon id={s.icon} size={22} />
               </span>
-              <span className="min-w-0 text-[12px] leading-snug">
-                <span className="block font-semibold">{s.title}</span>
-                <span className="text-muted-foreground">{s.text}</span>
+              <span className="min-w-0 text-[13px] leading-snug">
+                <span className="text-foreground block font-semibold">
+                  <span className="tabular text-faint mr-1 font-normal">{i + 1}.</span>
+                  {s.title}
+                </span>
+                {s.text}
               </span>
             </li>
           ))}
         </ol>
-        <div className="text-muted-foreground mt-3 flex gap-2.5 border-t pt-3 text-[12px] leading-snug">
-          <span className="grid size-8 shrink-0 place-items-center">
-            <MapIcon id="sonde-lost" size={20} />
+        <div className="mt-4 flex gap-3 border-t pt-4 text-[13px] leading-snug">
+          <span className="grid size-9 shrink-0 place-items-center">
+            <MapIcon id="sonde-lost" size={22} />
           </span>
           <span className="min-w-0">
             <span className="text-foreground font-semibold">Signal perdu</span> : la sonde n’est plus captée, en général parce qu’elle est passée trop bas

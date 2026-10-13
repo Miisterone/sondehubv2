@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cx } from './ui';
 
 const LABEL = { live: 'Direct', connecting: 'Connexion', offline: 'Hors ligne' } as const;
-const DOT = { live: 'bg-emerald-400', connecting: 'bg-amber-400', offline: 'bg-rose-500' } as const;
+const DOT = { live: 'bg-live', connecting: 'bg-faint', offline: 'bg-destructive' } as const;
 
 export function StatusPill() {
   const conn = useStore((s) => s.conn);
@@ -23,11 +23,11 @@ export function StatusPill() {
           tabIndex={0}
           role="status"
           aria-label={`${LABEL[conn]} — ${hint}`}
-          className="bg-muted/60 dark:bg-muted/50 text-muted-foreground h-6 cursor-default gap-1.5 rounded-full border-transparent px-2 text-[11px] font-medium"
+          className="bg-background text-muted-foreground border-border h-7 cursor-default gap-1.5 rounded-md px-2 text-[12px] font-medium"
         >
-          <span className={cx('size-1.5 shrink-0 rounded-full', DOT[conn], conn === 'live' && 'live-dot')} />
+          <span className={cx('relative size-2 shrink-0 rounded-full', DOT[conn], conn === 'live' && 'live-dot')} />
           {LABEL[conn]}
-          {conn === 'live' && <span className="tabular text-muted-foreground/80 font-mono">{rate.toFixed(0)}/s</span>}
+          {conn === 'live' && <span className="tabular text-muted-foreground/80 ">{rate.toFixed(0)}/s</span>}
         </Badge>
       </TooltipTrigger>
       <TooltipContent side="bottom">{hint}</TooltipContent>

@@ -168,7 +168,7 @@ function deliver(list: PendingAlert[]) {
     toast(a.title, {
       id: `alert:${a.serial}:${a.kind}`,
       description: a.body,
-      icon: <BellRing className="size-4 text-amber-500" />,
+      icon: <BellRing className="text-foreground size-4" />,
       duration: 30_000,
       closeButton: true,
       action: { label: 'Voir', onClick: () => viewSonde(a.serial) },
@@ -178,7 +178,7 @@ function deliver(list: PendingAlert[]) {
   const rest = list.length - shown.length;
   if (rest > 0) {
     const body = `${rest} autres sondes devraient atterrir près de vous ou sont suivies`;
-    toast('Autres alertes d’atterrissage', { id: 'alert:more', description: body, icon: <BellRing className="size-4 text-amber-500" />, duration: 30_000, closeButton: true });
+    toast('Autres alertes d’atterrissage', { id: 'alert:more', description: body, icon: <BellRing className="text-foreground size-4" />, duration: 30_000, closeButton: true });
     for (const a of list.slice(shown.length)) systemNotify(a);
   }
 }
@@ -216,7 +216,7 @@ function useLandingAlerts() {
         toast('Alertes d’atterrissage en pause', {
           id: 'alerts-geo',
           description: 'Votre position est nécessaire pour les sondes qui atterrissent près de vous.',
-          icon: <BellRing className="size-4 text-amber-500" />,
+          icon: <BellRing className="text-foreground size-4" />,
           duration: 15_000,
           action: { label: 'Me localiser', onClick: () => void locateUser({ fly: false }) },
         });

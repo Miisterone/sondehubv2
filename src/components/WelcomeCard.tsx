@@ -104,7 +104,7 @@ export function WelcomeCard() {
         role="region"
         aria-label="Bienvenue sur SondeTrack"
         className={cx(
-          'glass animate-in pointer-events-auto relative w-full max-w-[440px] rounded-2xl p-3.5 text-[12.5px] md:p-5 md:text-[13px] transition-[opacity,transform] duration-150',
+          'glass animate-in pointer-events-auto relative w-full max-w-[440px] rounded-lg p-3.5 text-[12.5px] md:p-5 md:text-[13px] transition-[opacity,transform] duration-150',
           leaving && 'translate-y-1 opacity-0',
         )}
       >
@@ -133,7 +133,7 @@ export function WelcomeCard() {
             <Tip icon={<Search className="text-muted-foreground size-4" />}>Touchez la loupe pour rechercher une sonde, une station ou un site.</Tip>
           ) : (
             <Tip icon={<Search className="text-muted-foreground size-4" />}>
-              <Kbd className="bg-chip text-foreground font-mono">{isMac ? '⌘K' : 'Ctrl K'}</Kbd> pour tout rechercher : sondes, stations, sites, actions.
+              <Kbd className="bg-chip text-foreground tabular">{isMac ? '⌘K' : 'Ctrl K'}</Kbd> pour tout rechercher : sondes, stations, sites, actions.
             </Tip>
           )}
         </ul>

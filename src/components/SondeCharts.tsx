@@ -5,7 +5,6 @@ import type { Prediction, Sonde } from '../lib/types';
 import type { Units } from '../lib/format';
 import { Chart, axis, type ChartTheme } from './Chart';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PHASE_COLOUR } from '../lib/icons';
 
 type Tab = 'altitude' | 'profile' | 'speed';
 
@@ -85,11 +84,11 @@ export function SondeCharts({ sonde, prediction, units, simple = false }: { sond
     legend: { show: false },
     cursor: { points: { size: 6 } },
     scales: { x: { time: true } },
-    axes: [axis(th, { values: timeFmt, space: 60 }), axis(th, { label: altUnit, labelSize: 14, labelFont: '10.5px Inter Variable', size: 44 })],
+    axes: [axis(th, { values: timeFmt, space: 60 }), axis(th, { label: altUnit, labelSize: 14, labelFont: '11px "Open Sans Variable"', size: 44 })],
     series: [
       {},
-      { label: 'Altitude', stroke: '#818cf8', width: 2, fill: 'rgba(129,140,248,0.12)', points: { show: false } },
-      { label: 'Prédiction', stroke: '#fb7185', width: 1.6, dash: [5, 4], points: { show: false } },
+      { label: 'Altitude', stroke: th.accent, width: 2, fill: th.accentFill, points: { show: false } },
+      { label: 'Prédiction', stroke: th.secondary, width: 1.6, dash: [5, 4], points: { show: false } },
     ],
   });
 
@@ -97,22 +96,22 @@ export function SondeCharts({ sonde, prediction, units, simple = false }: { sond
     legend: { show: false },
     scales: { x: { time: false }, t: { auto: true }, h: { range: [0, 100] as [number, number] } },
     axes: [
-      axis(th, { label: `Altitude (${altUnit})`, labelSize: 14, labelFont: '10.5px Inter Variable', size: 34 }),
-      axis(th, { scale: 't', label: units === 'metric' ? '°C' : '°F', labelSize: 14, labelFont: '10.5px Inter Variable', size: 44 }),
-      axis(th, { scale: 'h', side: 1, label: '% HR', labelSize: 14, labelFont: '10.5px Inter Variable', size: 40, grid: { show: false } }),
+      axis(th, { label: `Altitude (${altUnit})`, labelSize: 14, labelFont: '11px "Open Sans Variable"', size: 34 }),
+      axis(th, { scale: 't', label: units === 'metric' ? '°C' : '°F', labelSize: 14, labelFont: '11px "Open Sans Variable"', size: 44 }),
+      axis(th, { scale: 'h', side: 1, label: '% HR', labelSize: 14, labelFont: '11px "Open Sans Variable"', size: 40, grid: { show: false } }),
     ],
     series: [
       {},
-      { label: 'Température', scale: 't', stroke: '#fb923c', width: 1.8, points: { show: false }, spanGaps: true },
-      { label: 'Humidité', scale: 'h', stroke: '#38bdf8', width: 1.5, points: { show: false }, spanGaps: true },
+      { label: 'Température', scale: 't', stroke: th.accent, width: 1.8, points: { show: false }, spanGaps: true },
+      { label: 'Humidité', scale: 'h', stroke: th.secondary, width: 1.5, dash: [4, 3], points: { show: false }, spanGaps: true },
     ],
   });
 
   const speedOpts = (th: ChartTheme) => ({
     legend: { show: false },
     scales: { x: { time: true } },
-    axes: [axis(th, { values: timeFmt, space: 60 }), axis(th, { label: units === 'metric' ? 'm/s' : 'ft/min', labelSize: 14, labelFont: '10.5px Inter Variable', size: 44 })],
-    series: [{}, { label: 'Vitesse verticale', stroke: PHASE_COLOUR.descending, width: 1.6, points: { show: false }, spanGaps: true }],
+    axes: [axis(th, { values: timeFmt, space: 60 }), axis(th, { label: units === 'metric' ? 'm/s' : 'ft/min', labelSize: 14, labelFont: '11px "Open Sans Variable"', size: 44 })],
+    series: [{}, { label: 'Vitesse verticale', stroke: th.accent, width: 1.6, points: { show: false }, spanGaps: true }],
   });
 
   // Radix unmounts inactive tab panels, so each chart is (re)created while visible and sized to its container.
@@ -121,15 +120,15 @@ export function SondeCharts({ sonde, prediction, units, simple = false }: { sond
   const altitudeLegend = (
     <Legend
       items={[
-        { label: simple ? 'Altitude mesurée' : 'Mesurée', swatch: <span className="h-0.5 w-4 rounded bg-[#818cf8]" /> },
-        ...(prediction && sonde.phase !== 'landed' ? [{ label: simple ? 'Suite prévue du vol' : 'Prédiction', swatch: <span className="h-0 w-4 border-t-2 border-dashed border-[#fb7185]" /> }] : []),
+        { label: simple ? 'Altitude mesurée' : 'Mesurée', swatch: <span className="bg-primary h-0.5 w-4" /> },
+        ...(prediction && sonde.phase !== 'landed' ? [{ label: simple ? 'Suite prévue du vol' : 'Prédiction', swatch: <span className="border-muted-foreground h-0 w-4 border-t-2 border-dashed" /> }] : []),
       ]}
     />
   );
 
   if (simple) {
     return (
-      <div className="bg-chip rounded-xl p-2">
+      <div className="rounded-md border p-2">
         <Chart data={altData} makeOptions={altOpts} />
         {altitudeLegend}
       </div>
@@ -138,37 +137,37 @@ export function SondeCharts({ sonde, prediction, units, simple = false }: { sond
 
   return (
     <Tabs value={value} onValueChange={(v) => setTab(v as Tab)} className="gap-2">
-      <TabsList className="h-8! w-full">
-        <TabsTrigger value="altitude" className="text-[11.5px]">
+      <TabsList className="bg-surface h-9! w-full rounded-md border">
+        <TabsTrigger value="altitude" className="text-[12.5px]">
           Altitude
         </TabsTrigger>
         {hasProfile && (
-          <TabsTrigger value="profile" className="text-[11.5px]">
+          <TabsTrigger value="profile" className="text-[12.5px]">
             Sondage T° / HR
           </TabsTrigger>
         )}
-        <TabsTrigger value="speed" className="text-[11.5px]">
+        <TabsTrigger value="speed" className="text-[12.5px]">
           Vitesse vert.
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="altitude" className="bg-chip rounded-xl p-2">
+      <TabsContent value="altitude" className="rounded-md border p-2">
         <Chart data={altData} makeOptions={altOpts} />
         {altitudeLegend}
       </TabsContent>
       {hasProfile && (
-        <TabsContent value="profile" className="bg-chip rounded-xl p-2">
+        <TabsContent value="profile" className="rounded-md border p-2">
           <Chart data={profileData} makeOptions={profileOpts} />
           <Legend
             items={[
-              { label: 'Température', swatch: <span className="h-0.5 w-4 rounded bg-[#fb923c]" /> },
-              { label: 'Humidité relative', swatch: <span className="h-0.5 w-4 rounded bg-[#38bdf8]" /> },
+              { label: 'Température', swatch: <span className="bg-primary h-0.5 w-4" /> },
+              { label: 'Humidité relative', swatch: <span className="border-muted-foreground h-0 w-4 border-t-2 border-dashed" /> },
             ]}
           />
         </TabsContent>
       )}
-      <TabsContent value="speed" className="bg-chip rounded-xl p-2">
+      <TabsContent value="speed" className="rounded-md border p-2">
         <Chart data={speedData} makeOptions={speedOpts} />
-        <Legend items={[{ label: 'Vitesse verticale', swatch: <span className="h-0.5 w-4 rounded" style={{ background: PHASE_COLOUR.descending }} /> }]} />
+        <Legend items={[{ label: 'Vitesse verticale', swatch: <span className="bg-primary h-0.5 w-4" /> }]} />
       </TabsContent>
     </Tabs>
   );
@@ -176,7 +175,7 @@ export function SondeCharts({ sonde, prediction, units, simple = false }: { sond
 
 function Legend({ items }: { items: { label: string; swatch: ReactNode }[] }) {
   return (
-    <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 px-1 pt-1 text-[11px]">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 pt-1.5 text-[12px]">
       {items.map((it) => (
         <span key={it.label} className="flex items-center gap-1.5">
           {it.swatch} {it.label}

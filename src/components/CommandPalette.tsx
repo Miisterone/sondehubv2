@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed, MapPinned, Moon, Mountain, RotateCcw, SlidersHorizontal, Sun, X } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed, MapPinned, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
@@ -120,7 +120,7 @@ export function CommandPalette({ onAbout }: { onAbout: () => void }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         showCloseButton={false}
-        className="top-[12dvh] translate-y-0 gap-0 overflow-hidden rounded-2xl border p-0 shadow-2xl sm:max-w-xl"
+        className="top-[12dvh] translate-y-0 gap-0 overflow-hidden rounded-lg border p-0 shadow-2xl sm:max-w-xl"
       >
         <DialogTitle className="sr-only">Palette de commandes</DialogTitle>
         <DialogDescription className="sr-only">Rechercher une sonde, une station, un site de lâcher ou une action.</DialogDescription>
@@ -230,7 +230,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       label: alertsOn ? 'Désactiver les alertes d’atterrissage' : 'Activer les alertes d’atterrissage',
       keywords: 'alerte alertes notification prevenir atterrissage position',
       icon: alertsOn ? <BellOff /> : <Bell />,
-      hint: <span className={cx('text-[11px] tracking-normal', alertsOn ? 'text-emerald-500' : 'text-muted-foreground')}>{alertsOn ? 'activées' : 'désactivées'}</span>,
+      hint: <span className={cx('text-[11px] tracking-normal', alertsOn ? 'text-foreground' : 'text-muted-foreground')}>{alertsOn ? 'activées' : 'désactivées'}</span>,
       run: () => (alertsOn ? disableAlerts() : void enableAlerts()),
     });
     list.push({
@@ -246,15 +246,6 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         const basemap = b === 'dark' && next === 'light' ? 'positron' : (b === 'positron' || b === 'liberty') && next === 'dark' ? 'dark' : b;
         setSettings({ theme: next, basemap });
       },
-    });
-    list.push({
-      id: 'expert',
-      group: 'Affichage',
-      label: settings.expert ? 'Passer en vue simple' : 'Passer en vue expert',
-      keywords: 'vue simple expert avance technique debutant niveau detail donnees frequence',
-      icon: <SlidersHorizontal />,
-      active: settings.expert,
-      run: () => useStore.getState().setExpert(!settings.expert),
     });
     list.push({
       id: 'terrain',
@@ -295,7 +286,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         label: `${on ? 'Masquer' : 'Afficher'} ${LAYER_LABEL[key]}`,
         keywords: 'couche calque afficher masquer cacher montrer',
         icon: on ? <EyeOff /> : <Eye />,
-        hint: <span className={cx('text-[11px] tracking-normal', on ? 'text-emerald-500' : 'text-muted-foreground')}>{on ? 'affiché' : 'masqué'}</span>,
+        hint: <span className={cx('text-[11px] tracking-normal', on ? 'text-foreground' : 'text-muted-foreground')}>{on ? 'affiché' : 'masqué'}</span>,
         run: () => setLayer(key, !on),
       });
     }
@@ -365,11 +356,11 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
           <CommandItem key={s.serial} value={`sonde:${s.serial}`} onSelect={() => run(() => useStore.getState().select(s.serial, true))}>
             <MapIcon id={`sonde-${s.phase}`} size={22} />
             <div className="flex min-w-0 flex-1 items-baseline gap-2">
-              <span className="truncate font-mono font-semibold">{s.serial}</span>
+              <span className="truncate tabular font-semibold">{s.serial}</span>
               <span className="text-muted-foreground truncate text-xs">{[s.type, s.subtype && s.subtype !== s.type ? s.subtype : null].filter(Boolean).join(' · ')}</span>
             </div>
             <div className="ml-auto flex shrink-0 flex-col items-end leading-tight">
-              <span className="tabular font-mono text-xs font-semibold">{fmtAltShort(s.last.alt, settings.units)}</span>
+              <span className="tabular text-xs font-semibold">{fmtAltShort(s.last.alt, settings.units)}</span>
               <span className="text-muted-foreground text-[10.5px]">{ago(s.lastTime, now)}</span>
             </div>
           </CommandItem>
@@ -393,7 +384,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
             }
           >
             <MapIcon id={l.mobile ? 'chase' : 'listener'} size={20} />
-            <span className="truncate font-mono font-medium">{l.callsign}</span>
+            <span className="truncate tabular font-medium">{l.callsign}</span>
             <span className="text-muted-foreground ml-auto shrink-0 text-xs">{l.mobile ? 'Poursuite' : 'Fixe'}</span>
           </CommandItem>
         ))}
@@ -440,7 +431,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       value={value}
       onValueChange={setValue}
       loop
-      className="**:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:text-muted-foreground bg-popover rounded-none [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase [&_[cmdk-item]]:py-2"
+      className="**:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:text-muted-foreground bg-popover rounded-none [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-item]]:py-2"
     >
       <div className="relative">
         <CommandInput value={query} onValueChange={setQuery} placeholder="Sonde, indicatif, site de lâcher, action…" className="h-12 text-[15px] sm:pr-14" autoFocus />
