@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import {
   ArrowDown,
   ArrowLeft,
@@ -34,7 +34,6 @@ import { bearing, compass, distance, elevation } from '@/lib/geo';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
 import { ALT_RAMP } from './MapView';
-import { SondeCharts } from './SondeCharts';
 import { IconButton, MapIcon, PhaseBadge, Section, Stat, cx } from './ui';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
@@ -44,6 +43,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+const SondeCharts = lazy(() => import('./SondeCharts').then((m) => ({ default: m.SondeCharts })));
 
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
 
@@ -341,7 +342,9 @@ export function SondeDetail({ serial }: { serial: string }) {
           </Section>
 
           <Section title={<>Altitude au fil du vol <HelpHint title="Lire la courbe">Trait plein : altitude mesurée. Pointillés : suite du vol prévue par le modèle Tawhiri, recalculée régulièrement.</HelpHint></>}>
-            <SondeCharts sonde={sonde} prediction={prediction} units={units} simple />
+            <Suspense fallback={<div className="h-[180px]" />}>
+              <SondeCharts sonde={sonde} prediction={prediction} units={units} simple />
+            </Suspense>
             <AltitudeLegend units={units} />
           </Section>
 
@@ -435,7 +438,9 @@ export function SondeDetail({ serial }: { serial: string }) {
                     Courbes détaillées
                     <HelpHint title={HELP.profile.title}>{HELP.profile.text}</HelpHint>
                   </h4>
-                  <SondeCharts sonde={sonde} prediction={prediction} units={units} />
+                  <Suspense fallback={<div className="h-[228px]" />}>
+                    <SondeCharts sonde={sonde} prediction={prediction} units={units} />
+                  </Suspense>
                 </div>
 
                 {receivers.length > 0 && (

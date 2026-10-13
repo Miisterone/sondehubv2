@@ -1,4 +1,4 @@
-import mqtt from 'mqtt';
+import type { MqttClient } from 'mqtt';
 import { normaliseListener, normalisePrediction, normaliseRecovery, type RawRecovery, type RawWsPrediction } from './api';
 import type { Frame, Listener, Prediction, Recovery } from './types';
 import { useStore } from '../store/useStore';
@@ -23,49 +23,60 @@ export function startLiveFeed(): () => void {
   let bucket = 0;
   let paused = false;
 
-  const client = mqtt.connect(WS_URL, {
-    clientId: `sondehubv2-${Math.random().toString(16).slice(2, 12)}`,
-    reconnectPeriod: 3000,
-    connectTimeout: 15_000,
-    keepalive: 60,
-    clean: true,
-  });
+  let client: MqttClient | undefined;
+  let stopped = false;
 
-  client.on('connect', () => {
-    client.subscribe(TOPICS);
-    store().setConn('live');
-  });
-  client.on('reconnect', () => store().setConn('connecting'));
-  client.on('offline', () => store().setConn('offline'));
-  client.on('close', () => {
-    if (store().conn === 'live') store().setConn('connecting');
-  });
-  client.on('error', () => store().setConn('offline'));
+  const attach = (c: MqttClient) => {
+    c.on('connect', () => {
+      c.subscribe(TOPICS);
+      store().setConn('live');
+    });
+    c.on('reconnect', () => store().setConn('connecting'));
+    c.on('offline', () => store().setConn('offline'));
+    c.on('close', () => {
+      if (store().conn === 'live') store().setConn('connecting');
+    });
+    c.on('error', () => store().setConn('offline'));
 
-  client.on('message', (topic, payload) => {
-    if (paused) return;
-    let data: unknown;
-    try {
-      data = JSON.parse(payload.toString());
-    } catch {
-      return;
-    }
-    if (topic === 'batch') {
-      if (Array.isArray(data)) {
-        frames.push(...(data as Frame[]));
-        rateBuckets[bucket] += data.length;
+    c.on('message', (topic, payload) => {
+      if (paused) return;
+      let data: unknown;
+      try {
+        data = JSON.parse(payload.toString());
+      } catch {
+        return;
       }
-    } else if (topic.startsWith('prediction/')) {
-      const p = normalisePrediction(data as RawWsPrediction);
-      if (p) preds.push(p);
-    } else if (topic.startsWith('listener/')) {
-      const l = normaliseListener(data as Parameters<typeof normaliseListener>[0]);
-      if (l) listeners.push(l);
-    } else if (topic.startsWith('recovery/')) {
-      const r = data as RawRecovery;
-      if (Number.isFinite(r.lat) && Number.isFinite(r.lon)) recoveries.push(normaliseRecovery(r));
-    }
-  });
+      if (topic === 'batch') {
+        if (Array.isArray(data)) {
+          frames.push(...(data as Frame[]));
+          rateBuckets[bucket] += data.length;
+        }
+      } else if (topic.startsWith('prediction/')) {
+        const p = normalisePrediction(data as RawWsPrediction);
+        if (p) preds.push(p);
+      } else if (topic.startsWith('listener/')) {
+        const l = normaliseListener(data as Parameters<typeof normaliseListener>[0]);
+        if (l) listeners.push(l);
+      } else if (topic.startsWith('recovery/')) {
+        const r = data as RawRecovery;
+        if (Number.isFinite(r.lat) && Number.isFinite(r.lon)) recoveries.push(normaliseRecovery(r));
+      }
+    });
+  };
+
+  import('mqtt')
+    .then(({ default: mqtt }) => {
+      if (stopped) return;
+      client = mqtt.connect(WS_URL, {
+        clientId: `sondehubv2-${Math.random().toString(16).slice(2, 12)}`,
+        reconnectPeriod: 3000,
+        connectTimeout: 15_000,
+        keepalive: 60,
+        clean: true,
+      });
+      attach(client);
+    })
+    .catch(() => store().setConn('offline'));
 
   const flush = window.setInterval(() => {
     const s = store();
@@ -105,6 +116,7 @@ export function startLiveFeed(): () => void {
     window.clearInterval(flush);
     window.clearInterval(rate);
     document.removeEventListener('visibilitychange', onVisibility);
-    client.end(true);
+    stopped = true;
+    client?.end(true);
   };
 }

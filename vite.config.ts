@@ -10,5 +10,15 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 1500,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'maplibre', test: /node_modules[\\/](maplibre-gl|@maplibre)[\\/]/, priority: 20 },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 10 },
+          ],
+        },
+      },
+    },
   },
 });
