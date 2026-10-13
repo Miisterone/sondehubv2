@@ -187,15 +187,17 @@ export function LayerPanel() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setSettings({ basemap: b.id })}
-                className="group focus-visible:ring-ring/50 rounded-xl text-center outline-none focus-visible:ring-[3px]"
+                className="group focus-visible:ring-ring/50 rounded-lg text-center outline-none focus-visible:ring-[3px]"
               >
                 <span
                   className={cx(
-                    'ring-offset-background block h-11 rounded-lg ring-offset-2 transition-all',
-                    selected ? 'ring-primary shadow-primary/30 shadow-md ring-2' : 'ring-border group-hover:ring-1',
+                    'ring-offset-background block h-11 overflow-hidden rounded-md ring-offset-2 transition-[box-shadow]',
+                    selected ? 'ring-primary ring-2' : 'ring-border group-hover:ring-foreground/25 ring-1 ring-offset-0',
                   )}
                   style={{ background: b.swatch }}
-                />
+                >
+                  <img src={b.preview} alt="" width={160} height={76} decoding="async" draggable={false} className="size-full object-cover" />
+                </span>
                 <span className={cx('mt-1.5 block text-[11px]', selected ? 'text-foreground font-semibold' : 'text-muted-foreground')}>{b.label}</span>
               </button>
             );

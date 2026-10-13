@@ -1,5 +1,11 @@
 import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
 import type { BasemapId } from '../store/useStore';
+import darkPreview from '../assets/basemaps/dark.webp';
+import libertyPreview from '../assets/basemaps/liberty.webp';
+import positronPreview from '../assets/basemaps/positron.webp';
+import satellitePreview from '../assets/basemaps/satellite.webp';
+import topoPreview from '../assets/basemaps/topo.webp';
+import osmPreview from '../assets/basemaps/osm.webp';
 
 export const GLYPHS = 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf';
 export const FONT = ['Noto Sans Regular'];
@@ -21,14 +27,15 @@ export interface Basemap {
   label: string;
   dark: boolean;
   style: string | StyleSpecification;
-  /** Colour used for the preview swatch in the layer picker. */
+  preview: string;
+  /** Placeholder colour behind the thumbnail while it loads. */
   swatch: string;
 }
 
 export const BASEMAPS: Basemap[] = [
-  { id: 'dark', label: 'Nuit', dark: true, style: 'https://tiles.openfreemap.org/styles/dark', swatch: '#1b2233' },
-  { id: 'liberty', label: 'Plan', dark: false, style: 'https://tiles.openfreemap.org/styles/liberty', swatch: '#f3efe6' },
-  { id: 'positron', label: 'Clair', dark: false, style: 'https://tiles.openfreemap.org/styles/positron', swatch: '#fafafa' },
+  { id: 'dark', label: 'Nuit', dark: true, style: 'https://tiles.openfreemap.org/styles/dark', preview: darkPreview, swatch: '#1b1b1b' },
+  { id: 'liberty', label: 'Plan', dark: false, style: 'https://tiles.openfreemap.org/styles/liberty', preview: libertyPreview, swatch: '#f3efe6' },
+  { id: 'positron', label: 'Clair', dark: false, style: 'https://tiles.openfreemap.org/styles/positron', preview: positronPreview, swatch: '#f2f2f2' },
   {
     id: 'satellite',
     label: 'Satellite',
@@ -37,7 +44,8 @@ export const BASEMAPS: Basemap[] = [
       ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       'Imagerie © Esri, Maxar, Earthstar Geographics',
     ),
-    swatch: '#2f4a2a',
+    preview: satellitePreview,
+    swatch: '#3d4a32',
   },
   {
     id: 'topo',
@@ -48,13 +56,15 @@ export const BASEMAPS: Basemap[] = [
       '© OpenStreetMap, SRTM | Style © OpenTopoMap (CC-BY-SA)',
       17,
     ),
-    swatch: '#e8e0c8',
+    preview: topoPreview,
+    swatch: '#4f9a3c',
   },
   {
     id: 'osm',
     label: 'OSM',
     dark: false,
     style: raster(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], '© les contributeurs OpenStreetMap'),
+    preview: osmPreview,
     swatch: '#f2efe9',
   },
 ];
