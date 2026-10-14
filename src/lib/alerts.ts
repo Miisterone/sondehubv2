@@ -77,7 +77,7 @@ export async function enableAlerts(): Promise<boolean> {
   const a = useStore.getState().settings.alerts;
   toast.success(`Alertes activées — rayon ${a.radiusKm} km`, {
     id: 'alerts',
-    description: a.favourites ? 'Et pour vos sondes suivies, où qu’elles soient.' : undefined,
+    description: a.favourites ? 'Et pour vos sondes favorites, où qu’elles soient.' : undefined,
   });
   return true;
 }

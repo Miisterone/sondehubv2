@@ -109,7 +109,7 @@ function collectAlerts(): PendingAlert[] {
           out.push({
             serial,
             kind: 'burst',
-            title: 'Éclatement d’une sonde suivie',
+            title: 'Éclatement d’une sonde favorite',
             body: `${serial} a éclaté à ${fmtAlt(s.maxAlt, units)}, descente en cours`,
             rank: -1,
           });
@@ -177,7 +177,7 @@ function deliver(list: PendingAlert[]) {
   }
   const rest = list.length - shown.length;
   if (rest > 0) {
-    const body = `${rest} autres sondes devraient atterrir près de vous ou sont suivies`;
+    const body = `${rest} autres sondes devraient atterrir près de vous ou font partie de vos favoris`;
     toast('Autres alertes d’atterrissage', { id: 'alert:more', description: body, icon: <BellRing className="text-foreground size-4" />, duration: 30_000, closeButton: true });
     for (const a of list.slice(shown.length)) systemNotify(a);
   }

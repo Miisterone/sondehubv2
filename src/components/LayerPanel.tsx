@@ -137,8 +137,8 @@ function AlertsSection() {
             <Toggle
               checked={alerts.favourites}
               onChange={(v) => setAlerts({ favourites: v })}
-              label="Sondes suivies"
-              hint={`Éclatement et atterrissage imminent, partout${nFavs ? ` (${nFavs} suivie${nFavs > 1 ? 's' : ''})` : ''}`}
+              label="Sondes favorites"
+              hint={`Éclatement et atterrissage imminent, partout${nFavs ? ` (${nFavs} favori${nFavs > 1 ? 's' : ''})` : ''}`}
             />
             {perm !== 'unsupported' && (
               <Toggle

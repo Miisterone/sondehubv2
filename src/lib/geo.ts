@@ -56,6 +56,13 @@ export function towards(deg: number): string {
   return COMPASS_WORD[compass(deg)] ?? compass(deg);
 }
 
+const WIND8 = ['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ouest', 'ouest', 'nord-ouest'];
+
+export function cardinal(deg: number): string {
+  const w = WIND8[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+  return w === 'est' || w === 'ouest' ? `à l’${w}` : `au ${w}`;
+}
+
 export function parseLatLon(v: unknown): [number, number] | undefined {
   if (Array.isArray(v) && v.length >= 2) {
     const lat = Number(v[0]);

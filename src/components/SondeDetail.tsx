@@ -34,6 +34,7 @@ import { bearing, compass, distance, elevation, towards } from '@/lib/geo';
 import { buildFlight, buildSounding } from '@/lib/flight';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
+import { findLaunch } from '@/lib/sonde';
 import { ALT_RAMP } from './MapView';
 import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
@@ -87,17 +88,11 @@ export function SondeDetail({ serial }: { serial: string }) {
   const [reporting, setReporting] = useState(false);
   const [trackView, setTrackView] = useState<TrackView>('plan');
 
-  const launch = useMemo(() => {
-    if (!sonde?.track.length) return null;
-    const [lon, lat, , t] = sonde.track[0];
-    let best: { name: string; d: number } | null = null;
-    for (const s of sites) {
-      const d = distance(lat, lon, s.lat, s.lon);
-      if (!best || d < best.d) best = { name: s.name, d };
-    }
-    return { t, site: best && best.d < 30_000 ? best.name : null, fromGround: sonde.track[0][2] < 3000 };
+  const launch = useMemo(
+    () => (sonde ? findLaunch(sonde, sites) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sonde?.track[0], sites]);
+    [sonde?.track[0], sites],
+  );
 
   const flight = useMemo(
     () => (sonde ? buildFlight(sonde, usefulPrediction(sonde, prediction) ? prediction : null) : null),
@@ -154,7 +149,7 @@ export function SondeDetail({ serial }: { serial: string }) {
 
   const toggleFav = () => {
     toggleFavourite(sonde.serial);
-    toast(favourite ? 'Sonde retirée de Mes suivis' : 'Sonde ajoutée à Mes suivis', { id: 'fav' });
+    toast(favourite ? 'Sonde retirée des favoris' : 'Sonde ajoutée aux favoris', { id: 'fav' });
   };
 
   const receiverList = (withSignal: boolean, limit: number | null) => (
@@ -199,7 +194,7 @@ export function SondeDetail({ serial }: { serial: string }) {
           <LocateFixed className="size-[18px]" />
         </IconButton>
         <IconButton
-          label={favourite ? 'Retirer de Mes suivis' : 'Ajouter à Mes suivis'}
+          label={favourite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           side="bottom"
           className={cx(favourite && 'text-foreground')}
           aria-pressed={favourite}
