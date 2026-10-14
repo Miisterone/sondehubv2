@@ -1,15 +1,15 @@
 import { CircleHelp } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import type { IconId } from '@/lib/icons';
-import { MapIcon, cx } from './ui';
+import { cx } from './ui';
+import { Icon3D, type Icon3DId } from './Icon3D';
 
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
 
-const STEPS: { icon: IconId; title: string; text: string }[] = [
-  { icon: 'sonde-ascending', title: 'Montée', text: 'Le ballon monte d’environ 5 m/s (18 km/h) pendant 1 h 30 à 2 h.' },
+const STEPS: { icon: Icon3DId; title: string; text: string }[] = [
+  { icon: 'ascending', title: 'Montée', text: 'Le ballon monte d’environ 5 m/s (18 km/h) pendant 1 h 30 à 2 h.' },
   { icon: 'burst', title: 'Éclatement', text: 'Vers 20 à 35 km d’altitude, le ballon, devenu énorme, éclate.' },
-  { icon: 'sonde-descending', title: 'Descente', text: 'La sonde redescend sous un petit parachute, en 30 à 45 min.' },
-  { icon: 'sonde-landed', title: 'Au sol', text: 'Elle tombe souvent à plusieurs dizaines de kilomètres du lâcher. Vous pouvez la chercher et signaler votre trouvaille.' },
+  { icon: 'descending', title: 'Descente', text: 'La sonde redescend sous un petit parachute, en 30 à 45 min.' },
+  { icon: 'landed', title: 'Au sol', text: 'Elle tombe souvent à plusieurs dizaines de kilomètres du lâcher. Vous pouvez la chercher et signaler votre trouvaille.' },
 ];
 
 export function FlightGuide({ className }: { className?: string }) {
@@ -36,8 +36,8 @@ export function FlightGuide({ className }: { className?: string }) {
         <ol className="mt-4 space-y-3">
           {STEPS.map((s, i) => (
             <li key={s.title} className="flex gap-3">
-              <span className="bg-surface grid size-9 shrink-0 place-items-center rounded-md border">
-                <MapIcon id={s.icon} size={22} />
+              <span className="-my-1 grid size-10 shrink-0 place-items-center">
+                <Icon3D id={s.icon} size={40} />
               </span>
               <span className="min-w-0 text-[13px] leading-snug">
                 <span className="text-foreground block font-semibold">
@@ -50,8 +50,8 @@ export function FlightGuide({ className }: { className?: string }) {
           ))}
         </ol>
         <div className="mt-4 flex gap-3 border-t pt-4 text-[13px] leading-snug">
-          <span className="grid size-9 shrink-0 place-items-center">
-            <MapIcon id="sonde-lost" size={22} />
+          <span className="-my-1 grid size-10 shrink-0 place-items-center">
+            <Icon3D id="lost" size={40} />
           </span>
           <span className="min-w-0">
             <span className="text-foreground font-semibold">Signal perdu</span> : la sonde n’est plus captée, en général parce qu’elle est passée trop bas

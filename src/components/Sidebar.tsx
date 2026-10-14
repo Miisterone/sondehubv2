@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Bell, BellRing, ChevronDown, Info, LoaderCircle, MapPin, MapPinOff, Radar, RotateCw, Search, SearchX, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Bell, BellRing, ChevronDown, Info, LoaderCircle, MapPin, RotateCw, Search, SearchX, SlidersHorizontal, Star, X } from 'lucide-react';
 import { Drawer as DrawerPrimitive } from 'vaul';
 import { toast } from 'sonner';
 import type { MapMouseEvent } from 'maplibre-gl';
@@ -22,7 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { IconButton, Logo, MapIcon, Segmented, cx } from './ui';
+import { IconButton, Logo, Segmented, cx } from './ui';
+import { Icon3D, type Icon3DId } from './Icon3D';
 import { SondeDetail } from './SondeDetail';
 import { SiteDetail } from './SiteDetail';
 import { ListenerDetail } from './ListenerDetail';
@@ -676,7 +677,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         </div>
       ) : (
         <EmptyState
-          icon={<MapPinOff />}
+          art="locate"
           title={geo === 'failed' ? 'Position indisponible' : 'Où êtes-vous ?'}
           actions={
             <Button size="sm" onClick={onLocate}>
@@ -709,7 +710,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
             skeleton(4)
           ) : (
             <EmptyState
-              icon={<Radar />}
+              art="locate"
               title={`Aucun ballon à moins de ${fmtRadius(alerts.radiusKm, units)}`}
               actions={
                 <>
@@ -779,7 +780,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           skeleton(6)
         ) : flyingCount === 0 ? (
           <EmptyState
-            icon={<Radar />}
+            art="ascending"
             title={filtered ? 'Aucun ballon ne correspond aux filtres' : 'Aucun ballon en vol pour le moment'}
             actions={
               filtered && (
@@ -975,7 +976,7 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
             <legend className="text-foreground mb-1 text-[13px] font-semibold">Étapes du vol</legend>
             {PHASES.map((p) => (
               <label key={p} className="flex cursor-pointer items-center gap-3 py-1.5">
-                <MapIcon id={`sonde-${p}`} size={20} />
+                <Icon3D id={p} size={30} className="-my-1" />
                 <span className="text-foreground min-w-0 flex-1 text-[13.5px]">{PHASE_LABEL[p]}</span>
                 <span className="tabular text-faint text-[12.5px]">{counts[p]}</span>
                 <Switch checked={phaseFilter[p]} onCheckedChange={() => togglePhase(p)} aria-label={`Afficher : ${PHASE_LABEL[p].toLowerCase()}`} />
@@ -1049,10 +1050,26 @@ function RowSkeleton() {
   );
 }
 
-function EmptyState({ icon, title, children, actions }: { icon: ReactNode; title: string; children?: ReactNode; actions?: ReactNode }) {
+function EmptyState({
+  icon,
+  art,
+  title,
+  children,
+  actions,
+}: {
+  icon?: ReactNode;
+  art?: Icon3DId;
+  title: string;
+  children?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
     <div className="flex flex-col items-start px-5 py-8">
-      <span className="text-muted-foreground mb-4 grid size-10 place-items-center rounded-md border [&>svg]:size-5">{icon}</span>
+      {art ? (
+        <Icon3D id={art} size={96} className="-mt-3 mb-2 -ml-2.5" />
+      ) : (
+        <span className="text-muted-foreground mb-4 grid size-10 place-items-center rounded-md border [&>svg]:size-5">{icon}</span>
+      )}
       <h2 className="text-[16px] font-semibold">{title}</h2>
       {children && <p className="mt-1 max-w-80 text-[13.5px] leading-relaxed">{children}</p>}
       {actions && <div className="mt-4 flex flex-wrap items-center gap-2">{actions}</div>}
@@ -1182,8 +1199,8 @@ function SondeItem({
           onClick={() => select(serial, true)}
           className="focus-visible:ring-ring/50 flex min-w-0 flex-1 items-start gap-3 py-3 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
         >
-          <span className="mt-0.5 grid size-8 shrink-0 place-items-center" title={s ? PHASE_LABEL[s.phase] : undefined}>
-            {s ? <MapIcon id={`sonde-${s.phase}`} size={26} /> : <Star className="text-faint size-4" />}
+          <span className="-my-1 -ml-1.5 grid size-10 shrink-0 place-items-center" title={s ? PHASE_LABEL[s.phase] : undefined}>
+            {s ? <Icon3D id={s.phase} size={40} /> : <Star className="text-faint size-4" />}
           </span>
           <span className="min-w-0 flex-1">
             <span className="tabular text-foreground block truncate text-[14.5px] leading-5 font-semibold">{serial}</span>

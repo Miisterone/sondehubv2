@@ -10,7 +10,8 @@ import { PHASE_LABEL } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { IconButton, MapIcon, Section, Stat, cx } from './ui';
+import { IconButton, Section, Stat, cx } from './ui';
+import { Icon3D } from './Icon3D';
 import { HelpHint } from './HelpHint';
 
 const HISTORY_DAYS = 30;
@@ -183,7 +184,7 @@ export function SiteDetail({ id }: { id: string }) {
         <IconButton label="Retour à la liste" side="bottom" onClick={() => selectSite(null)}>
           <ArrowLeft />
         </IconButton>
-        <MapIcon id="site" size={22} />
+        <Icon3D id="launch" size={38} className="-my-1.5" />
         <div className="ml-0.5 min-w-0 flex-1">
           <h2 className="truncate text-[16px] leading-tight font-semibold">{siteLabel(site.name)}</h2>
           <div className="truncate text-[12.5px]">
@@ -223,7 +224,7 @@ export function SiteDetail({ id }: { id: string }) {
                       onClick={() => select(s.serial, true)}
                       className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2"
                     >
-                      <MapIcon id={`sonde-${s.phase}`} size={22} />
+                      <Icon3D id={s.phase} size={34} className="-my-1" />
                       <span className="min-w-0 flex-1">
                         <span className="tabular text-foreground block truncate text-[13.5px] font-semibold">{s.serial}</span>
                         <span className="block truncate text-[12.5px]">

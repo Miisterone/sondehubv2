@@ -4,7 +4,7 @@ import type { LaunchSite } from '@/lib/types';
 import { fmtDist, relative } from '@/lib/format';
 import { bearing, cardinal, distance } from '@/lib/geo';
 import { fmtDay, fmtHour, siteCountry, siteLabel, upcomingLaunches } from '@/lib/sonde';
-import { MapIcon } from './ui';
+import { Icon3D } from './Icon3D';
 
 const HORIZON_MS = 36 * 3_600_000;
 const NEAR_RADIUS_M = 400_000;
@@ -55,7 +55,7 @@ export function UpcomingLaunches({ limit = 5, className }: { limit?: number; cla
               onClick={() => selectSite(r.site.id, true)}
               className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-5 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
             >
-              <MapIcon id="site" size={22} />
+              <Icon3D id="launch" size={36} className="-my-1" />
               <span className="min-w-0 flex-1">
                 <span className="text-foreground block truncate text-[14px] font-semibold">{siteLabel(r.site.name)}</span>
                 <span className="block truncate text-[12.5px]">

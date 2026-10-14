@@ -8,7 +8,8 @@ import { bearing, compass, distance, elevation } from '@/lib/geo';
 import { PHASE_LABEL } from '@/lib/icons';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HelpHint } from './HelpHint';
-import { IconButton, MapIcon, Section, Stat } from './ui';
+import { IconButton, Section, Stat } from './ui';
+import { Icon3D } from './Icon3D';
 
 const LIVE_MS = 120_000;
 const SECTORS = 36;
@@ -116,7 +117,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
         <IconButton label="Retour à la liste" side="bottom" onClick={() => selectListener(null)}>
           <ArrowLeft />
         </IconButton>
-        <MapIcon id={mobile ? 'chase' : 'listener'} size={22} />
+        <Icon3D id={mobile ? 'chase' : 'station'} size={38} className="-my-1.5" />
         <div className="ml-0.5 min-w-0 flex-1">
           <h2 className="tabular truncate text-[16px] leading-tight font-semibold">{callsign}</h2>
           <div className="truncate text-[12.5px]">{title}</div>
@@ -206,7 +207,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
                         onClick={() => select(h.sonde.serial, true)}
                         className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                       >
-                        <MapIcon id={`sonde-${h.sonde.phase}`} size={20} />
+                        <Icon3D id={h.sonde.phase} size={32} className="-my-1" />
                         <span className="min-w-0 flex-1">
                           <span className="tabular text-foreground block truncate text-[13px] font-semibold">{h.sonde.serial}</span>
                           <span className="block truncate text-[12.5px]">

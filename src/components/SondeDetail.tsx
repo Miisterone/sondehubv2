@@ -45,7 +45,8 @@ import { FlightTimeline } from './FlightTimeline';
 import { ReplayControls, ReplayStats, canReplay, startReplay } from './ReplayBar';
 import { AtmoIndices } from './AtmoIndices';
 import { AtmospherePanel } from './AtmospherePanel';
-import { IconButton, MapIcon, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
+import { IconButton, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
+import { AltitudeColumn, Icon3D } from './Icon3D';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
 import { NavMenu } from './NavMenu';
@@ -192,6 +193,7 @@ export function SondeDetail({ serial }: { serial: string }) {
     : null;
   const model = [sonde.manufacturer, sonde.type].filter((v, i, a) => v && a.indexOf(v) === i).join(' ');
   const burstAlt = sonde.phase !== 'ascending' && sonde.maxAlt - f.alt > 500 ? sonde.maxAlt : null;
+  const columnMark = burstAlt ?? (sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt ? prediction.burstAltitude : null);
   const receivers = Object.values(sonde.receivers).sort((a, b) => b.lastHeard - a.lastHeard);
   const live = now - sonde.lastTime < 60_000;
   const falling = vv !== undefined && vv < -0.5;
@@ -229,7 +231,7 @@ export function SondeDetail({ serial }: { serial: string }) {
               onClick={() => selectListener(r.callsign, true)}
               className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
             >
-            <MapIcon id={listeners[r.callsign]?.mobile ? 'chase' : 'listener'} size={20} className={fresh ? '' : 'opacity-40 grayscale'} />
+            <Icon3D id={listeners[r.callsign]?.mobile ? 'chase' : 'station'} size={30} className={cx('-my-1', fresh ? '' : 'opacity-40 grayscale')} />
             <div className="min-w-0 flex-1">
               <div className="text-foreground truncate text-[13px] font-semibold">{r.callsign}</div>
               <div className="text-faint truncate text-[12px]">
@@ -269,7 +271,7 @@ export function SondeDetail({ serial }: { serial: string }) {
         <IconButton label="Retour à la liste" side="bottom" onClick={() => select(null)}>
           <ArrowLeft />
         </IconButton>
-        {!compact && <MapIcon id={`sonde-${sonde.phase}`} size={26} />}
+        {!compact && <Icon3D id={sonde.phase} size={38} className="-my-1.5" />}
         <div className="ml-0.5 min-w-0 flex-1">
           <h2 className={cx('tabular truncate leading-tight font-semibold', compact ? 'text-[15px]' : 'text-[16px]')}>{sonde.serial}</h2>
           {compact ? (
@@ -322,21 +324,29 @@ export function SondeDetail({ serial }: { serial: string }) {
             </span>
           </div>
 
-          <div>
-            <div className="text-[12.5px]">Altitude</div>
-            <div className="font-heading tabular text-foreground text-[36px] leading-none font-semibold">{fmtAlt(f.alt, units)}</div>
-            <div className="mt-1.5 flex items-center gap-1 text-[12.5px]">
-              <span className="min-w-0 truncate">
-                {burstAlt
-                  ? `Éclatement à ${fmtAltShort(burstAlt, units)}`
-                  : sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt
-                    ? `Éclatement prévu vers ${fmtAltShort(prediction.burstAltitude, units)}`
-                    : `Maximum atteint ${fmtAltShort(sonde.maxAlt, units)}`}
-              </span>
-              <HelpHint title={burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
-                {burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
-              </HelpHint>
+          <div className="flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-[12.5px]">Altitude</div>
+              <div className="font-heading tabular text-foreground text-[36px] leading-none font-semibold">{fmtAlt(f.alt, units)}</div>
+              <div className="mt-1.5 flex items-center gap-1 text-[12.5px]">
+                <span className="min-w-0 truncate">
+                  {burstAlt
+                    ? `Éclatement à ${fmtAltShort(burstAlt, units)}`
+                    : sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt
+                      ? `Éclatement prévu vers ${fmtAltShort(prediction.burstAltitude, units)}`
+                      : `Maximum atteint ${fmtAltShort(sonde.maxAlt, units)}`}
+                </span>
+                <HelpHint title={burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
+                  {burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
+                </HelpHint>
+              </div>
             </div>
+            <AltitudeColumn
+              alt={f.alt}
+              burst={columnMark}
+              className="-my-2"
+              label={`Altitude ${fmtAltShort(f.alt, units)}${columnMark !== null ? `, ${burstAlt ? 'éclatement' : 'éclatement prévu'} ${fmtAltShort(columnMark, units)}` : ''}`}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4 border-t pt-4">
@@ -524,7 +534,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                 {showLanding && (
                   <div className="space-y-3 rounded-lg border px-4 py-3.5">
                     <div className="flex items-start gap-3">
-                      <MapIcon id="landing" size={22} className="mt-0.5" />
+                      <Icon3D id={landing ? 'landing' : sonde.phase === 'lost' ? 'lost' : 'landed'} size={36} className="-mt-1.5 -ml-1" />
                       <div className="min-w-0 flex-1 text-[13px] leading-relaxed">
                         <div className="text-foreground flex items-center gap-1.5 font-semibold">
                           <span className="truncate">

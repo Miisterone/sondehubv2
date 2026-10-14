@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { LocateFixed, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
-import { MapIcon, cx } from '@/components/ui';
+import { cx } from '@/components/ui';
+import { Icon3D } from '@/components/Icon3D';
 import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
 
@@ -21,10 +22,10 @@ const isMac =
 /** Touch-first devices have no keyboard shortcut to advertise. */
 const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
 
-function Tip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+function Tip({ icon, bare, children }: { icon: ReactNode; bare?: boolean; children: ReactNode }) {
   return (
     <li className="flex items-center gap-2.5 md:gap-3">
-      <span className="bg-chip grid size-8 shrink-0 place-items-center rounded-xl md:size-9">{icon}</span>
+      <span className={cx('grid size-8 shrink-0 place-items-center md:size-9', !bare && 'bg-chip rounded-xl')}>{icon}</span>
       <span className="min-w-0 leading-snug">{children}</span>
     </li>
   );
@@ -125,10 +126,10 @@ export function WelcomeCard() {
         </p>
 
         <ul className="mt-3 space-y-2 md:mt-3.5 md:space-y-2.5">
-          <Tip icon={<MapIcon id="sonde-descending" size={22} />}>
+          <Tip bare icon={<Icon3D id="descending" size={40} />}>
             {isTouch ? 'Touchez' : 'Cliquez sur'} un ballon pour voir sa trajectoire, ses mesures et son point d’atterrissage prévu.
           </Tip>
-          <Tip icon={<MapIcon id="landing" size={20} />}>Activez votre position pour voir ce qui atterrit près de chez vous et être alerté.</Tip>
+          <Tip bare icon={<Icon3D id="landing" size={40} />}>Activez votre position pour voir ce qui atterrit près de chez vous et être alerté.</Tip>
           {isTouch ? (
             <Tip icon={<Search className="text-muted-foreground size-4" />}>Touchez la loupe pour rechercher une sonde, une station ou un site.</Tip>
           ) : (

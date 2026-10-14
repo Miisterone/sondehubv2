@@ -3,7 +3,8 @@ import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed,
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
-import { MapIcon, cx } from '@/components/ui';
+import { cx } from '@/components/ui';
+import { Icon3D } from '@/components/Icon3D';
 import { useStore, type Duration, type Layers } from '@/store/useStore';
 import { BASEMAPS } from '@/lib/basemaps';
 import { ago, fmtAltShort } from '@/lib/format';
@@ -354,7 +355,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       <CommandGroup key="sondes" heading={q ? 'Sondes' : 'Sondes en vol'}>
         {sondeHits.map((s) => (
           <CommandItem key={s.serial} value={`sonde:${s.serial}`} onSelect={() => run(() => useStore.getState().select(s.serial, true))}>
-            <MapIcon id={`sonde-${s.phase}`} size={22} />
+            <Icon3D id={s.phase} className="-my-1 size-8!" />
             <div className="flex min-w-0 flex-1 items-baseline gap-2">
               <span className="truncate tabular font-semibold">{s.serial}</span>
               <span className="text-muted-foreground truncate text-xs">{[s.type, s.subtype && s.subtype !== s.type ? s.subtype : null].filter(Boolean).join(' · ')}</span>
@@ -380,7 +381,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
               run(() => useStore.getState().selectListener(l.callsign, true))
             }
           >
-            <MapIcon id={l.mobile ? 'chase' : 'listener'} size={20} />
+            <Icon3D id={l.mobile ? 'chase' : 'station'} className="-my-1 size-8!" />
             <span className="truncate tabular font-medium">{l.callsign}</span>
             <span className="text-muted-foreground ml-auto shrink-0 text-xs">{l.mobile ? 'Poursuite' : 'Fixe'}</span>
           </CommandItem>
@@ -394,7 +395,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       <CommandGroup key="sites" heading="Sites de lâcher">
         {siteHits.map((site) => (
           <CommandItem key={site.id} value={`site:${site.id}`} onSelect={() => run(() => useStore.getState().selectSite(site.id, true))}>
-            <MapIcon id="site" size={18} />
+            <Icon3D id="launch" className="-my-1 size-8!" />
             <span className="truncate">{site.name}</span>
             {site.types.length > 0 && <span className="text-muted-foreground ml-auto max-w-[40%] shrink-0 truncate text-xs">{site.types.slice(0, 3).join(', ')}</span>}
           </CommandItem>

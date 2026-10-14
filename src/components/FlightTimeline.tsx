@@ -4,6 +4,7 @@ import type { FlightPhase, Prediction } from '@/lib/types';
 import { ago, fmtAltShort, fmtDuration, fmtVSpeed, relative, type Units } from '@/lib/format';
 import { siteLabel, type Launch } from '@/lib/sonde';
 import { cx } from './ui';
+import { Icon3D, type Icon3DId } from './Icon3D';
 
 const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -87,18 +88,21 @@ export function FlightTimeline({
 
       <div className="grid grid-cols-3 gap-4">
         <Event
+          icon={launch?.fromGround === false && !launch?.estimated ? 'station' : 'launch'}
           label={launch?.estimated ? 'Lâcher estimé' : launch?.fromGround === false ? 'Premier signal' : 'Lâcher'}
           value={clock(start)}
           sub={launch?.site ? siteLabel(launch.site) : ago(start * 1000, now)}
           muted={launch?.estimated}
         />
         <Event
+          icon="burst"
           label="Éclatement"
           value={tb !== null ? clock(tb) : '—'}
           sub={tb !== null && burstAlt !== null ? `${burstPredicted ? 'prévu ' : ''}à ${fmtAltShort(burstAlt, units)}` : 'pas encore estimé'}
           muted={burstPredicted}
         />
         <Event
+          icon={landingPredicted || !ended ? 'landing' : phase === 'lost' ? 'lost' : 'landed'}
           label={landingPredicted || !ended ? 'Atterrissage' : 'Dernier signal'}
           value={tl !== null ? clock(tl) : '—'}
           sub={tl !== null ? (landingPredicted && tl * 1000 > now ? relative(tl * 1000, now) : ago(tl * 1000, now)) : 'pas encore estimé'}
@@ -124,9 +128,10 @@ function Segment({ grow, filled, first, last }: { grow: number; filled: number; 
   );
 }
 
-function Event({ label, value, sub, muted }: { label: string; value: ReactNode; sub: ReactNode; muted?: boolean }) {
+function Event({ icon, label, value, sub, muted }: { icon: Icon3DId; label: string; value: ReactNode; sub: ReactNode; muted?: boolean }) {
   return (
     <div className="min-w-0">
+      <Icon3D id={icon} size={44} className="mb-1.5 -ml-1.5" />
       <div className="truncate text-[12px]">{label}</div>
       <div className={cx('tabular mt-0.5 truncate text-[15px] font-semibold', muted ? 'text-muted-foreground' : 'text-foreground')}>{value}</div>
       <div className="text-faint truncate text-[12px]">{sub}</div>
