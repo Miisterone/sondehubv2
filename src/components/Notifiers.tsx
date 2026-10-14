@@ -142,26 +142,6 @@ function viewSonde(serial: string) {
   useStore.getState().select(serial, true);
 }
 
-/**
- * System notifications only when the user is not looking at the page (tab hidden or window
- * unfocused): otherwise the in-app toast already says it, and a second OS banner is noise.
- */
-function systemNotify(a: PendingAlert) {
-  if (!useStore.getState().settings.alerts.system) return;
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  if (!document.hidden && document.hasFocus()) return;
-  try {
-    const n = new Notification(a.title, { body: a.body, tag: `${a.serial}:${a.kind}`, icon: '/favicon.svg' });
-    n.onclick = () => {
-      window.focus();
-      viewSonde(a.serial);
-      n.close();
-    };
-  } catch {
-    /* e.g. Android Chrome only allows notifications from a service worker: the toast remains */
-  }
-}
-
 function deliver(list: PendingAlert[]) {
   const shown = list.length > MAX_TOASTS_PER_PASS ? list.slice(0, MAX_TOASTS_PER_PASS - 1) : list;
   for (const a of shown) {
@@ -173,13 +153,11 @@ function deliver(list: PendingAlert[]) {
       closeButton: true,
       action: { label: 'Voir', onClick: () => viewSonde(a.serial) },
     });
-    systemNotify(a);
   }
   const rest = list.length - shown.length;
   if (rest > 0) {
     const body = `${rest} autres sondes devraient atterrir près de vous ou font partie de vos favoris`;
     toast('Autres alertes d’atterrissage', { id: 'alert:more', description: body, icon: <BellRing className="text-foreground size-4" />, duration: 30_000, closeButton: true });
-    for (const a of list.slice(shown.length)) systemNotify(a);
   }
 }
 

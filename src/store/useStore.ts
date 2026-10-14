@@ -33,8 +33,6 @@ export interface AlertSettings {
   radiusKm: number;
   /** Also warn shortly before followed (favourite) sondes land, wherever they are. */
   favourites: boolean;
-  /** Use system notifications (when permitted) in addition to in-app toasts. */
-  system: boolean;
 }
 
 export interface Settings {
@@ -68,7 +66,7 @@ const DEFAULT_SETTINGS: Settings = {
   basemap: 'positron',
   units: localeUnits(),
   favourites: [],
-  alerts: { enabled: false, radiusKm: 50, favourites: true, system: true },
+  alerts: { enabled: false, radiusKm: 50, favourites: true },
   callsign: '',
   onboarded: false,
   techOpen: false,

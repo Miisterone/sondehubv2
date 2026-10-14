@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Bell, BellRing, Layers as LayersIcon, LocateFixed, MapPin, Moon, Sun } from 'lucide-react';
 import { useStore, type Layers } from '@/store/useStore';
 import { BASEMAPS } from '@/lib/basemaps';
@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { locateUser } from '@/lib/geolocation';
-import { disableAlerts, enableAlerts, notificationPermission, setSystemNotifications, type NotifPermission } from '@/lib/alerts';
+import { disableAlerts, enableAlerts } from '@/lib/alerts';
 import { IconButton, MapIcon, Segmented, Toggle, cx } from './ui';
 
 const OVERLAYS: { key: keyof Layers; label: string; hint: string; icon: IconId }[] = [
@@ -35,7 +35,7 @@ function SectionTitle({ children }: { children: string }) {
 
 const RADII = [25, 50, 100, 200] as const;
 
-/** Landing alerts: master switch, radius, favourites, system notifications and position status. */
+/** Landing alerts: master switch, radius, favourites and position status. */
 function AlertsSection() {
   const alerts = useStore((s) => s.settings.alerts);
   const nFavs = useStore((s) => s.settings.favourites.length);
@@ -43,21 +43,6 @@ function AlertsSection() {
   const { setAlerts } = useStore.getState();
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [perm, setPerm] = useState<NotifPermission>(notificationPermission);
-
-  // The permission can change in the browser's site settings while the page is open.
-  useEffect(() => {
-    let status: PermissionStatus | undefined;
-    const sync = () => setPerm(notificationPermission());
-    navigator.permissions
-      ?.query({ name: 'notifications' })
-      .then((p) => {
-        status = p;
-        p.addEventListener('change', sync);
-      })
-      .catch(() => {});
-    return () => status?.removeEventListener('change', sync);
-  }, []);
 
   const toggleMaster = async (on: boolean) => {
     if (!on) return disableAlerts();
@@ -66,13 +51,7 @@ function AlertsSection() {
       await enableAlerts();
     } finally {
       setBusy(false);
-      setPerm(notificationPermission());
     }
-  };
-
-  const toggleSystem = async (on: boolean) => {
-    await setSystemNotifications(on);
-    setPerm(notificationPermission());
   };
 
   const locate = async () => {
@@ -80,13 +59,6 @@ function AlertsSection() {
     await locateUser({ fly: true });
     setLocating(false);
   };
-
-  const systemHint =
-    perm === 'denied'
-      ? 'Bloquées par le navigateur — autorisez-les dans les réglages du site'
-      : perm === 'unsupported'
-        ? 'Non prises en charge par ce navigateur'
-        : 'Quand SondeHub V2 est en arrière-plan';
 
   return (
     <section aria-labelledby="alerts-title">
@@ -140,14 +112,6 @@ function AlertsSection() {
               label="Sondes favorites"
               hint={`Éclatement et atterrissage imminent, partout${nFavs ? ` (${nFavs} favori${nFavs > 1 ? 's' : ''})` : ''}`}
             />
-            {perm !== 'unsupported' && (
-              <Toggle
-                checked={alerts.system && perm === 'granted'}
-                onChange={(v) => void toggleSystem(v)}
-                label="Notifications système"
-                hint={systemHint}
-              />
-            )}
           </div>
         </div>
       )}
