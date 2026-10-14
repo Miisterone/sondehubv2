@@ -32,6 +32,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
   const replayT = useStore((s) => (serial && s.replay?.serial === serial ? s.replay.t : null));
+  const playing = useStore((s) => !!serial && s.replay?.serial === serial && s.replay.playing);
   const at = replayT !== null && d.last >= 0 ? Math.min(d.last, nearestIndex(d.x, replayT)) : null;
   const t = chartTheme(theme);
   const [hover, setHover] = useState<number | null>(null);
@@ -94,7 +95,8 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
     return { done: geo.toPath([...before, at]), rest: geo.toPath([at, ...after]) };
   }, [geo, at]);
 
-  const i = hover ?? at ?? d.last;
+  const probe = playing ? null : hover;
+  const i = probe ?? at ?? d.last;
   const fromLaunch = d.x.length ? distance(d.lat[0], d.lon[0], d.lat[i], d.lon[i]) : 0;
   const dir = fromLaunch > 200 ? towards(bearing(d.lat[0], d.lon[0], d.lat[i], d.lon[i])) : null;
   const predicted = i > d.last;
@@ -240,8 +242,8 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
               </text>
             ))}
             {at !== null && <circle cx={geo.sx[at]} cy={geo.sy[at]} r={6.5} fill={t.accent} stroke={t.surface} strokeWidth={3} />}
-            {hover !== null && (
-              <circle cx={geo.sx[hover]} cy={geo.sy[hover]} r={6} fill="none" stroke={hover > d.last ? t.pred : t.accent} strokeWidth={2} />
+            {probe !== null && (
+              <circle cx={geo.sx[probe]} cy={geo.sy[probe]} r={6} fill="none" stroke={probe > d.last ? t.pred : t.accent} strokeWidth={2} />
             )}
           </svg>
         )}

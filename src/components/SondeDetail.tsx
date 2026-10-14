@@ -41,7 +41,7 @@ import { ALT_RAMP } from './MapView';
 import { PHASE_LABEL } from '@/lib/icons';
 import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
-import { ReplayBar, canReplay, startReplay } from './ReplayBar';
+import { ReplayControls, ReplayStats, canReplay, startReplay } from './ReplayBar';
 import { AtmoIndices } from './AtmoIndices';
 import { IconButton, MapIcon, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
 import { HELP, HelpHint } from './HelpHint';
@@ -458,7 +458,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                 className="border-t pt-6"
               >
                 {replaying ? (
-                  <ReplayBar serial={sonde.serial} d={flight} units={units} />
+                  <ReplayStats serial={sonde.serial} d={flight} units={units} />
                 ) : (
                   <div className="grid grid-cols-3 gap-4">
                     <Stat label="Parcourue" value={fmtDist(flight.path[flight.last] ?? 0, units)} sub="depuis le lâcher" />
@@ -471,10 +471,14 @@ export function SondeDetail({ serial }: { serial: string }) {
                   </div>
                 )}
                 <GroundTrack d={flight} units={units} now={now} live={live} serial={sonde.serial} />
-                {!replaying && canReplay(flight) && (
-                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => startReplay(sonde.serial, flight)}>
-                    <Play /> Rejouer le vol
-                  </Button>
+                {replaying ? (
+                  <ReplayControls serial={sonde.serial} d={flight} units={units} />
+                ) : (
+                  canReplay(flight) && (
+                    <Button variant="outline" size="sm" className="text-[13px]" onClick={() => startReplay(sonde.serial, flight)}>
+                      <Play /> Rejouer le vol
+                    </Button>
+                  )
                 )}
                 <AltitudeLegend units={units} />
               </Section>
