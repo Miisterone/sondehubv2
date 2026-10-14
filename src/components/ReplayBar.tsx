@@ -12,10 +12,9 @@ const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { ho
 
 export function ReplayBar({ serial, d, units }: { serial: string; d: FlightData; units: Units }) {
   const replay = useStore((s) => (s.replay?.serial === serial ? s.replay : null));
-  const { setReplay, setFollow } = useStore.getState();
+  const { setReplay } = useStore.getState();
   const start = d.x[0];
   const end = d.x[Math.max(0, d.last)];
-  const span = end - start;
   const playing = replay?.playing ?? false;
 
   useEffect(() => {
@@ -41,28 +40,7 @@ export function ReplayBar({ serial, d, units }: { serial: string; d: FlightData;
 
   const point = useMemo(() => (replay ? replayAt(d, replay.t) : null), [d, replay]);
 
-  if (d.last < 2 || span < 120) return null;
-
-  if (!replay || !point) {
-    return (
-      <div className="space-y-3">
-        <p className="text-[13px] leading-relaxed">
-          Revoyez les {fmtDuration(span * 1000)} de vol mesurés en accéléré : la sonde se déplace sur la carte et les mesures défilent avec elle.
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-[13px]"
-          onClick={() => {
-            setReplay({ serial, t: start, playing: true, speed: 300 });
-            setFollow(true);
-          }}
-        >
-          <Play /> Rejouer le vol
-        </Button>
-      </div>
-    );
-  }
+  if (!replay || !point) return null;
 
   const atEnd = replay.t >= end;
   const toggle = () => {
@@ -124,7 +102,16 @@ export function ReplayBar({ serial, d, units }: { serial: string; d: FlightData;
           <X /> Quitter
         </Button>
       </div>
-      <p className="text-[12.5px] leading-relaxed">Sur la carte, le tracé déjà parcouru reste en couleur. Déplacez la carte pour ne plus suivre la sonde.</p>
     </div>
   );
+}
+
+export function canReplay(d: FlightData): boolean {
+  return d.last > 2 && d.x[d.last] - d.x[0] >= 120;
+}
+
+export function startReplay(serial: string, d: FlightData) {
+  const st = useStore.getState();
+  st.setReplay({ serial, t: d.x[0], playing: true, speed: 300 });
+  st.setFollow(true);
 }

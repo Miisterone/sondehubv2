@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
-import type { FlightData } from '@/lib/flight';
+import { nearestIndex, type FlightData } from '@/lib/flight';
 import { fmtAltShort, fmtClock, fmtDist, relative, type Units } from '@/lib/format';
 import { bearing, distance, towards } from '@/lib/geo';
 import { useStore } from '@/store/useStore';
@@ -28,9 +28,11 @@ const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { ho
 
 type Label = { x: number; y: number; text: string; anchor: 'start' | 'end' };
 
-export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightData; units: Units; now: number; live: boolean; height?: number }) {
+export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: FlightData; units: Units; now: number; live: boolean; serial?: string; height?: number }) {
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
+  const replayT = useStore((s) => (serial && s.replay?.serial === serial ? s.replay.t : null));
+  const at = replayT !== null && d.last >= 0 ? Math.min(d.last, nearestIndex(d.x, replayT)) : null;
   const t = chartTheme(theme);
   const [hover, setHover] = useState<number | null>(null);
   const timer = useRef(0);
@@ -82,10 +84,17 @@ export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightDa
     const toPath = (idx: number[]) => idx.map((i, k) => `${k ? 'L' : 'M'}${sx[i].toFixed(1)},${sy[i].toFixed(1)}`).join('');
     const target = (width - 2 * padX) / 4;
     const metres = [...SCALES].reverse().find((m) => m * s <= target) ?? SCALES[0];
-    return { sx, sy, measured, forecast, mPath: toPath(measured), fPath: d.forecast ? toPath(forecast) : '', scaleM: metres, scalePx: metres * s };
+    return { sx, sy, measured, forecast, toPath, mPath: toPath(measured), fPath: d.forecast ? toPath(forecast) : '', scaleM: metres, scalePx: metres * s };
   }, [d, width, height]);
 
-  const i = hover ?? d.last;
+  const played = useMemo(() => {
+    if (!geo || at === null) return null;
+    const before = geo.measured.filter((j) => j <= at);
+    const after = geo.measured.filter((j) => j >= at);
+    return { done: geo.toPath([...before, at]), rest: geo.toPath([at, ...after]) };
+  }, [geo, at]);
+
+  const i = hover ?? at ?? d.last;
   const fromLaunch = d.x.length ? distance(d.lat[0], d.lon[0], d.lat[i], d.lon[i]) : 0;
   const dir = fromLaunch > 200 ? towards(bearing(d.lat[0], d.lon[0], d.lat[i], d.lon[i])) : null;
   const predicted = i > d.last;
@@ -194,7 +203,14 @@ export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightDa
                 {fmtDist(geo.scaleM, units)}
               </text>
             </g>
-            <path d={geo.mPath} fill="none" stroke={t.accent} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            {played ? (
+              <>
+                <path d={played.rest} fill="none" stroke={t.accent} strokeOpacity={0.25} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                <path d={played.done} fill="none" stroke={t.accent} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              </>
+            ) : (
+              <path d={geo.mPath} fill="none" stroke={t.accent} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            )}
             {geo.fPath && <path d={geo.fPath} fill="none" stroke={t.pred} strokeWidth={2} strokeDasharray="6 4" strokeLinejoin="round" />}
             <circle cx={geo.sx[0]} cy={geo.sy[0]} r={4.5} fill={t.surface} stroke={t.ink} strokeWidth={2} />
             {d.burst !== null && <circle cx={geo.sx[d.burst]} cy={geo.sy[d.burst]} r={4} fill={t.ink} stroke={t.surface} strokeWidth={2} />}
@@ -223,6 +239,7 @@ export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightDa
                 {l.text}
               </text>
             ))}
+            {at !== null && <circle cx={geo.sx[at]} cy={geo.sy[at]} r={6.5} fill={t.accent} stroke={t.surface} strokeWidth={3} />}
             {hover !== null && (
               <circle cx={geo.sx[hover]} cy={geo.sy[hover]} r={6} fill="none" stroke={hover > d.last ? t.pred : t.accent} strokeWidth={2} />
             )}

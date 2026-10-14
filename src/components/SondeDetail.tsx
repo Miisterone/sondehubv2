@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowLeft,
@@ -8,7 +8,6 @@ import {
   Compass,
   Copy,
   Crosshair,
-  Download,
   Droplets,
   ExternalLink,
   FileCode2,
@@ -17,6 +16,7 @@ import {
   Hash,
   LocateFixed,
   PackageCheck,
+  Play,
   Radio,
   Ruler,
   Satellite,
@@ -38,9 +38,10 @@ import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
 import { findLaunch, fmtHour, siteLabel, type Launch } from '@/lib/sonde';
 import { ALT_RAMP } from './MapView';
+import { PHASE_LABEL } from '@/lib/icons';
 import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
-import { ReplayBar } from './ReplayBar';
+import { ReplayBar, canReplay, startReplay } from './ReplayBar';
 import { AtmoIndices } from './AtmoIndices';
 import { IconButton, MapIcon, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
 import { HELP, HelpHint } from './HelpHint';
@@ -50,7 +51,6 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const charts = () => import('./FlightCharts');
 const AltitudeChart = lazy(() => charts().then((m) => ({ default: m.AltitudeChart })));
@@ -62,11 +62,35 @@ const SkewT = lazy(() => import('./SkewT').then((m) => ({ default: m.SkewT })));
 const WindProfile = lazy(() => import('./WindProfile').then((m) => ({ default: m.WindProfile })));
 const PredictionConvergence = lazy(() => import('./PredictionConvergence').then((m) => ({ default: m.PredictionConvergence })));
 
-const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
-
 const RECEIVERS_PREVIEW = 8;
 
-type TrackView = 'plan' | 'profile';
+type DetailTab = 'flight' | 'atmosphere' | 'technical';
+type ChartView = 'altitude' | 'speed' | 'distance';
+
+const DETAIL_TABS: { id: DetailTab; label: string }[] = [
+  { id: 'flight', label: 'Vol' },
+  { id: 'atmosphere', label: 'Atmosphère' },
+  { id: 'technical', label: 'Technique' },
+];
+
+const TAB_KEY = 'sondetrack.detailTab.v1';
+
+function readTab(): DetailTab {
+  try {
+    const t = localStorage.getItem(TAB_KEY);
+    return t === 'atmosphere' || t === 'technical' ? t : 'flight';
+  } catch {
+    return 'flight';
+  }
+}
+
+function writeTab(t: DetailTab) {
+  try {
+    localStorage.setItem(TAB_KEY, t);
+  } catch {
+    return;
+  }
+}
 
 async function copyText(text: string, success: string) {
   try {
@@ -89,13 +113,24 @@ export function SondeDetail({ serial }: { serial: string }) {
   const reverse = useStore((s) => s.reverse[serial]);
   const favourite = useStore((s) => s.settings.favourites.includes(serial));
   const recovery = useStore((s) => s.recoveries[serial]);
-  const techOpen = useStore((s) => s.settings.techOpen);
   const predHistory = useStore((s) => s.predHistory[serial]);
-  const { select, selectSite, selectListener, setFollow, requestFly, toggleFavourite, setSettings } = useStore.getState();
-  const [showReceivers, setShowReceivers] = useState(false);
+  const replaying = useStore((s) => s.replay?.serial === serial);
+  const { select, selectSite, selectListener, setFollow, requestFly, toggleFavourite } = useStore.getState();
   const [allReceivers, setAllReceivers] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const [trackView, setTrackView] = useState<TrackView>('plan');
+  const [tab, setTab] = useState<DetailTab>(readTab);
+  const [chartView, setChartView] = useState<ChartView>('altitude');
+  const [evolutionOpen, setEvolutionOpen] = useState(false);
+  const [hero, setHero] = useState<HTMLDivElement | null>(null);
+  const [compact, setCompact] = useState(false);
+  const tabAnchor = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!hero) return;
+    const io = new IntersectionObserver(([e]) => setCompact(!e.isIntersecting), { threshold: 0 });
+    io.observe(hero);
+    return () => io.disconnect();
+  }, [hero]);
 
   const launch = useMemo(
     () => (sonde ? findLaunch(sonde, sites, reverse) : null),
@@ -165,12 +200,20 @@ export function SondeDetail({ serial }: { serial: string }) {
   const toLanding = landing ? distance(f.lat, f.lon, landing.lat, landing.lon) : null;
   const drift = launchPt ? distance(launchPt.lat, launchPt.lon, f.lat, f.lon) : 0;
 
+  const history = predHistory ?? [];
+  const lastStep =
+    history.length > 1
+      ? distance(history[history.length - 2].lat, history[history.length - 2].lon, history[history.length - 1].lat, history[history.length - 1].lon)
+      : null;
+  const evolutionText =
+    lastStep !== null ? `Dernière correction de ${fmtDist(lastStep, units)}, ${ago(history[history.length - 1].at, now)}` : 'Historique en cours de constitution';
+
   const toggleFav = () => {
     toggleFavourite(sonde.serial);
     toast(favourite ? 'Sonde retirée des favoris' : 'Sonde ajoutée aux favoris', { id: 'fav' });
   };
 
-  const receiverList = (withSignal: boolean, limit: number | null) => (
+  const receiverList = (limit: number | null) => (
     <ul className="divide-y rounded-md border">
       {(limit === null ? receivers : receivers.slice(0, limit)).map((r) => {
         const pos = r.position ?? (listeners[r.callsign] ? [listeners[r.callsign].lat, listeners[r.callsign].lon] : undefined);
@@ -189,10 +232,10 @@ export function SondeDetail({ serial }: { serial: string }) {
               <div className="text-faint truncate text-[12px]">
                 {ago(r.lastHeard, now)}
                 {d !== undefined ? ` · à ${fmtDist(d, units)} de la sonde` : ''}
-                {withSignal && r.software ? ` · ${r.software}` : ''}
+                {r.software ? ` · ${r.software}` : ''}
               </div>
             </div>
-            {withSignal && r.snr !== undefined && <SnrBar snr={r.snr} />}
+            {r.snr !== undefined && <SnrBar snr={r.snr} />}
             </button>
           </li>
         );
@@ -200,20 +243,58 @@ export function SondeDetail({ serial }: { serial: string }) {
     </ul>
   );
 
+  const selectTab = (t: DetailTab) => {
+    setTab(t);
+    writeTab(t);
+    const anchor = tabAnchor.current;
+    const viewport = anchor?.closest('[data-slot=scroll-area-viewport]') as HTMLElement | null;
+    if (!anchor || !viewport) return;
+    const offset = anchor.getBoundingClientRect().top - viewport.getBoundingClientRect().top;
+    if (offset < 0) viewport.scrollTop += offset;
+  };
+
+  const vSpeed = (
+    <>
+      {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />)}
+      {fmtVSpeed(vv, units)}
+    </>
+  );
+
   return (
     <div className="animate-in flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-3">
+      <div className={cx('flex shrink-0 items-center border-b px-3', compact ? 'gap-1.5 py-2' : 'gap-2 py-3')}>
         <IconButton label="Retour à la liste" side="bottom" onClick={() => select(null)}>
           <ArrowLeft />
         </IconButton>
-        <MapIcon id={`sonde-${sonde.phase}`} size={26} />
+        {!compact && <MapIcon id={`sonde-${sonde.phase}`} size={26} />}
         <div className="ml-0.5 min-w-0 flex-1">
-          <h2 className="tabular truncate text-[16px] leading-tight font-semibold">{sonde.serial}</h2>
-          <div className="truncate text-[12.5px]">{model || 'Radiosonde météo'}</div>
+          <h2 className={cx('tabular truncate leading-tight font-semibold', compact ? 'text-[15px]' : 'text-[16px]')}>{sonde.serial}</h2>
+          {compact ? (
+            <div className="flex items-center gap-1.5 truncate text-[12px]">
+              <span className={cx('relative size-1.5 shrink-0 rounded-full', live ? 'live-dot bg-live' : 'bg-faint')} />
+              <span className="truncate">{PHASE_LABEL[sonde.phase]}</span>
+            </div>
+          ) : (
+            <div className="truncate text-[12.5px]">{model || 'Radiosonde météo'}</div>
+          )}
         </div>
-        <IconButton label="Centrer la carte sur la sonde" side="bottom" onClick={() => requestFly(f.lon, f.lat, 11)}>
-          <Crosshair className="size-[18px]" />
-        </IconButton>
+        {compact ? (
+          <div className="tabular shrink-0 pr-1 text-right">
+            <div className="font-heading text-foreground text-[16px] leading-tight font-semibold">{fmtAlt(f.alt, units)}</div>
+            <div className="flex items-center justify-end gap-0.5 text-[11.5px] whitespace-nowrap">
+              {vSpeed} · {fmtHSpeed(f.vel_h, units)}
+            </div>
+          </div>
+        ) : (
+          <>
+            <IconButton label="Centrer la carte sur la sonde" side="bottom" onClick={() => requestFly(f.lon, f.lat, 11)}>
+              <Crosshair className="size-[18px]" />
+            </IconButton>
+            <IconButton label="Partager cette sonde" side="bottom" onClick={() => share(sonde, landing, now, units)}>
+              <Share2 className="size-[18px]" />
+            </IconButton>
+          </>
+        )}
         <IconButton label={follow ? 'Arrêter de suivre sur la carte' : 'Suivre sur la carte en continu (F)'} side="bottom" active={follow} onClick={() => setFollow(!follow)}>
           <LocateFixed className="size-[18px]" />
         </IconButton>
@@ -229,372 +310,394 @@ export function SondeDetail({ serial }: { serial: string }) {
       </div>
 
       <ScrollArea className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:block!">
-        <div className="space-y-8 px-5 pt-5 pb-10">
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <PhaseBadge phase={sonde.phase} />
-              <span className="flex items-center gap-2 text-[12.5px]">
-                <span className={cx('relative size-2 shrink-0 rounded-full', live ? 'live-dot bg-live' : 'bg-faint')} />
-                {live ? 'En direct' : 'Dernier signal'} · {ago(sonde.lastTime, now)}
-              </span>
-            </div>
-
-            <div>
-              <div className="text-[12.5px]">Altitude</div>
-              <div className="font-heading tabular text-foreground text-[36px] leading-none font-semibold">{fmtAlt(f.alt, units)}</div>
-              <div className="mt-1.5 flex items-center gap-1 text-[12.5px]">
-                <span className="min-w-0 truncate">
-                  {burstAlt
-                    ? `Éclatement à ${fmtAltShort(burstAlt, units)}`
-                    : sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt
-                      ? `Éclatement prévu vers ${fmtAltShort(prediction.burstAltitude, units)}`
-                      : `Maximum atteint ${fmtAltShort(sonde.maxAlt, units)}`}
-                </span>
-                <HelpHint title={burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
-                  {burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
-                </HelpHint>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1 text-[12.5px]">
-                  <span className="truncate">{flying ? (falling ? 'Vitesse de chute' : 'Vitesse de montée') : 'Vitesse verticale'}</span>
-                  <HelpHint title={HELP.vspeed.title}>{HELP.vspeed.text}</HelpHint>
-                </div>
-                <div className="font-heading tabular text-foreground mt-0.5 flex items-center gap-1 text-[22px] leading-tight font-semibold">
-                  {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />)}
-                  {fmtVSpeed(vv, units)}
-                </div>
-                <div className="text-faint truncate text-[12px]">{flying ? (falling ? 'sous parachute' : 'portée par le ballon') : 'à la dernière mesure'}</div>
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1 text-[12.5px]">
-                  <span className="truncate">Vitesse horizontale</span>
-                  <HelpHint title={HELP.hspeed.title} align="end">
-                    {HELP.hspeed.text}
-                  </HelpHint>
-                </div>
-                <div className="font-heading tabular text-foreground mt-0.5 text-[22px] leading-tight font-semibold">{fmtHSpeed(f.vel_h, units)}</div>
-                <div className="text-faint truncate text-[12px]">{f.heading !== undefined ? `vers le ${towards(f.heading)}` : 'poussée par le vent'}</div>
-              </div>
-            </div>
-
-            <p className="text-[13.5px] leading-relaxed">{summarise(sonde, launch, landing, prediction, now, units)}</p>
-
-            {recovery && (
-              <div className="flex gap-3 rounded-md border px-3 py-2.5 text-[13px] leading-snug">
-                <PackageCheck className="text-foreground mt-0.5 size-4 shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-foreground font-semibold">
-                    {recovery.recovered ? 'Signalée récupérée' : 'Recherche signalée'}
-                    {recovery.recoveredBy ? <> par {recovery.recoveredBy}</> : null}
-                    <span className="font-normal"> · {ago(recovery.datetime, now)}</span>
-                  </div>
-                  {recovery.description && <div className="line-clamp-3 break-words">« {recovery.description} »</div>}
-                </div>
-              </div>
-            )}
+        <div ref={setHero} className="space-y-5 px-5 pt-5 pb-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <PhaseBadge phase={sonde.phase} />
+            <span className="flex items-center gap-2 text-[12.5px]">
+              <span className={cx('relative size-2 shrink-0 rounded-full', live ? 'live-dot bg-live' : 'bg-faint')} />
+              {live ? 'En direct' : 'Dernier signal'} · {ago(sonde.lastTime, now)}
+            </span>
           </div>
 
-          <Section
-            title={
-              <>
-                Altitude
-                <HelpHint title="Lire la courbe">
-                  Trait plein : altitude mesurée. Pointillés : suite du vol prévue par le modèle Tawhiri. Survolez ou faites glisser le doigt sur la courbe pour lire
-                  les valeurs à chaque instant.
-                </HelpHint>
-              </>
-            }
-            className="border-t pt-6"
-          >
-            <Suspense fallback={<div className="h-[318px]" />}>
-              <AltitudeChart d={flight} units={units} now={now} live={live} syncKey={syncKey} />
-            </Suspense>
-          </Section>
+          <div>
+            <div className="text-[12.5px]">Altitude</div>
+            <div className="font-heading tabular text-foreground text-[36px] leading-none font-semibold">{fmtAlt(f.alt, units)}</div>
+            <div className="mt-1.5 flex items-center gap-1 text-[12.5px]">
+              <span className="min-w-0 truncate">
+                {burstAlt
+                  ? `Éclatement à ${fmtAltShort(burstAlt, units)}`
+                  : sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt
+                    ? `Éclatement prévu vers ${fmtAltShort(prediction.burstAltitude, units)}`
+                    : `Maximum atteint ${fmtAltShort(sonde.maxAlt, units)}`}
+              </span>
+              <HelpHint title={burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
+                {burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
+              </HelpHint>
+            </div>
+          </div>
 
-          <Section
-            title={
-              <>
-                Vitesse
+          <div className="grid grid-cols-2 gap-4 border-t pt-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 text-[12.5px]">
+                <span className="truncate">{flying ? (falling ? 'Vitesse de chute' : 'Vitesse de montée') : 'Vitesse verticale'}</span>
                 <HelpHint title={HELP.vspeed.title}>{HELP.vspeed.text}</HelpHint>
-              </>
-            }
-            className="border-t pt-6"
-          >
-            <Suspense fallback={<div className="h-[360px]" />}>
-              <SpeedChart d={flight} units={units} now={now} live={live} syncKey={syncKey} />
-              <FlightTable d={flight} units={units} />
-            </Suspense>
-          </Section>
-
-          <Section
-            title={
-              <>
-                Trajectoire
-                <HelpHint title={HELP.trajectory.title}>{HELP.trajectory.text}</HelpHint>
-              </>
-            }
-            className="border-t pt-6"
-          >
-            <div className="grid grid-cols-3 gap-4">
-              <Stat label="Parcourue" value={fmtDist(flight.path[flight.last] ?? 0, units)} sub="depuis le lâcher" />
-              {toLanding !== null && flying ? (
-                <Stat label="Reste" value={fmtDist(toLanding, units)} sub="avant d’atterrir" />
-              ) : (
-                <Stat label="Du lâcher" value={fmtDist(drift, units)} sub="à vol d’oiseau" />
-              )}
-              <Stat label="Cap" value={f.heading !== undefined ? `${Math.round(f.heading)}°` : '—'} sub={f.heading !== undefined ? `vers le ${compass(f.heading)}` : undefined} />
-            </div>
-            <Segmented<TrackView>
-              size="sm"
-              value={trackView}
-              onChange={setTrackView}
-              className="w-full [&>*]:flex-1"
-              options={[
-                { value: 'plan', label: 'Vue de dessus', title: 'Le trajet au sol, nord en haut' },
-                { value: 'profile', label: 'Profil', title: 'L’altitude selon la distance parcourue' },
-              ]}
-            />
-            {trackView === 'plan' ? (
-              <GroundTrack d={flight} units={units} now={now} live={live} />
-            ) : (
-              <Suspense fallback={<div className="h-[290px]" />}>
-                <ProfileChart d={flight} units={units} now={now} live={live} />
-              </Suspense>
-            )}
-            <AltitudeLegend units={units} />
-          </Section>
-
-          {flight.last > 2 && flight.x[flight.last] - flight.x[0] >= 120 && (
-            <Section title="Rejouer le vol" className="border-t pt-6">
-              <ReplayBar serial={sonde.serial} d={flight} units={units} />
-            </Section>
-          )}
-
-          <Section
-            title={
-              <>
-                {useful && flying ? 'Prévision du vol' : 'Déroulé du vol'}
-                <HelpHint title={HELP.prediction.title}>{HELP.prediction.text}</HelpHint>
-              </>
-            }
-            className="border-t pt-6"
-          >
-            <FlightTimeline d={flight} phase={sonde.phase} prediction={useful ? prediction : null} units={units} now={now} launch={launch} />
-            {launch?.estimated && (
-              <p className="text-[12.5px] leading-relaxed">
-                Cette sonde a été captée pour la première fois en vol, à {fmtAltShort(sonde.track[0][2], units)}. En remontant les vents jusqu’au sol, SondeHub estime
-                qu’elle a été lâchée vers {fmtHour(launch.t)}
-                {launch.site
-                  ? ` depuis ${siteLabel(launch.site)}`
-                  : launch.near
-                    ? `, à ${fmtDist(launch.near.d, units)} ${cardinal(launch.near.bearing)} de ${siteLabel(launch.near.site)}`
-                    : ''}
-                . Le trajet estimé est tracé en pointillés sur la carte.
-              </p>
-            )}
-            {launch?.siteId && launch.site && (
-              <Button variant="link" size="xs" className="-ml-2 h-auto text-[13px] font-normal" onClick={() => selectSite(launch.siteId, true)}>
-                Voir le site de lâcher : {siteLabel(launch.site)}
-              </Button>
-            )}
-          </Section>
-
-          {(flying || (predHistory?.length ?? 0) > 1) && (
-            <Section
-              title={
-                <>
-                  Fiabilité de la prévision
-                  <HelpHint title="Pourquoi la prévision bouge">
-                    Le point d’atterrissage est recalculé à chaque nouvelle mesure avec les vents prévus. Pendant la montée, une petite erreur sur l’altitude
-                    d’éclatement ou le vent déplace le point de plusieurs kilomètres ; pendant la descente, la prévision converge.
-                  </HelpHint>
-                </>
-              }
-              className="border-t pt-6"
-            >
-              <Suspense fallback={<div className="h-[260px]" />}>
-                <PredictionConvergence sonde={sonde} samples={predHistory ?? []} units={units} now={now} />
-              </Suspense>
-            </Section>
-          )}
-
-          <Section title="Ce que mesure la sonde" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>} className="border-t pt-6">
-            <div className="grid grid-cols-3 gap-4">
-              <Stat icon={<Thermometer />} label="Température" value={fmtTemp(f.temp, units)} sub="de l’air" />
-              <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />
-              <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa', 0)} sub={pressureSub(f.pressure)} />
-            </div>
-            {insights.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-[14px] font-semibold">Ce que ce vol nous apprend</h4>
-                <ul className="divide-y rounded-md border">
-                  {insights.map((x) => (
-                    <li key={x.id} className="px-4 py-3">
-                      <div className="text-foreground text-[13.5px] font-semibold">{x.title}</div>
-                      <p className="mt-0.5 text-[13px] leading-relaxed">{x.text}</p>
-                    </li>
-                  ))}
-                </ul>
               </div>
-            )}
-            {hasSounding && (
-              <Suspense fallback={<div className="h-[340px]" />}>
-                <SoundingCharts s={sounding} units={units} syncKey={`sondage-${sonde.serial}`} />
-              </Suspense>
-            )}
-            <p className="text-[12.5px] leading-relaxed">
-              <span className="text-foreground font-semibold">À quoi ça sert ?</span> Ces profils de température, d’humidité et de vent alimentent les modèles de
-              prévision météo. Près de 900 stations dans le monde lâchent un ballon chaque jour, en général vers 0 h et 12 h UTC, pour mesurer l’atmosphère au même
-              instant partout.
-            </p>
-          </Section>
+              <div className="font-heading tabular text-foreground mt-0.5 flex items-center gap-1 text-[22px] leading-tight font-semibold">
+                {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />)}
+                {fmtVSpeed(vv, units)}
+              </div>
+              <div className="text-faint truncate text-[12px]">{flying ? (falling ? 'sous parachute' : 'portée par le ballon') : 'à la dernière mesure'}</div>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 text-[12.5px]">
+                <span className="truncate">Vitesse horizontale</span>
+                <HelpHint title={HELP.hspeed.title} align="end">
+                  {HELP.hspeed.text}
+                </HelpHint>
+              </div>
+              <div className="font-heading tabular text-foreground mt-0.5 text-[22px] leading-tight font-semibold">{fmtHSpeed(f.vel_h, units)}</div>
+              <div className="text-faint truncate text-[12px]">{f.heading !== undefined ? `vers le ${towards(f.heading)}` : 'poussée par le vent'}</div>
+            </div>
+          </div>
 
-          {profile && (
-            <Section
-              title={
-                <>
-                  Émagramme
-                  <HelpHint title="Lire un Skew-T">
-                    Diagramme des météorologues : la pression (donc l’altitude) monte vers le haut, les isothermes sont inclinées à 45°. Quand la température (noir) et
-                    le point de rosée (bleu) se rapprochent, l’air est proche de la saturation : nuages probables. La particule de surface (pointillés) montre comment
-                    une bulle d’air soulevée se refroidit : à droite de la courbe de température, elle est plus chaude que son environnement et monte seule
-                    (instabilité, orages possibles).
-                  </HelpHint>
-                </>
-              }
-              className="border-t pt-6"
-            >
-              <Suspense fallback={<div className="h-[440px]" />}>
-                <SkewT profile={profile} units={units} />
-              </Suspense>
-              <AtmoIndices profile={profile} units={units} />
-            </Section>
-          )}
+          <p className="text-[13.5px] leading-relaxed">{summarise(sonde, launch, landing, prediction, now, units)}</p>
 
-          {profile && profile.winds.length >= 6 && (
-            <Section
-              title={
-                <>
-                  Vent en altitude
-                  <HelpHint title="Comment le vent est mesuré">
-                    La sonde n’a pas d’anémomètre : elle dérive avec l’air. Le vent de chaque couche de 250 m est déduit de son déplacement GPS pendant la montée, ce
-                    qui gomme le balancement sous le ballon.
-                  </HelpHint>
-                </>
-              }
-              className="border-t pt-6"
-            >
-              <Suspense fallback={<div className="h-[360px]" />}>
-                <WindProfile winds={profile.winds} units={units} syncKey={`vent-${sonde.serial}`} />
-              </Suspense>
-            </Section>
-          )}
-
-          {showLanding && (
-            <Section title={flying ? 'Où va-t-elle tomber ?' : 'Où se trouve-t-elle ?'} className="border-t pt-6">
-              <div className="flex items-start gap-3">
-                <MapIcon id="landing" size={22} className="mt-0.5" />
-                <div className="min-w-0 flex-1 text-[13px] leading-relaxed">
-                  <div className="text-foreground flex items-center gap-1.5 font-semibold">
-                    <span className="truncate">
-                      {landing ? (flying ? 'Atterrissage prévu' : 'Atterrissage estimé') : sonde.phase === 'landed' ? 'Position au sol' : 'Dernière position connue'}
-                      {landing && flying ? ` ${relative(landing.time * 1000, now)}` : ''}
-                    </span>
-                    {landing ? (
-                      <HelpHint title={HELP.landing.title}>{HELP.landing.text}</HelpHint>
-                    ) : sonde.phase === 'lost' ? (
-                      <HelpHint title={HELP.lost.title}>{HELP.lost.text}</HelpHint>
-                    ) : null}
-                  </div>
-                  <div>
-                    {landing && flying && <>vers {fmtClock(landing.time * 1000).slice(0, 5)}</>}
-                    {landing && !flying && (
-                      <>
-                        Signal perdu à {fmtAltShort(f.alt, units)} · {ago(sonde.lastTime, now)}
-                      </>
-                    )}
-                    {!landing && ago(sonde.lastTime, now)}
-                    {fromMe && <> · à {fmtDist(fromMe.d, units)} de vous, vers le {towards(fromMe.b)}</>}
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        className="tabular text-muted-foreground hover:text-foreground -ml-2 text-[12.5px] font-normal"
-                        onClick={() => copyText(`${target.lat.toFixed(5)}, ${target.lon.toFixed(5)}`, 'Coordonnées copiées')}
-                      >
-                        {fmtCoord(target.lat, target.lon)}
-                        <Copy />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">Copier les coordonnées</TooltipContent>
-                  </Tooltip>
+          {recovery && (
+            <div className="flex gap-3 rounded-md border px-3 py-2.5 text-[13px] leading-snug">
+              <PackageCheck className="text-foreground mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-foreground font-semibold">
+                  {recovery.recovered ? 'Signalée récupérée' : 'Recherche signalée'}
+                  {recovery.recoveredBy ? <> par {recovery.recoveredBy}</> : null}
+                  <span className="font-normal"> · {ago(recovery.datetime, now)}</span>
                 </div>
+                {recovery.description && <div className="line-clamp-3 break-words">« {recovery.description} »</div>}
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="text-[13px]" onClick={() => requestFly(target.lon, target.lat, 12)}>
-                  <Crosshair /> Voir sur la carte
-                </Button>
-                <NavMenu target={target} heading={landing ? 'Itinéraire vers l’atterrissage' : 'Itinéraire vers la sonde'} className="text-[13px]" />
-                {recoverable && (
-                  <Button variant="ghost" size="sm" className="text-[13px]" onClick={() => setReporting(true)}>
-                    <PackageCheck /> Je l’ai trouvée
+            </div>
+          )}
+        </div>
+
+        <div ref={tabAnchor} />
+        <div
+          role="tablist"
+          aria-label="Sections de la fiche"
+          className="bg-background sticky top-0 z-10 flex gap-6 border-b px-5"
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            e.preventDefault();
+            const i = DETAIL_TABS.findIndex((t) => t.id === tab);
+            const next = DETAIL_TABS[(i + (e.key === 'ArrowRight' ? 1 : DETAIL_TABS.length - 1)) % DETAIL_TABS.length].id;
+            selectTab(next);
+            (e.currentTarget.querySelector(`[data-tab="${next}"]`) as HTMLElement | null)?.focus();
+          }}
+        >
+          {DETAIL_TABS.map((t) => {
+            const on = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`detail-tab-${t.id}`}
+                data-tab={t.id}
+                aria-selected={on}
+                aria-controls="detail-panel"
+                tabIndex={on ? 0 : -1}
+                onClick={() => selectTab(t.id)}
+                className={cx(
+                  'focus-visible:ring-ring/50 -mb-px rounded-t-sm border-b-2 pt-2.5 pb-3 text-[14px] whitespace-nowrap transition-colors outline-none focus-visible:ring-2',
+                  on ? 'border-primary text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground border-transparent font-normal',
+                )}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div id="detail-panel" role="tabpanel" aria-labelledby={`detail-tab-${tab}`} className="space-y-8 px-5 pt-6 pb-10">
+          {tab === 'flight' && (
+            <>
+              <Section
+                title={
+                  <>
+                    Courbes
+                    <HelpHint title="Lire les courbes">
+                      Trait plein : valeurs mesurées. Pointillés : suite du vol prévue par le modèle Tawhiri. Survolez ou faites glisser le doigt sur la courbe pour lire
+                      les valeurs à chaque instant.
+                    </HelpHint>
+                  </>
+                }
+              >
+                <Segmented<ChartView>
+                  size="sm"
+                  value={chartView}
+                  onChange={setChartView}
+                  className="w-full [&>*]:flex-1"
+                  options={[
+                    { value: 'altitude', label: 'Altitude', title: 'Altitude au fil du temps' },
+                    { value: 'speed', label: 'Vitesse', title: 'Vitesse verticale ou horizontale au fil du temps' },
+                    { value: 'distance', label: 'Distance', title: 'Altitude selon la distance parcourue' },
+                  ]}
+                />
+                <Suspense fallback={<div className="h-[318px]" />}>
+                  {chartView === 'altitude' && <AltitudeChart d={flight} units={units} now={now} live={live} syncKey={syncKey} />}
+                  {chartView === 'speed' && <SpeedChart d={flight} units={units} now={now} live={live} syncKey={syncKey} />}
+                  {chartView === 'distance' && <ProfileChart d={flight} units={units} now={now} live={live} />}
+                  <FlightTable d={flight} units={units} />
+                </Suspense>
+              </Section>
+
+              <Section
+                title={
+                  <>
+                    Trajectoire
+                    <HelpHint title={HELP.trajectory.title}>{HELP.trajectory.text}</HelpHint>
+                  </>
+                }
+                className="border-t pt-6"
+              >
+                {replaying ? (
+                  <ReplayBar serial={sonde.serial} d={flight} units={units} />
+                ) : (
+                  <div className="grid grid-cols-3 gap-4">
+                    <Stat label="Parcourue" value={fmtDist(flight.path[flight.last] ?? 0, units)} sub="depuis le lâcher" />
+                    {toLanding !== null && flying ? (
+                      <Stat label="Reste" value={fmtDist(toLanding, units)} sub="avant d’atterrir" />
+                    ) : (
+                      <Stat label="Du lâcher" value={fmtDist(drift, units)} sub="à vol d’oiseau" />
+                    )}
+                    <Stat label="Cap" value={f.heading !== undefined ? `${Math.round(f.heading)}°` : '—'} sub={f.heading !== undefined ? `vers le ${compass(f.heading)}` : undefined} />
+                  </div>
+                )}
+                <GroundTrack d={flight} units={units} now={now} live={live} serial={sonde.serial} />
+                {!replaying && canReplay(flight) && (
+                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => startReplay(sonde.serial, flight)}>
+                    <Play /> Rejouer le vol
                   </Button>
                 )}
-              </div>
-            </Section>
+                <AltitudeLegend units={units} />
+              </Section>
+
+              <Section
+                title={
+                  <>
+                    {useful && flying ? 'Prévision' : 'Déroulé du vol'}
+                    <HelpHint title={HELP.prediction.title}>{HELP.prediction.text}</HelpHint>
+                  </>
+                }
+                className="border-t pt-6"
+              >
+                <FlightTimeline d={flight} phase={sonde.phase} prediction={useful ? prediction : null} units={units} now={now} launch={launch} />
+                {launch?.estimated && (
+                  <p className="text-[12.5px] leading-relaxed">
+                    Cette sonde a été captée pour la première fois en vol, à {fmtAltShort(sonde.track[0][2], units)}. En remontant les vents jusqu’au sol, SondeHub estime
+                    qu’elle a été lâchée vers {fmtHour(launch.t)}
+                    {launch.site
+                      ? ` depuis ${siteLabel(launch.site)}`
+                      : launch.near
+                        ? `, à ${fmtDist(launch.near.d, units)} ${cardinal(launch.near.bearing)} de ${siteLabel(launch.near.site)}`
+                        : ''}
+                    . Le trajet estimé est tracé en pointillés sur la carte.
+                  </p>
+                )}
+                {launch?.siteId && launch.site && (
+                  <Button variant="link" size="xs" className="-ml-2 h-auto text-[13px] font-normal" onClick={() => selectSite(launch.siteId, true)}>
+                    Voir le site de lâcher : {siteLabel(launch.site)}
+                  </Button>
+                )}
+
+                {showLanding && (
+                  <div className="space-y-3 rounded-lg border px-4 py-3.5">
+                    <div className="flex items-start gap-3">
+                      <MapIcon id="landing" size={22} className="mt-0.5" />
+                      <div className="min-w-0 flex-1 text-[13px] leading-relaxed">
+                        <div className="text-foreground flex items-center gap-1.5 font-semibold">
+                          <span className="truncate">
+                            {landing ? (flying ? 'Atterrissage prévu' : 'Atterrissage estimé') : sonde.phase === 'landed' ? 'Position au sol' : 'Dernière position connue'}
+                            {landing && flying ? ` ${relative(landing.time * 1000, now)}` : ''}
+                          </span>
+                          {landing ? (
+                            <HelpHint title={HELP.landing.title}>{HELP.landing.text}</HelpHint>
+                          ) : sonde.phase === 'lost' ? (
+                            <HelpHint title={HELP.lost.title}>{HELP.lost.text}</HelpHint>
+                          ) : null}
+                        </div>
+                        <div>
+                          {landing && flying && <>vers {fmtClock(landing.time * 1000).slice(0, 5)}</>}
+                          {landing && !flying && (
+                            <>
+                              Signal perdu à {fmtAltShort(f.alt, units)} · {ago(sonde.lastTime, now)}
+                            </>
+                          )}
+                          {!landing && ago(sonde.lastTime, now)}
+                          {fromMe && <> · à {fmtDist(fromMe.d, units)} de vous, vers le {towards(fromMe.b)}</>}
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              className="tabular text-muted-foreground hover:text-foreground -ml-2 text-[12.5px] font-normal"
+                              onClick={() => copyText(`${target.lat.toFixed(5)}, ${target.lon.toFixed(5)}`, 'Coordonnées copiées')}
+                            >
+                              {fmtCoord(target.lat, target.lon)}
+                              <Copy />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Copier les coordonnées</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" className="text-[13px]" onClick={() => requestFly(target.lon, target.lat, 12)}>
+                        <Crosshair /> Voir sur la carte
+                      </Button>
+                      <NavMenu target={target} heading={landing ? 'Itinéraire vers l’atterrissage' : 'Itinéraire vers la sonde'} className="text-[13px]" />
+                      {recoverable && (
+                        <Button variant="ghost" size="sm" className="text-[13px]" onClick={() => setReporting(true)}>
+                          <PackageCheck /> Je l’ai trouvée
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {(flying || history.length > 1) && (
+                  <div className="border-t">
+                    <button
+                      type="button"
+                      aria-expanded={evolutionOpen}
+                      aria-controls="prediction-evolution"
+                      onClick={() => setEvolutionOpen((v) => !v)}
+                      className="focus-visible:ring-ring/50 flex w-full items-center gap-3 py-3 text-left outline-none focus-visible:ring-2"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="text-foreground block text-[13.5px] font-semibold">Évolution de la prévision</span>
+                        <span className="block truncate text-[12.5px]">{evolutionText}</span>
+                      </span>
+                      <ChevronDown className={cx('text-muted-foreground size-5 shrink-0 transition-transform', evolutionOpen && 'rotate-180')} />
+                    </button>
+                    {evolutionOpen && (
+                      <div id="prediction-evolution" className="pb-2">
+                        <Suspense fallback={<div className="h-[260px]" />}>
+                          <PredictionConvergence sonde={sonde} samples={history} units={units} now={now} />
+                        </Suspense>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Section>
+
+              {!showLanding && (
+                <Button variant="link" size="xs" className="-ml-2 h-auto text-[13px] font-normal" onClick={() => setReporting(true)}>
+                  Vous avez trouvé cette sonde ? Signalez-le
+                </Button>
+              )}
+            </>
           )}
 
-          <Section title="Qui reçoit son signal ?" right={<HelpHint title={HELP.receivers.title} align="end">{HELP.receivers.text}</HelpHint>} className="border-t pt-6">
-            {receivers.length === 0 ? (
-              <p className="text-[13px]">Aucune station ne l’a encore captée sur la période affichée.</p>
-            ) : (
-              <>
-                <p className="text-[13px] leading-relaxed">
-                  {receivers.length === 1 ? 'Une station' : `${receivers.length} stations`} de passionnés {receivers.length === 1 ? 'a capté' : 'ont capté'} cette
-                  sonde par radio et {receivers.length === 1 ? 'partage' : 'partagent'} sa position. Dernière réception {ago(receivers[0].lastHeard, now)}.
+          {tab === 'atmosphere' && (
+            <>
+              <Section title="Mesures" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>}>
+                <div className="grid grid-cols-3 gap-4">
+                  <Stat icon={<Thermometer />} label="Température" value={fmtTemp(f.temp, units)} sub="de l’air" />
+                  <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />
+                  <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa', 0)} sub={pressureSub(f.pressure)} />
+                </div>
+                {insights.length > 0 && (
+                  <ul className="divide-y rounded-md border">
+                    {insights.map((x) => (
+                      <li key={x.id} className="px-4 py-3">
+                        <div className="text-foreground text-[13.5px] font-semibold">{x.title}</div>
+                        <p className="mt-0.5 text-[13px] leading-relaxed">{x.text}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!profile && hasSounding && (
+                  <Suspense fallback={<div className="h-[340px]" />}>
+                    <SoundingCharts s={sounding} units={units} syncKey={`sondage-${sonde.serial}`} />
+                  </Suspense>
+                )}
+              </Section>
+
+              {profile ? (
+                <Section
+                  title={
+                    <>
+                      Émagramme
+                      <HelpHint title="Lire un Skew-T">
+                        Diagramme des météorologues : la pression (donc l’altitude) monte vers le haut, les isothermes sont inclinées à 45°. Quand la température (noir)
+                        et le point de rosée (bleu) se rapprochent, l’air est proche de la saturation : nuages probables. La particule de surface (pointillés) montre
+                        comment une bulle d’air soulevée se refroidit : à droite de la courbe de température, elle est plus chaude que son environnement et monte seule
+                        (instabilité, orages possibles).
+                      </HelpHint>
+                    </>
+                  }
+                  className="border-t pt-6"
+                >
+                  <Suspense fallback={<div className="h-[440px]" />}>
+                    <SkewT profile={profile} units={units} />
+                  </Suspense>
+                  <AtmoIndices profile={profile} units={units} />
+                </Section>
+              ) : (
+                <p className="border-t pt-6 text-[13px] leading-relaxed">
+                  L’émagramme apparaîtra quand la sonde aura transmis assez de mesures pendant sa montée (au moins 2 km de profil).
                 </p>
-                {showReceivers && receiverList(false, null)}
-                <Button variant="ghost" size="sm" className="-ml-2 text-[13px]" onClick={() => setShowReceivers((v) => !v)} aria-expanded={showReceivers}>
-                  <ChevronDown className={cx('transition-transform', showReceivers && 'rotate-180')} />
-                  {showReceivers ? 'Masquer les stations' : 'Voir les stations'}
-                </Button>
-              </>
-            )}
-          </Section>
+              )}
 
-          <div className="space-y-2 border-t pt-6">
-            <Button variant="outline" className="h-9 w-full text-[13.5px]" onClick={() => share(sonde, landing, now, units)}>
-              <Share2 /> Partager cette sonde
-            </Button>
-            {!showLanding && (
-              <Button variant="link" size="xs" className="-ml-2 h-auto text-[13px] font-normal" onClick={() => setReporting(true)}>
-                Vous avez trouvé cette sonde ? Signalez-le
-              </Button>
-            )}
-          </div>
+              {profile && profile.winds.length >= 6 && (
+                <Section
+                  title={
+                    <>
+                      Vent en altitude
+                      <HelpHint title="Comment le vent est mesuré">
+                        La sonde n’a pas d’anémomètre : elle dérive avec l’air. Le vent de chaque couche de 250 m est déduit de son déplacement GPS pendant la montée,
+                        ce qui gomme le balancement sous le ballon.
+                      </HelpHint>
+                    </>
+                  }
+                  className="border-t pt-6"
+                >
+                  <Suspense fallback={<div className="h-[360px]" />}>
+                    <WindProfile winds={profile.winds} units={units} syncKey={`vent-${sonde.serial}`} />
+                  </Suspense>
+                </Section>
+              )}
 
-          <div className="border-t">
-            <button
-              type="button"
-              aria-expanded={techOpen}
-              aria-controls="tech-details"
-              onClick={() => setSettings({ techOpen: !techOpen })}
-              className="focus-visible:ring-ring/50 flex w-full items-center gap-3 py-4 text-left outline-none focus-visible:ring-2"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="font-heading text-foreground block text-[15px] font-semibold">Détails techniques</span>
-                <span className="block text-[12.5px]">Fréquence, batterie, GPS, pointage d’antenne, réception, export</span>
-              </span>
-              <ChevronDown className={cx('text-muted-foreground size-5 transition-transform', techOpen && 'rotate-180')} />
-            </button>
+              <p className="border-t pt-6 text-[12.5px] leading-relaxed">
+                <span className="text-foreground font-semibold">À quoi ça sert ?</span> Ces profils de température, d’humidité et de vent alimentent les modèles de
+                prévision météo. Près de 900 stations dans le monde lâchent un ballon chaque jour, en général vers 0 h et 12 h UTC.
+              </p>
+            </>
+          )}
 
-            {techOpen && (
-              <div id="tech-details" className="space-y-6 pb-2">
+          {tab === 'technical' && (
+            <>
+              <Section title="Réception" right={<HelpHint title={HELP.receivers.title} align="end">{HELP.receivers.text}</HelpHint>}>
+                {receivers.length === 0 ? (
+                  <p className="text-[13px]">Aucune station ne l’a encore captée sur la période affichée.</p>
+                ) : (
+                  <>
+                    <p className="text-[13px] leading-relaxed">
+                      {receivers.length === 1 ? 'Une station capte' : `${receivers.length} stations captent`} cette sonde. Dernière réception{' '}
+                      {ago(receivers[0].lastHeard, now)}.
+                      <HelpHint title={HELP.snr.title}>{HELP.snr.text}</HelpHint>
+                    </p>
+                    {receiverList(allReceivers ? null : RECEIVERS_PREVIEW)}
+                    {receivers.length > RECEIVERS_PREVIEW && (
+                      <Button variant="ghost" size="sm" className="-ml-2 text-[13px]" onClick={() => setAllReceivers((v) => !v)}>
+                        <ChevronDown className={cx('transition-transform', allReceivers && 'rotate-180')} />
+                        {allReceivers ? 'Réduire' : `Voir les ${receivers.length - RECEIVERS_PREVIEW} autres`}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </Section>
+
+              <Section title="Émetteur" className="border-t pt-6">
                 <div className="grid grid-cols-3 gap-x-4 gap-y-4">
                   <Stat icon={<Radio />} label="Fréquence" value={fmtFreq(f.frequency, false)} sub={f.frequency ? 'MHz' : undefined} />
                   <Stat icon={<Hash />} label="Modèle" value={sonde.subtype ?? sonde.type ?? '—'} sub={sonde.manufacturer} />
@@ -606,68 +709,46 @@ export function SondeDetail({ serial }: { serial: string }) {
                   <Stat icon={<Compass />} label="Cap" value={f.heading !== undefined ? `${Math.round(f.heading)}°` : '—'} sub={f.heading !== undefined ? compass(f.heading) : undefined} />
                   <Stat icon={<Ruler />} label="Alt. max" value={fmtAlt(sonde.maxAlt, units)} />
                 </div>
+              </Section>
 
-                {meToSonde && (
-                  <div className="space-y-3">
-                    <h4 className="flex items-center gap-1.5 text-[14px] font-semibold">
+              {meToSonde && (
+                <Section
+                  title={
+                    <>
                       Pointage depuis votre position
                       <HelpHint title={HELP.elevation.title}>{HELP.elevation.text}</HelpHint>
-                    </h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      <Stat label="Distance" value={fmtDist(meToSonde.d, units)} />
-                      <Stat label="Azimut" value={`${Math.round(meToSonde.az)}°`} sub={compass(meToSonde.az)} />
-                      <Stat label="Élévation" value={`${meToSonde.el.toFixed(1)}°`} sub={meToSonde.el < 0 ? 'sous l’horizon' : undefined} />
-                    </div>
+                    </>
+                  }
+                  className="border-t pt-6"
+                >
+                  <div className="grid grid-cols-3 gap-4">
+                    <Stat label="Distance" value={fmtDist(meToSonde.d, units)} />
+                    <Stat label="Azimut" value={`${Math.round(meToSonde.az)}°`} sub={compass(meToSonde.az)} />
+                    <Stat label="Élévation" value={`${meToSonde.el.toFixed(1)}°`} sub={meToSonde.el < 0 ? 'sous l’horizon' : undefined} />
                   </div>
-                )}
+                </Section>
+              )}
 
-                {receivers.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="flex items-center gap-1.5 text-[14px] font-semibold">
-                      Réception ({receivers.length})
-                      <HelpHint title={HELP.snr.title}>{HELP.snr.text}</HelpHint>
-                    </h4>
-                    {receiverList(true, allReceivers ? null : RECEIVERS_PREVIEW)}
-                    {receivers.length > RECEIVERS_PREVIEW && (
-                      <Button variant="ghost" size="sm" className="-ml-2 text-[13px]" onClick={() => setAllReceivers((v) => !v)}>
-                        <ChevronDown className={cx('transition-transform', allReceivers && 'rotate-180')} />
-                        {allReceivers ? 'Réduire' : `Voir les ${receivers.length - RECEIVERS_PREVIEW} autres`}
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="tabular text-faint text-[12.5px]">
-                    {fmtCoord(f.lat, f.lon)} · {fmtClock(sonde.lastTime)}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="text-[13px]">
-                        <Download /> Exporter <ChevronDown className="opacity-60" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56" onEscapeKeyDown={keepSelection}>
-                      <DropdownMenuItem className="text-[13.5px]" onSelect={() => downloadKML(sonde, prediction)}>
-                        <FileCode2 /> Fichier KML
-                        <span className="text-muted-foreground ml-auto text-[12px]">Google Earth</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-[13.5px]" onSelect={() => downloadCSV(sonde)}>
-                        <FileSpreadsheet /> Fichier CSV
-                        <span className="text-muted-foreground ml-auto text-[12px]">Tableur</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild className="text-[13.5px]">
-                        <a href={`https://sondehub.org/${encodeURIComponent(sonde.serial)}`} target="_blank" rel="noreferrer">
-                          <ExternalLink /> Voir sur SondeHub
-                        </a>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <Section title="Données" className="border-t pt-6">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadKML(sonde, prediction)}>
+                    <FileCode2 /> Exporter en KML
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadCSV(sonde)}>
+                    <FileSpreadsheet /> Exporter en CSV
+                  </Button>
                 </div>
-              </div>
-            )}
-          </div>
+                <Button variant="link" size="xs" asChild className="-ml-2 h-auto text-[13px] font-normal">
+                  <a href={`https://sondehub.org/${encodeURIComponent(sonde.serial)}`} target="_blank" rel="noreferrer">
+                    <ExternalLink /> Voir sur SondeHub
+                  </a>
+                </Button>
+                <div className="tabular text-faint text-[12.5px]">
+                  {fmtCoord(f.lat, f.lon)} · {fmtClock(sonde.lastTime)}
+                </div>
+              </Section>
+            </>
+          )}
         </div>
       </ScrollArea>
       <RecoveryDialog serial={sonde.serial} open={reporting} onOpenChange={setReporting} />
