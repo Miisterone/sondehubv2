@@ -7,9 +7,11 @@ import {
 } from "lucide-react"
 import { useStore } from "@/store/useStore"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useT } from "@/i18n"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const theme = useStore((s) => s.settings.theme)
+  const t = useT()
 
   return (
     <Sonner
@@ -30,7 +32,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      containerAriaLabel={t("app.toast.region")}
       {...props}
+      toastOptions={{ closeButtonAriaLabel: t("app.toast.close"), ...props.toastOptions }}
     />
   )
 }

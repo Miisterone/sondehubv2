@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { useStore } from './store/useStore';
 import { fetchListeners, fetchPredictions, fetchRecoveries, fetchReverse, fetchSites, fetchSondeHistory, fetchTelemetry } from './lib/api';
 import { startLiveFeed } from './lib/live';
+import { t, useLocale } from './i18n';
 
 const PREDICTIONS_REFRESH_MS = 60_000;
 
@@ -20,6 +21,7 @@ export default function App() {
   const selected = useStore((s) => s.selected);
   const showRecoveries = useStore((s) => s.settings.layers.recoveries);
   const [about, setAbout] = useState(false);
+  const locale = useLocale();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -41,7 +43,7 @@ export default function App() {
         })
         .catch((e) => {
           if (ctrl.signal.aborted) return;
-          st.setLoading(false, `Impossible de charger les sondes : ${(e as Error).message}`);
+          st.setLoading(false, t('app.loadError', { message: (e as Error).message }));
         });
       fetchReverse(duration, ctrl.signal)
         .then((r) => useStore.getState().setReverse(r, true))
@@ -115,7 +117,7 @@ export default function App() {
     else p.delete('s');
     history.replaceState(null, '', `#${p.toString().replace(/%2C/g, ',')}`);
     if (!selected) return;
-    document.title = `${selected} — SondeHub V2`;
+    document.title = t('app.sondeTitle', { serial: selected });
     const ctrl = new AbortController();
     if (!useStore.getState().sondes[selected]?.detailed) {
       fetchSondeHistory(selected, ctrl.signal)
@@ -124,9 +126,9 @@ export default function App() {
     }
     return () => {
       ctrl.abort();
-      document.title = 'SondeHub V2 — Radiosondes en temps réel';
+      document.title = t('app.title');
     };
-  }, [selected]);
+  }, [selected, locale]);
 
   // Keyboard shortcuts.
   useEffect(() => {

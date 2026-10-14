@@ -1,18 +1,52 @@
 import { CircleHelp } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { t as translate, Trans, useT } from '@/i18n';
 import { cx } from './ui';
 import { Icon3D, type Icon3DId } from './Icon3D';
 
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
 
 const STEPS: { icon: Icon3DId; title: string; text: string }[] = [
-  { icon: 'ascending', title: 'Montée', text: 'Le ballon monte d’environ 5 m/s (18 km/h) pendant 1 h 30 à 2 h.' },
-  { icon: 'burst', title: 'Éclatement', text: 'Vers 20 à 35 km d’altitude, le ballon, devenu énorme, éclate.' },
-  { icon: 'descending', title: 'Descente', text: 'La sonde redescend sous un petit parachute, en 30 à 45 min.' },
-  { icon: 'landed', title: 'Au sol', text: 'Elle tombe souvent à plusieurs dizaines de kilomètres du lâcher. Vous pouvez la chercher et signaler votre trouvaille.' },
+  {
+    icon: 'ascending',
+    get title() {
+      return translate('sidebar.guide.ascentTitle');
+    },
+    get text() {
+      return translate('sidebar.guide.ascentText');
+    },
+  },
+  {
+    icon: 'burst',
+    get title() {
+      return translate('sidebar.guide.burstTitle');
+    },
+    get text() {
+      return translate('sidebar.guide.burstText');
+    },
+  },
+  {
+    icon: 'descending',
+    get title() {
+      return translate('sidebar.guide.descentTitle');
+    },
+    get text() {
+      return translate('sidebar.guide.descentText');
+    },
+  },
+  {
+    icon: 'landed',
+    get title() {
+      return translate('sidebar.guide.landedTitle');
+    },
+    get text() {
+      return translate('sidebar.guide.landedText');
+    },
+  },
 ];
 
 export function FlightGuide({ className }: { className?: string }) {
+  const t = useT();
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -24,14 +58,13 @@ export function FlightGuide({ className }: { className?: string }) {
           )}
         >
           <CircleHelp className="size-4" />
-          Comment ça marche ?
+          {t('sidebar.guide.trigger')}
         </button>
       </PopoverTrigger>
       <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[320px] p-5" onEscapeKeyDown={keepSelection}>
-        <h2 className="text-[16px] font-semibold">Le vol d’une radiosonde</h2>
+        <h2 className="text-[16px] font-semibold">{t('sidebar.guide.title')}</h2>
         <p className="mt-1.5 text-[13px] leading-relaxed">
-          Chaque jour, des stations météo lâchent des ballons qui emportent une petite sonde. Elle mesure la température, l’humidité et le vent en montant, et
-          envoie ses données par radio. Ces mesures alimentent les prévisions météo du monde entier.
+          {t('sidebar.guide.intro')}
         </p>
         <ol className="mt-4 space-y-3">
           {STEPS.map((s, i) => (
@@ -54,8 +87,7 @@ export function FlightGuide({ className }: { className?: string }) {
             <Icon3D id="lost" size={40} />
           </span>
           <span className="min-w-0">
-            <span className="text-foreground font-semibold">Signal perdu</span> : la sonde n’est plus captée, en général parce qu’elle est passée trop bas
-            pour les antennes. Elle est alors souvent déjà au sol.
+            <Trans k="sidebar.guide.lost" tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }} />
           </span>
         </div>
       </PopoverContent>

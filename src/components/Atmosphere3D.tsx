@@ -25,6 +25,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type { FlightData } from '@/lib/flight';
 import { HEIGHT, SIDE, positionAt, type AtmoScene, type Band, type Vec3 } from '@/lib/atmo3d';
 import { fmtAltShort, type Units } from '@/lib/format';
+import { t, useT } from '@/i18n';
 
 const FOV = 30;
 const VIEW = { theta: 0.62, phi: 1.12 };
@@ -105,6 +106,7 @@ interface Tag {
   priority: number;
   w: number;
   h: number;
+  text?: { el: HTMLElement; get: () => string };
 }
 
 function tickLabel(z: number, units: Units): string {
@@ -308,15 +310,25 @@ class Engine {
     return l;
   }
 
-  private tag(kind: TagKind, html: string, className: string, alt = 0, world = new Vector3(), priority = 0): Tag {
+  private tag(kind: TagKind, html: string, className: string, alt = 0, world = new Vector3(), priority = 0, text?: () => string): Tag {
     const el = document.createElement('div');
     el.className = `absolute top-0 left-0 whitespace-nowrap will-change-transform ${className}`;
     el.innerHTML = html;
     el.setAttribute('aria-hidden', 'true');
     this.overlay.append(el);
     const t: Tag = { el, kind, alt, world, priority, w: 0, h: 0 };
+    if (text) {
+      const target = (el.querySelector('[data-text]') as HTMLElement | null) ?? el;
+      target.textContent = text();
+      t.text = { el: target, get: text };
+    }
     this.tags.push(t);
     return t;
+  }
+
+  relabel() {
+    for (const t of this.tags) if (t.text) t.text.el.textContent = t.text.get();
+    this.setIndex(this.index);
   }
 
   private clear() {
@@ -444,12 +456,14 @@ class Engine {
       `<span class="absolute top-0 left-0 block -translate-x-1/2 -translate-y-1/2 rounded-full" style="width:${size}px;height:${size}px;background:${fill};border:2px solid ${stroke}">${
         inner ? `<span class="absolute top-1/2 left-1/2 block size-[4px] -translate-x-1/2 -translate-y-1/2 rounded-full" style="background:${stroke}"></span>` : ''
       }</span>`;
-    const caption = (text: string) => `<span class="atmo-label text-foreground absolute top-0 left-0 -translate-y-1/2 pl-[11px] text-[11.5px] font-semibold">${text}</span>`;
+    const caption = '<span data-text class="atmo-label text-foreground absolute top-0 left-0 -translate-y-1/2 pl-[11px] text-[11.5px] font-semibold"></span>';
+    const point = (html: string, world: Vector3, priority: number, text: () => string) =>
+      full ? this.tag('point', html + caption, '', 0, world, priority, text) : this.tag('point', html, '', 0, world, priority);
 
-    this.tag('point', ring('var(--foreground)', 'var(--background)', 11) + (full ? caption(s.airborneStart ? 'Premier signal' : 'Lâcher') : ''), '', 0, this.toWorld(s.launch, s), 1);
-    if (s.burst) this.tag('point', ring('var(--background)', 'var(--foreground)', 11) + (full ? caption('Éclatement') : ''), '', 0, this.toWorld(s.burst, s), 2);
-    if (s.burstP) this.tag('point', ring('var(--chart-pred)', 'var(--background)', 10) + (full ? caption('Éclatement prévu') : ''), '', 0, this.toWorld(s.burstP, s), 2);
-    if (s.landingP) this.tag('point', ring('var(--chart-pred)', 'var(--background)', 13, true) + (full ? caption('Atterrissage prévu') : ''), '', 0, this.toWorld(s.landingP, s), 1);
+    point(ring('var(--foreground)', 'var(--background)', 11), this.toWorld(s.launch, s), 1, () => (s.airborneStart ? t('atmo3d.scene.firstSignal') : t('atmo3d.scene.launch')));
+    if (s.burst) point(ring('var(--background)', 'var(--foreground)', 11), this.toWorld(s.burst, s), 2, () => t('atmo3d.scene.burst'));
+    if (s.burstP) point(ring('var(--chart-pred)', 'var(--background)', 10), this.toWorld(s.burstP, s), 2, () => t('atmo3d.scene.burstPredicted'));
+    if (s.landingP) point(ring('var(--chart-pred)', 'var(--background)', 13, true), this.toWorld(s.landingP, s), 1, () => t('atmo3d.scene.landingPredicted'));
 
     const sondeTag = this.tag(
       'point',
@@ -475,22 +489,19 @@ class Engine {
       const ozone = s.bands.find((x) => x.id === 'ozone');
       const mid = b.id === 'stratosphere' && ozone ? (b.from + ozone.from) / 2 : (b.from + b.to) / 2;
       const prio = b.id === 'troposphere' || b.id === 'stratosphere' ? 3 : b.id === 'ozone' ? 2 : 1;
-      this.tag('name', b.label, `atmo-label text-[12px] ${prio === 3 ? 'text-foreground font-semibold' : 'text-muted-foreground'}`, mid, new Vector3(), prio);
+      this.tag('name', '', `atmo-label text-[12px] ${prio === 3 ? 'text-foreground font-semibold' : 'text-muted-foreground'}`, mid, new Vector3(), prio, () => b.label);
     }
-    this.tag(
-      'edge',
-      s.tropopause.measured ? `Tropopause ${fmtAltShort(s.tropopause.z, units)}` : `Tropopause typique ${fmtAltShort(s.tropopause.z, units)}`,
-      'atmo-label text-foreground text-[11.5px] font-semibold',
-      s.tropopause.z,
-      new Vector3(),
-      3,
+    this.tag('edge', '', 'atmo-label text-foreground text-[11.5px] font-semibold', s.tropopause.z, new Vector3(), 3, () =>
+      t(s.tropopause.measured ? 'atmo3d.scene.tropopause' : 'atmo3d.scene.tropopauseTypical', { alt: fmtAltShort(s.tropopause.z, units) }),
     );
-    if (s.freezing !== null && s.freezing > 0) this.tag('edge', `0 °C à ${fmtAltShort(s.freezing, units)}`, 'atmo-label text-muted-foreground text-[11.5px]', s.freezing, new Vector3(), 2);
+    const freezing = s.freezing;
+    if (freezing !== null && freezing > 0)
+      this.tag('edge', '', 'atmo-label text-muted-foreground text-[11.5px]', freezing, new Vector3(), 2, () => t('atmo3d.scene.freezing', { alt: fmtAltShort(freezing, units) }));
     for (const [a, b] of s.clouds) {
       if (b - a < 300) continue;
-      this.tag('band', 'Nuages', 'atmo-label text-muted-foreground text-[11.5px]', (a + b) / 2, new Vector3(), 1);
+      this.tag('band', '', 'atmo-label text-muted-foreground text-[11.5px]', (a + b) / 2, new Vector3(), 1, () => t('atmo3d.layer.clouds'));
     }
-    this.tag('point', 'N', 'text-faint text-[11px] font-semibold -translate-x-1/2 -translate-y-1/2', 0, new Vector3(0, 0.01, -half + 0.45), 0);
+    this.tag('point', '', 'text-faint text-[11px] font-semibold -translate-x-1/2 -translate-y-1/2', 0, new Vector3(0, 0.01, -half + 0.45), 0, () => t('atmo3d.scene.north'));
 
     this.setIndex(this.index);
   }
@@ -639,6 +650,7 @@ export default function Atmosphere3D({ scene, flight, theme, units, mode, index,
   const overlay = useRef<HTMLDivElement>(null);
   const engine = useRef<Engine | null>(null);
   const [failed, setFailed] = useState(false);
+  const tr = useT();
 
   useEffect(() => {
     if (!host.current || !overlay.current) return;
@@ -659,6 +671,10 @@ export default function Atmosphere3D({ scene, flight, theme, units, mode, index,
   useEffect(() => {
     engine.current?.setContent({ scene, flight, pal: palette(theme), units, live });
   }, [scene, flight, theme, units, live, mode]);
+
+  useEffect(() => {
+    engine.current?.relabel();
+  }, [tr]);
 
   useEffect(() => {
     engine.current?.setIndex(index);
@@ -684,7 +700,7 @@ export default function Atmosphere3D({ scene, flight, theme, units, mode, index,
   if (failed) {
     return (
       <div className="bg-surface flex h-full items-center justify-center rounded-md border px-6 text-center text-[13px]">
-        La vue 3D demande WebGL, qui n’est pas disponible sur cet appareil ou ce navigateur.
+        {tr('atmo3d.webglUnavailable')}
       </div>
     );
   }

@@ -9,15 +9,27 @@ import { Button } from '@/components/ui/button';
 import { locateUser } from '@/lib/geolocation';
 import { disableAlerts, enableAlerts } from '@/lib/alerts';
 import { IconButton, MapIcon, Segmented, Toggle, cx } from './ui';
+import { t, useT } from '@/i18n';
+
+const overlay = (key: keyof Layers, icon: IconId) => ({
+  key,
+  icon,
+  get label() {
+    return t(`map.layers.${key}.label`);
+  },
+  get hint() {
+    return t(`map.layers.${key}.hint`);
+  },
+});
 
 const OVERLAYS: { key: keyof Layers; label: string; hint: string; icon: IconId }[] = [
-  { key: 'landings', label: 'Points d’atterrissage', hint: 'Prédiction pour chaque sonde en vol', icon: 'landing' },
-  { key: 'allPredictions', label: 'Toutes les trajectoires prévues', hint: 'Sinon seulement la sonde sélectionnée', icon: 'burst' },
-  { key: 'listeners', label: 'Stations de réception', hint: 'Radioamateurs qui décodent les sondes', icon: 'listener' },
-  { key: 'chase', label: 'Véhicules de poursuite', hint: 'Chasseurs en route vers une sonde', icon: 'chase' },
-  { key: 'receiverLinks', label: 'Liens sonde ↔ récepteurs', hint: 'Pour la sonde sélectionnée', icon: 'listener' },
-  { key: 'sites', label: 'Sites de lâcher', hint: 'Stations météo officielles', icon: 'site' },
-  { key: 'recoveries', label: 'Sondes récupérées', hint: 'Signalements des 3 derniers jours', icon: 'recovery-ok' },
+  overlay('landings', 'landing'),
+  overlay('allPredictions', 'burst'),
+  overlay('listeners', 'listener'),
+  overlay('chase', 'chase'),
+  overlay('receiverLinks', 'listener'),
+  overlay('sites', 'site'),
+  overlay('recoveries', 'recovery-ok'),
 ];
 
 /** Switch the UI theme, swapping the vector basemap along with it (imagery/topo choices are kept). */
@@ -41,6 +53,7 @@ function AlertsSection() {
   const nFavs = useStore((s) => s.settings.favourites.length);
   const loc = useStore((s) => s.userLocation);
   const { setAlerts } = useStore.getState();
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
 
@@ -63,14 +76,14 @@ function AlertsSection() {
   return (
     <section aria-labelledby="alerts-title">
       <h3 id="alerts-title" className="mb-2 flex items-center gap-1.5 px-0.5 text-[14px] font-semibold">
-        <Bell className="size-3.5" aria-hidden /> Alertes d’atterrissage
+        <Bell className="size-3.5" aria-hidden /> {t('map.alerts.title')}
       </h3>
       <div className="-mx-1.5">
         <Toggle
           checked={alerts.enabled || busy}
           onChange={(v) => void toggleMaster(v)}
-          label={busy ? 'Activation…' : 'M’alerter des atterrissages'}
-          hint="Quand une sonde doit tomber près de vous"
+          label={busy ? t('map.alerts.enabling') : t('map.alerts.enable')}
+          hint={t('map.alerts.enableHint')}
           swatch={
             <span className={cx('grid size-8 shrink-0 place-items-center rounded-lg', alerts.enabled ? 'bg-primary/10 text-primary' : 'bg-chip text-muted-foreground')}>
               {alerts.enabled ? <BellRing className="size-4" /> : <Bell className="size-4" />}
@@ -85,19 +98,19 @@ function AlertsSection() {
             <MapPin className="size-3.5 shrink-0" aria-hidden />
             {loc ? (
               <span className="tabular truncate">
-                Position : {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
+                {t('map.alerts.position', { lat: loc.lat.toFixed(2), lon: loc.lon.toFixed(2) })}
               </span>
             ) : (
               <>
-                <span className="truncate">Position inconnue —</span>
+                <span className="truncate">{t('map.alerts.positionUnknown')}</span>
                 <Button variant="link" size="sm" className="h-auto gap-1 p-0 text-[12px]" disabled={locating} onClick={() => void locate()}>
-                  <LocateFixed className="size-3.5" /> {locating ? 'Recherche…' : 'Me localiser'}
+                  <LocateFixed className="size-3.5" /> {locating ? t('map.alerts.locating') : t('map.alerts.locate')}
                 </Button>
               </>
             )}
           </div>
           <div className="flex items-center justify-between gap-2 px-0.5 py-1">
-            <span className="text-[13px] font-medium">Rayon</span>
+            <span className="text-[13px] font-medium">{t('map.alerts.radius')}</span>
             <Segmented
               size="sm"
               value={String(alerts.radiusKm)}
@@ -109,8 +122,8 @@ function AlertsSection() {
             <Toggle
               checked={alerts.favourites}
               onChange={(v) => setAlerts({ favourites: v })}
-              label="Sondes favorites"
-              hint={`Éclatement et atterrissage imminent, partout${nFavs ? ` (${nFavs} favori${nFavs > 1 ? 's' : ''})` : ''}`}
+              label={t('map.alerts.favourites')}
+              hint={nFavs ? t('map.alerts.favouritesHintCount', { count: nFavs }) : t('map.alerts.favouritesHint')}
             />
           </div>
         </div>
@@ -123,12 +136,13 @@ function AlertsSection() {
 export function LayerPanel() {
   const settings = useStore((s) => s.settings);
   const { setSettings, setLayer } = useStore.getState();
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <IconButton label="Couches & fonds de carte" active={open}>
+        <IconButton label={t('map.layers.button')} active={open}>
           <LayersIcon size={18} />
         </IconButton>
       </PopoverTrigger>
@@ -141,7 +155,7 @@ export function LayerPanel() {
         className="glass scroll-thin w-[320px] max-w-[calc(100vw-5rem)] overflow-y-auto rounded-lg p-3"
         style={{ maxHeight: 'var(--radix-popover-content-available-height)' }}
       >
-        <SectionTitle>Fond de carte</SectionTitle>
+        <SectionTitle>{t('map.layers.basemap')}</SectionTitle>
         <div className="grid grid-cols-3 gap-2">
           {BASEMAPS.map((b) => {
             const selected = settings.basemap === b.id;
@@ -169,7 +183,7 @@ export function LayerPanel() {
         </div>
 
         <div className="mt-4">
-          <SectionTitle>Couches</SectionTitle>
+          <SectionTitle>{t('map.layers.overlays')}</SectionTitle>
           <div className="-mx-1.5">
             {OVERLAYS.map((o) => (
               <Toggle
@@ -196,19 +210,19 @@ export function LayerPanel() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[13px] font-medium">Unités</span>
+            <span className="text-[13px] font-medium">{t('map.layers.units')}</span>
             <Segmented
               size="sm"
               value={settings.units}
               onChange={(units) => setSettings({ units })}
               options={[
-                { value: 'metric', label: 'Métrique' },
-                { value: 'imperial', label: 'Impérial' },
+                { value: 'metric', label: t('map.layers.metric') },
+                { value: 'imperial', label: t('map.layers.imperial') },
               ]}
             />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[13px] font-medium">Thème</span>
+            <span className="text-[13px] font-medium">{t('map.layers.theme')}</span>
             <Segmented
               size="sm"
               value={settings.theme}
@@ -218,7 +232,7 @@ export function LayerPanel() {
                   value: 'dark',
                   label: (
                     <>
-                      <Moon className="size-3" /> Sombre
+                      <Moon className="size-3" /> {t('map.layers.dark')}
                     </>
                   ),
                 },
@@ -226,7 +240,7 @@ export function LayerPanel() {
                   value: 'light',
                   label: (
                     <>
-                      <Sun className="size-3" /> Clair
+                      <Sun className="size-3" /> {t('map.layers.light')}
                     </>
                   ),
                 },

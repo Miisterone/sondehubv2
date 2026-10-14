@@ -1,6 +1,7 @@
 import type { FlightData, Sounding } from './flight';
 import type { Sonde } from './types';
 import { fmtAltShort, fmtHSpeed, fmtTemp, type Units } from './format';
+import { intlTag, t } from '@/i18n';
 
 export interface Insight {
   id: string;
@@ -36,12 +37,12 @@ function isaPressure(h: number): number {
 }
 
 function lapseText(rate: number, units: Units): string {
-  const n = (v: number) => v.toLocaleString('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
-  return units === 'metric' ? `${n(rate)}\u00a0°C par kilomètre` : `${n((rate * 1.8) / 3.28084)}\u00a0°F par 1\u00a0000\u00a0ft`;
+  const n = (v: number) => v.toLocaleString(intlTag(), { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  return units === 'metric' ? t('lib.insights.lapseMetric', { rate: n(rate) }) : t('lib.insights.lapseImperial', { rate: n((rate * 1.8) / 3.28084) });
 }
 
-function range(a: number, b: number, units: Units): string {
-  return units === 'metric' ? `${(a / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} et ${fmtAltShort(b, units)}` : `${fmtAltShort(a, units)} et ${fmtAltShort(b, units)}`;
+function range(a: number, b: number, units: Units): [string, string] {
+  return units === 'metric' ? [(a / 1000).toLocaleString(intlTag(), { maximumFractionDigits: 1 }), fmtAltShort(b, units)] : [fmtAltShort(a, units), fmtAltShort(b, units)];
 }
 
 function findTropopause(t: Layer): number | null {
@@ -98,16 +99,21 @@ export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: 
     if (k > 0 && rate > 3) {
       out.push({
         id: 'cold',
-        title: 'Plus haut, plus froid',
-        text: `Il faisait ${fmtTemp(t0, units)} au départ et ${fmtTemp(temps.value[k], units)} vers ${fmtAltShort(temps.alt[k], units)} : en montant, l’air s’est refroidi d’environ ${lapseText(rate, units)}, car il se détend à mesure que la pression baisse.`,
+        title: t('lib.insights.cold.title'),
+        text: t('lib.insights.cold.text', {
+          start: fmtTemp(t0, units),
+          coldest: fmtTemp(temps.value[k], units),
+          altitude: fmtAltShort(temps.alt[k], units),
+          lapse: lapseText(rate, units),
+        }),
       });
     }
     if (tropo !== null) {
       const i = temps.alt.indexOf(tropo);
       out.push({
         id: 'tropopause',
-        title: `Tropopause vers ${fmtAltShort(tropo, units)}`,
-        text: `Au-dessus, la température cesse de baisser (${fmtTemp(temps.value[i], units)} à ce niveau). C’est la frontière entre la troposphère, où se forment les nuages et la météo, et la stratosphère, plus sèche et plus calme.`,
+        title: t('lib.insights.tropopause.title', { altitude: fmtAltShort(tropo, units) }),
+        text: t('lib.insights.tropopause.text', { temperature: fmtTemp(temps.value[i], units) }),
       });
     }
   }
@@ -125,10 +131,10 @@ export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: 
       const jet = speed * 3.6 >= 100 && alt >= 6000 && alt <= 15000;
       out.push({
         id: 'wind',
-        title: jet ? 'Courant-jet' : 'Vent le plus fort',
+        title: jet ? t('lib.insights.jet.title') : t('lib.insights.wind.title'),
         text: jet
-          ? `${fmtHSpeed(speed, units)} vers ${fmtAltShort(alt, units)} : c’est le courant-jet, un couloir de vent très rapide qui fait le tour de la planète et emporte les ballons sur des dizaines de kilomètres.`
-          : `${fmtHSpeed(speed, units)} vers ${fmtAltShort(alt, units)}. C’est ce vent d’altitude qui emporte le ballon loin de son point de départ.`,
+          ? t('lib.insights.jet.text', { speed: fmtHSpeed(speed, units), altitude: fmtAltShort(alt, units) })
+          : t('lib.insights.wind.text', { speed: fmtHSpeed(speed, units), altitude: fmtAltShort(alt, units) }),
       });
     }
   }
@@ -136,17 +142,20 @@ export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: 
   const layers = cloudLayers(s);
   if (layers) {
     if (layers.length) {
-      const shown = layers.slice(0, 2).map(([a, b]) => `entre ${range(a, b, units)}`);
+      const shown = layers.slice(0, 2).map(([a, b]) => range(a, b, units));
       out.push({
         id: 'clouds',
-        title: layers.length > 1 ? 'Couches nuageuses probables' : 'Nuage probable',
-        text: `${shown.join(' puis ')}, l’humidité dépassait 90\u00a0% : la sonde a sans doute traversé ${layers.length > 1 ? 'des nuages' : 'un nuage'}.`.replace(/^e/, 'E'),
+        title: layers.length > 1 ? t('lib.insights.clouds.title') : t('lib.insights.cloud.title'),
+        text:
+          shown.length > 1
+            ? t('lib.insights.clouds.text', { from1: shown[0][0], to1: shown[0][1], from2: shown[1][0], to2: shown[1][1] })
+            : t('lib.insights.cloud.text', { from: shown[0][0], to: shown[0][1] }),
       });
     } else {
       out.push({
         id: 'dry',
-        title: 'Air plutôt sec',
-        text: 'L’humidité n’a jamais atteint 90\u00a0% sous 12 km : probablement pas de nuage épais sur son trajet.',
+        title: t('lib.insights.dry.title'),
+        text: t('lib.insights.dry.text'),
       });
     }
   }
@@ -158,10 +167,15 @@ export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: 
     const ratio = Math.round(1013.25 / p);
     out.push({
       id: 'pressure',
-      title: burst ? `Éclatement à ${fmtAltShort(top, units)}` : sonde.phase === 'ascending' ? `Déjà à ${fmtAltShort(top, units)}` : `Dernier signal à ${fmtAltShort(top, units)}`,
-      text: `À cette altitude, la pression de l’air n’est plus que d’environ ${p < 10 ? p.toFixed(1).replace('.', ',') : Math.round(p)}\u00a0hPa, soit ${ratio} fois moins qu’au sol. Le ballon gonfle à mesure que l’air se raréfie, ${
-        burst ? 'jusqu’à éclater' : sonde.phase === 'ascending' ? 'et finira par éclater, en général entre 20 et 35 km' : 'jusqu’à éclater, sans doute peu après ce dernier signal'
-      }.`,
+      title: burst
+        ? t('lib.insights.pressure.titleBurst', { altitude: fmtAltShort(top, units) })
+        : sonde.phase === 'ascending'
+          ? t('lib.insights.pressure.titleAscending', { altitude: fmtAltShort(top, units) })
+          : t('lib.insights.pressure.titleLastSignal', { altitude: fmtAltShort(top, units) }),
+      text: t(burst ? 'lib.insights.pressure.textBurst' : sonde.phase === 'ascending' ? 'lib.insights.pressure.textAscending' : 'lib.insights.pressure.textLastSignal', {
+        pressure: p < 10 ? p.toLocaleString(intlTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(p),
+        ratio,
+      }),
     });
   }
 

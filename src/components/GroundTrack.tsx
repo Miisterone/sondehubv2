@@ -5,6 +5,7 @@ import { bearing, distance, towards } from '@/lib/geo';
 import { useStore } from '@/store/useStore';
 import { chartTheme } from '@/lib/chartTheme';
 import { LineKey, Readout } from './ChartParts';
+import { intlTag, useT } from '@/i18n';
 
 const M_PER_DEG = 111_195;
 const SCALES = [100, 200, 500, 1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000, 200_000, 500_000];
@@ -24,11 +25,12 @@ function useWidth() {
   return [ref, w] as const;
 }
 
-const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
 
 type Label = { x: number; y: number; text: string; anchor: 'start' | 'end' };
 
 export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: FlightData; units: Units; now: number; live: boolean; serial?: string; height?: number }) {
+  const tr = useT();
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
   const replayT = useStore((s) => (serial && s.replay?.serial === serial ? s.replay.t : null));
@@ -155,10 +157,10 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
     for (const j of [0, d.last, d.burst, d.burstP, d.landingP]) {
       if (j !== null) placed.push({ x: geo.sx[j] - 7, y: geo.sy[j] - 7, w: 14, h: 14 });
     }
-    addLabel(0, airborne ? 'Premier signal' : 'Lâcher');
-    if (d.landingP !== null) addLabel(d.landingP, 'Atterrissage prévu', 'end');
-    if (d.burst !== null) addLabel(d.burst, 'Éclatement');
-    if (d.burstP !== null) addLabel(d.burstP, 'Éclatement prévu');
+    addLabel(0, airborne ? tr('sonde.common.firstSignal') : tr('sonde.common.launch'));
+    if (d.landingP !== null) addLabel(d.landingP, tr('sonde.common.landingPredicted'), 'end');
+    if (d.burst !== null) addLabel(d.burst, tr('sonde.common.burst'));
+    if (d.burstP !== null) addLabel(d.burstP, tr('sonde.common.burstPredicted'));
   }
 
   return (
@@ -169,14 +171,18 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
           <>
             <LineKey predicted={predicted} />
             <span className="truncate">
-              du point de lâcher{dir ? `, vers le ${dir}` : ''}
+              {dir ? tr('sonde.track.fromLaunchTowards', { direction: dir }) : tr('sonde.track.fromLaunch')}
             </span>
           </>
         }
         aside={
           <>
-            <div className="text-foreground font-semibold">{alt !== null ? `à ${fmtAltShort(alt, units)}` : '—'}</div>
-            <div>{predicted ? `prévue ${clock(d.x[i])} · ${relative(d.x[i] * 1000, now)}` : i === d.last && live ? 'en direct' : fmtClock(d.x[i] * 1000).slice(0, 5)}</div>
+            <div className="text-foreground font-semibold">{alt !== null ? tr('sonde.common.atAlt', { alt: fmtAltShort(alt, units) }) : '—'}</div>
+            <div>{predicted
+              ? tr('sonde.track.predictedAt', { time: clock(d.x[i]), when: relative(d.x[i] * 1000, now) })
+              : i === d.last && live
+                ? tr('sonde.track.live')
+                : fmtClock(d.x[i] * 1000).slice(0, 5)}</div>
           </>
         }
       />
@@ -186,7 +192,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
             width={width}
             height={height}
             role="img"
-            aria-label="Trajectoire de la sonde vue de dessus, depuis le point de lâcher"
+            aria-label={tr('sonde.track.aria')}
             className="block touch-pan-y select-none"
             onPointerMove={pick}
             onPointerDown={pick}
@@ -196,7 +202,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
             <g transform={`translate(${width - 22},18)`} aria-hidden>
               <path d="M0,-8 L4,4 L0,1.5 L-4,4 Z" fill={t.text} />
               <text y={17} textAnchor="middle" fontSize={10.5} fontWeight={600} fill={t.text}>
-                N
+                {tr('sonde.track.north')}
               </text>
             </g>
             <g transform={`translate(12,${height - 14})`} aria-hidden>
@@ -253,13 +259,13 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
           <svg width="12" height="12" aria-hidden>
             <circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
           </svg>
-          {airborne ? 'Premier signal' : 'Lâcher'}
+          {airborne ? tr('sonde.common.firstSignal') : tr('sonde.common.launch')}
         </span>
         <span className="flex items-center gap-1.5">
           <svg width="12" height="12" aria-hidden>
             <circle cx="6" cy="6" r="5" className="fill-primary" />
           </svg>
-          Position actuelle
+          {tr('sonde.track.currentPosition')}
         </span>
         {(d.burst !== null || d.burstP !== null) && (
           <span className="flex items-center gap-1.5">
@@ -270,7 +276,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
                 <circle cx="6" cy="6" r="3.5" fill="none" stroke="var(--chart-pred)" strokeWidth="2" />
               )}
             </svg>
-            {d.burst !== null ? 'Éclatement' : 'Éclatement prévu'}
+            {d.burst !== null ? tr('sonde.common.burst') : tr('sonde.common.burstPredicted')}
           </span>
         )}
         {d.landingP !== null && (
@@ -279,12 +285,12 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
               <circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--chart-pred)" strokeWidth="2" />
               <circle cx="7" cy="7" r="1.8" fill="var(--chart-pred)" />
             </svg>
-            Atterrissage prévu
+            {tr('sonde.common.landingPredicted')}
           </span>
         )}
         {d.forecast && (
           <span className="flex items-center gap-1.5">
-            <LineKey predicted /> Trajet prévu
+            <LineKey predicted /> {tr('sonde.track.predictedPath')}
           </span>
         )}
       </div>

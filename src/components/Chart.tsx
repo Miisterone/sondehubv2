@@ -3,6 +3,7 @@ import uPlot, { type AlignedData, type Options } from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { useStore } from '../store/useStore';
 import { chartTheme, type ChartTheme } from '@/lib/chartTheme';
+import { useLocale } from '@/i18n';
 
 export { chartTheme, type ChartTheme };
 
@@ -40,6 +41,7 @@ export function Chart({
   const el = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
   const theme = useStore((s) => s.settings.theme);
+  const locale = useLocale();
   const optsRef = useRef(makeOptions);
   const indexRef = useRef(onIndex);
   const annotateRef = useRef(annotate);
@@ -85,7 +87,7 @@ export function Chart({
       plot.current = null;
       indexRef.current?.(null);
     };
-  }, [theme, height]);
+  }, [theme, height, locale]);
 
   useEffect(() => {
     plot.current?.setData(data);

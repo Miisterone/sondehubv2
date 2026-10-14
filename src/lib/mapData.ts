@@ -2,6 +2,7 @@ import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { Listener, LaunchSite, PastFlight, Prediction, Recovery, ReversePrediction, SiteForecast, Sonde } from './types';
 import { usefulPrediction } from './filter';
 import { mapLabel } from './text';
+import { intlTag, t } from '@/i18n';
 
 type FC<G extends LineString | Point = LineString | Point> = FeatureCollection<G>;
 const fc = <G extends LineString | Point>(features: Feature<G>[]): FC<G> => ({ type: 'FeatureCollection', features });
@@ -158,14 +159,14 @@ export function reverseFC(rev: ReversePrediction | undefined, s: Sonde | undefin
   const path = rev.path.filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lon)).map((q) => [normLon(q.lon), q.lat]);
   if (path.length >= 2) out.push(line(path, { kind: 'path' }));
   else out.push(line([[rev.lon, rev.lat], [s.track[0][0], s.track[0][1]]], { kind: 'path' }));
-  out.push(pt(rev.lon, rev.lat, { kind: 'launch', label: 'Lâcher estimé' }));
+  out.push(pt(rev.lon, rev.lat, { kind: 'launch', label: t('lib.map.estimatedLaunch') }));
   return fc(out);
 }
 
 const shortWhen = (ts: number) => {
   const d = new Date(ts);
-  const day = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
-  return `${day.charAt(0).toUpperCase()}${day.slice(1)} ${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
+  const day = d.toLocaleDateString(intlTag(), { weekday: 'short' }).replace('.', '');
+  return t('lib.map.forecastWhen', { day: `${day.charAt(0).toUpperCase()}${day.slice(1)}`, h: d.getHours(), m: String(d.getMinutes()).padStart(2, '0') });
 };
 
 export function sitePathsFC(forecasts: SiteForecast[]): FC<LineString> {

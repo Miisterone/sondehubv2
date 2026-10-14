@@ -1,5 +1,6 @@
 import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
+import { t } from '@/i18n';
 
 let watchId: number | null = null;
 
@@ -15,7 +16,7 @@ export function locateUser({ fly = true, silent = false }: { fly?: boolean; sile
     return Promise.resolve(true);
   }
   if (!('geolocation' in navigator)) {
-    toast.error('Géolocalisation indisponible sur cet appareil', { id: 'geo' });
+    toast.error(t('lib.geolocation.unavailable'), { id: 'geo' });
     return Promise.resolve(false);
   }
   return new Promise((resolve) => {
@@ -30,13 +31,13 @@ export function locateUser({ fly = true, silent = false }: { fly?: boolean; sile
       return;
     }
     let first = true;
-    if (!silent) toast.loading('Recherche de votre position…', { id: 'geo' });
+    if (!silent) toast.loading(t('lib.geolocation.searching'), { id: 'geo' });
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy, alt: pos.coords.altitude ?? undefined });
         if (first) {
           first = false;
-          if (!silent) toast.success('Position trouvée', { id: 'geo' });
+          if (!silent) toast.success(t('lib.geolocation.found'), { id: 'geo' });
           if (fly) requestFly(pos.coords.longitude, pos.coords.latitude, 9);
           resolve(true);
         }
@@ -48,7 +49,7 @@ export function locateUser({ fly = true, silent = false }: { fly?: boolean; sile
           stopLocating();
           resolve(false);
         }
-        if (!silent) toast.error(denied ? 'Accès à la position refusé — autorisez-le dans votre navigateur' : 'Position introuvable', { id: 'geo' });
+        if (!silent) toast.error(denied ? t('lib.geolocation.denied') : t('lib.geolocation.notFound'), { id: 'geo' });
       },
       { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
     );

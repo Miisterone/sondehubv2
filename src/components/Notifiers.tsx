@@ -6,6 +6,7 @@ import { locateUser } from '@/lib/geolocation';
 import { usefulPrediction } from '@/lib/filter';
 import { bearing, compass, distance } from '@/lib/geo';
 import { fmtAlt, fmtDist, relative } from '@/lib/format';
+import { intlTag, t } from '@/i18n';
 
 /* ───────────────────────────── Landing alerts ───────────────────────────── */
 
@@ -57,11 +58,11 @@ function markSent(serial: string, kind: AlertKind, d?: number) {
   }
 }
 
-const clock = (ms: number) => new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const clock = (ms: number) => new Date(ms).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
 
 /** "vers 18:42 — dans 25 min" (no relative part once the predicted time is past). */
 function when(ms: number, now: number) {
-  return ms > now ? `vers ${clock(ms)} — ${relative(ms, now)}` : `vers ${clock(ms)}`;
+  return ms > now ? t('map.alert.whenRelative', { time: clock(ms), relative: relative(ms, now) }) : t('map.alert.when', { time: clock(ms) });
 }
 
 function collectAlerts(): PendingAlert[] {
@@ -89,8 +90,8 @@ function collectAlerts(): PendingAlert[] {
       out.push({
         serial,
         kind,
-        title: kind === 'near' ? 'Atterrissage prévu près de vous' : 'La sonde se rapproche de vous',
-        body: `${serial} devrait atterrir à ${fmtDist(d, units)} (${dir}) ${when(L.time * 1000, now)}`,
+        title: kind === 'near' ? t('map.alert.nearTitle') : t('map.alert.closeTitle'),
+        body: t('map.alert.nearBody', { serial, dist: fmtDist(d, units), dir, when: when(L.time * 1000, now) }),
         rank: d,
       });
       markSent(serial, kind, d);
@@ -109,8 +110,8 @@ function collectAlerts(): PendingAlert[] {
           out.push({
             serial,
             kind: 'burst',
-            title: 'Éclatement d’une sonde favorite',
-            body: `${serial} a éclaté à ${fmtAlt(s.maxAlt, units)}, descente en cours`,
+            title: t('map.alert.burstTitle'),
+            body: t('map.alert.burstBody', { serial, alt: fmtAlt(s.maxAlt, units) }),
             rank: -1,
           });
           markSent(serial, 'burst');
@@ -118,16 +119,20 @@ function collectAlerts(): PendingAlert[] {
       }
       const p = st.predictions[serial];
       if (!log[`${serial}:soon`] && usefulPrediction(s, p)) {
-        const t = p.landing!.time * 1000;
-        if (t - now <= SOON_MS && t - now > -60_000) {
-          const where = loc
-            ? ` à ${fmtDist(distance(loc.lat, loc.lon, p.landing!.lat, p.landing!.lon), units)} (${compass(bearing(loc.lat, loc.lon, p.landing!.lat, p.landing!.lon))}) de vous`
-            : '';
+        const landingMs = p.landing!.time * 1000;
+        if (landingMs - now <= SOON_MS && landingMs - now > -60_000) {
           out.push({
             serial,
             kind: 'soon',
-            title: 'Atterrissage imminent',
-            body: `${serial} devrait atterrir${where} ${when(t, now)}`,
+            title: t('map.alert.soonTitle'),
+            body: loc
+              ? t('map.alert.soonBodyFromMe', {
+                  serial,
+                  dist: fmtDist(distance(loc.lat, loc.lon, p.landing!.lat, p.landing!.lon), units),
+                  dir: compass(bearing(loc.lat, loc.lon, p.landing!.lat, p.landing!.lon)),
+                  when: when(landingMs, now),
+                })
+              : t('map.alert.soonBody', { serial, when: when(landingMs, now) }),
             rank: -2,
           });
           markSent(serial, 'soon');
@@ -151,13 +156,13 @@ function deliver(list: PendingAlert[]) {
       icon: <BellRing className="text-foreground size-4" />,
       duration: 30_000,
       closeButton: true,
-      action: { label: 'Voir', onClick: () => viewSonde(a.serial) },
+      action: { label: t('map.alert.view'), onClick: () => viewSonde(a.serial) },
     });
   }
   const rest = list.length - shown.length;
   if (rest > 0) {
-    const body = `${rest} autres sondes devraient atterrir près de vous ou font partie de vos favoris`;
-    toast('Autres alertes d’atterrissage', { id: 'alert:more', description: body, icon: <BellRing className="text-foreground size-4" />, duration: 30_000, closeButton: true });
+    const body = t('map.alert.moreBody', { count: rest });
+    toast(t('map.alert.moreTitle'), { id: 'alert:more', description: body, icon: <BellRing className="text-foreground size-4" />, duration: 30_000, closeButton: true });
   }
 }
 
@@ -191,12 +196,12 @@ function useLandingAlerts() {
     if (st.settings.alerts.enabled && !st.userLocation) {
       const locateQuietly = () => locateUser({ fly: false, silent: true });
       const offer = () =>
-        toast('Alertes d’atterrissage en pause', {
+        toast(t('map.alert.pausedTitle'), {
           id: 'alerts-geo',
-          description: 'Votre position est nécessaire pour les sondes qui atterrissent près de vous.',
+          description: t('map.alert.pausedBody'),
           icon: <BellRing className="text-foreground size-4" />,
           duration: 15_000,
-          action: { label: 'Me localiser', onClick: () => void locateUser({ fly: false }) },
+          action: { label: t('map.alerts.locate'), onClick: () => void locateUser({ fly: false }) },
         });
       const perms = navigator.permissions?.query({ name: 'geolocation' as PermissionName });
       if (!perms) offer();
@@ -234,9 +239,9 @@ function useConnectionNotices() {
 
     const showLost = () => {
       shown = 'lost';
-      toast.loading(everLive ? 'Connexion temps réel perdue — reconnexion…' : 'Connexion au flux temps réel impossible — nouvel essai…', {
+      toast.loading(everLive ? t('map.conn.lost') : t('map.conn.failed'), {
         id: 'conn',
-        description: 'Les positions affichées peuvent être en retard.',
+        description: t('map.conn.lostBody'),
         duration: Infinity,
       });
     };
@@ -248,7 +253,7 @@ function useConnectionNotices() {
         timer = undefined;
         if (shown !== 'offline') {
           shown = 'offline';
-          toast('Vous êtes hors ligne', { id: 'conn', icon, description: 'Les données reprendront au retour du réseau.', duration: Infinity });
+          toast(t('map.conn.offline'), { id: 'conn', icon, description: t('map.conn.offlineBody'), duration: Infinity });
         }
         return;
       }
@@ -256,7 +261,7 @@ function useConnectionNotices() {
         window.clearTimeout(timer);
         timer = undefined;
         everLive = true;
-        if (shown) toast.success(shown === 'offline' ? 'De retour en ligne' : 'Reconnecté', { id: 'conn', description: undefined, duration: 3000 });
+        if (shown) toast.success(shown === 'offline' ? t('map.conn.backOnline') : t('map.conn.reconnected'), { id: 'conn', description: undefined, duration: 3000 });
         shown = null;
         return;
       }

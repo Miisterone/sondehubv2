@@ -10,6 +10,7 @@ import { Chart, axis, cursorOptions, drawDot, drawHLine, drawLabel, drawVLine, i
 import { ChartLegend, LineKey, Readout } from './ChartParts';
 import { Segmented, cx } from './ui';
 import { Button } from '@/components/ui/button';
+import { intlTag, t, useT } from '@/i18n';
 
 type Num = number | null;
 
@@ -27,14 +28,22 @@ export function unitsOf(units: Units) {
   };
 }
 
-const nf = (digits: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: digits });
-const nf0 = nf(0);
-const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const nfCache = new Map<string, Intl.NumberFormat>();
+const nf = (digits: number) => {
+  const key = `${intlTag()}|${digits}`;
+  let f = nfCache.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(intlTag(), { maximumFractionDigits: digits });
+    nfCache.set(key, f);
+  }
+  return f;
+};
+const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
 const timeTicks = (_: uPlot, ticks: number[]) => ticks.map(clock);
 const scaled = (arr: Num[], k: number) => arr.map((v) => (v === null ? null : v * k));
 const unitTicks = (unit: string, digits = 0) => (_: uPlot, ticks: number[]) => ticks.map((v) => `${nf(digits).format(v)} ${unit}`);
 const signedTicks = (unit: string) => (_: uPlot, ticks: number[]) =>
-  ticks.map((v) => `${v > 0 ? '+' : ''}${nf0.format(v)} ${unit}`);
+  ticks.map((v) => `${v > 0 ? '+' : ''}${nf(0).format(v)} ${unit}`);
 
 function pick(d: FlightData, measured: Num[], forecast: Num[], i: number): { v: number | null; predicted: boolean } {
   if (i <= d.last) return { v: measured[i], predicted: false };
@@ -53,43 +62,44 @@ function niceMax(max: number, steps = [1, 2, 2.5, 5, 10]) {
   return 10 * mag;
 }
 
-function when(d: FlightData, i: number, now: number, live: boolean) {
-  const t = d.x[i];
-  if (i > d.last) return `prévue à ${clock(t)} · ${relative(t * 1000, now)}`;
-  if (i === d.last && live) return `à ${fmtClock(t * 1000)} · en direct`;
-  return `à ${fmtClock(t * 1000)}`;
+function when(d: FlightData, i: number, now: number, live: boolean, kind: 'altitude' | 'speed') {
+  const ts = d.x[i];
+  if (i > d.last) return t(kind === 'altitude' ? 'charts.altitude.predictedAt' : 'charts.speed.predictedAt', { time: clock(ts), relative: relative(ts * 1000, now) });
+  if (i === d.last && live) return t('charts.when.measuredLive', { time: fmtClock(ts * 1000) });
+  return t('charts.when.measured', { time: fmtClock(ts * 1000) });
 }
 
-function markCurrent(u: uPlot, t: ChartTheme, d: FlightData, ys: Num[], k: number, boxes: Box[], label?: string) {
+function markCurrent(u: uPlot, th: ChartTheme, d: FlightData, ys: Num[], k: number, boxes: Box[], label?: string) {
   if (d.last < 0) return;
   const v = ys[d.last];
   if (v === null) return;
   const x = u.valToPos(d.x[d.last], 'x', true);
   const y = u.valToPos(v * k, 'y', true);
   if (!inPlot(u, x, y)) return;
-  drawDot(u, x, y, t.accent, t.surface, 4);
+  drawDot(u, x, y, th.accent, th.surface, 4);
   boxes.push({ x: x - 8, y: y - 8, w: 16, h: 16 });
   if (label) {
-    const b = drawLabel(u, t, x, y, label, { prefer: 'left', avoid: boxes });
+    const b = drawLabel(u, th, x, y, label, { prefer: 'left', avoid: boxes });
     if (b) boxes.push(b);
   }
 }
 
-function nowLine(u: uPlot, t: ChartTheme, d: FlightData) {
-  if (d.forecast) drawVLine(u, u.valToPos(d.x[d.last], 'x', true), t.zero);
+function nowLine(u: uPlot, th: ChartTheme, d: FlightData) {
+  if (d.forecast) drawVLine(u, u.valToPos(d.x[d.last], 'x', true), th.zero);
 }
 
-function markNow(u: uPlot, t: ChartTheme, d: FlightData, live: boolean, boxes: Box[]) {
+function markNow(u: uPlot, th: ChartTheme, d: FlightData, live: boolean, boxes: Box[]) {
   if (!d.forecast) return;
   const x = u.valToPos(d.x[d.last], 'x', true);
-  const text = live ? 'maintenant' : 'dernier signal';
+  const text = live ? t('charts.marker.now') : t('charts.marker.lastSignal');
   const b =
-    drawLabel(u, t, x, u.bbox.top + u.bbox.height, text, { prefer: 'right', weight: 400, avoid: boxes }) ??
-    drawLabel(u, t, x, u.bbox.top, text, { prefer: 'right', above: false, weight: 400, avoid: boxes });
+    drawLabel(u, th, x, u.bbox.top + u.bbox.height, text, { prefer: 'right', weight: 400, avoid: boxes }) ??
+    drawLabel(u, th, x, u.bbox.top, text, { prefer: 'right', above: false, weight: 400, avoid: boxes });
   if (b) boxes.push(b);
 }
 
 export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData; units: Units; now: number; live: boolean; syncKey: string }) {
+  const t = useT();
   const [idx, setIdx] = useState<number | null>(null);
   const u = unitsOf(units);
   const data = useMemo<AlignedData>(() => [d.x, scaled(d.alt, u.alt), scaled(d.altP, u.alt)], [d, u.alt]);
@@ -99,17 +109,17 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
   const hs = pick(d, d.hs, d.hsP, i).v;
   const hdg = d.hdg[i];
 
-  const annotate: Annotate = (pl, t) => {
+  const annotate: Annotate = (pl, th) => {
     const boxes: Box[] = [];
-    nowLine(pl, t, d);
-    markCurrent(pl, t, d, d.alt, u.alt, boxes);
+    nowLine(pl, th, d);
+    markCurrent(pl, th, d, d.alt, u.alt, boxes);
     if (d.burst !== null) {
       const v = d.alt[d.burst];
       if (v !== null) {
         const x = pl.valToPos(d.x[d.burst], 'x', true);
         const y = pl.valToPos(v * u.alt, 'y', true);
-        drawDot(pl, x, y, t.ink, t.surface, 3.5);
-        const b = drawLabel(pl, t, x, y, `Éclatement · ${fmtAltShort(v, units)}`, { prefer: 'right', avoid: boxes });
+        drawDot(pl, x, y, th.ink, th.surface, 3.5);
+        const b = drawLabel(pl, th, x, y, t('charts.altitude.burstAt', { alt: fmtAltShort(v, units) }), { prefer: 'right', avoid: boxes });
         if (b) boxes.push(b);
       }
     }
@@ -118,33 +128,33 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
       if (v !== null) {
         const x = pl.valToPos(d.x[d.burstP], 'x', true);
         const y = pl.valToPos(v * u.alt, 'y', true);
-        drawDot(pl, x, y, t.pred, t.surface, 3.5, true);
-        const b = drawLabel(pl, t, x, y, `Éclatement prévu · ${fmtAltShort(v, units)}`, { prefer: 'right', avoid: boxes });
+        drawDot(pl, x, y, th.pred, th.surface, 3.5, true);
+        const b = drawLabel(pl, th, x, y, t('charts.altitude.burstPredictedAt', { alt: fmtAltShort(v, units) }), { prefer: 'right', avoid: boxes });
         if (b) boxes.push(b);
       }
     }
     if (d.landingP !== null) {
       const x = pl.valToPos(d.x[d.landingP], 'x', true);
       const y = pl.valToPos((d.altP[d.landingP] ?? 0) * u.alt, 'y', true);
-      drawDot(pl, x, y, t.pred, t.surface, 3.5, true);
-      const b = drawLabel(pl, t, x, y, `Atterrissage ${clock(d.x[d.landingP])}`, { prefer: 'left', avoid: boxes });
+      drawDot(pl, x, y, th.pred, th.surface, 3.5, true);
+      const b = drawLabel(pl, th, x, y, t('charts.altitude.landingAt', { time: clock(d.x[d.landingP]) }), { prefer: 'left', avoid: boxes });
       if (b) boxes.push(b);
     }
-    markNow(pl, t, d, live, boxes);
+    markNow(pl, th, d, live, boxes);
   };
 
-  const makeOptions = (t: ChartTheme) => ({
+  const makeOptions = (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t, syncKey),
+    cursor: cursorOptions(th, syncKey),
     scales: {
       x: { time: true },
       y: { range: (_: uPlot, _min: number, max: number): uPlot.Range.MinMax => [0, niceMax(max * 1.08)] },
     },
-    axes: [axis(t, { values: timeTicks, space: 64 }), axis(t, { values: unitTicks(u.altU), size: 52, space: 36 })],
+    axes: [axis(th, { values: timeTicks, space: 64 }), axis(th, { values: unitTicks(u.altU), size: 52, space: 36 })],
     series: [
       {},
-      { label: 'Altitude mesurée', stroke: t.accent, width: 2, fill: t.accentFill, points: { show: false } },
-      { label: 'Altitude prévue', stroke: t.pred, width: 2, dash: [6, 4], points: { show: false } },
+      { label: t('charts.common.altitudeMeasured'), stroke: th.accent, width: 2, fill: th.accentFill, points: { show: false } },
+      { label: t('charts.common.altitudePredicted'), stroke: th.pred, width: 2, dash: [6, 4], points: { show: false } },
     ],
   });
 
@@ -155,10 +165,7 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
         caption={
           <>
             <LineKey predicted={cur.predicted} />
-            <span className="truncate">
-              {cur.predicted ? 'Altitude ' : 'Mesurée '}
-              {when(d, i, now, live)}
-            </span>
+            <span className="truncate">{when(d, i, now, live, 'altitude')}</span>
           </>
         }
         aside={
@@ -168,8 +175,9 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
               {fmtVSpeed(vv ?? undefined, units)}
             </div>
             <div>
-              {fmtHSpeed(hs ?? undefined, units)}
-              {hdg !== null && hs !== null ? ` vers ${compass(hdg)}` : ''}
+              {hdg !== null && hs !== null
+                ? t('charts.altitude.speedTowards', { speed: fmtHSpeed(hs ?? undefined, units), direction: compass(hdg) })
+                : fmtHSpeed(hs ?? undefined, units)}
             </div>
           </>
         }
@@ -181,7 +189,7 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
         annotate={annotate}
         onIndex={setIdx}
         height={210}
-        label={`Altitude de la sonde au fil du temps${d.forecast ? ', avec la suite du vol prévue' : ''}`}
+        label={d.forecast ? t('charts.altitude.chartLabelForecast') : t('charts.altitude.chartLabel')}
       />
       <ChartLegend forecast={d.forecast} />
     </div>
@@ -191,6 +199,7 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
 type SpeedMode = 'vertical' | 'horizontal';
 
 export function SpeedChart({ d, units, now, live, syncKey }: { d: FlightData; units: Units; now: number; live: boolean; syncKey: string }) {
+  const t = useT();
   const [mode, setMode] = useState<SpeedMode>('vertical');
   const [idx, setIdx] = useState<number | null>(null);
   const u = unitsOf(units);
@@ -218,26 +227,26 @@ export function SpeedChart({ d, units, now, live, syncKey }: { d: FlightData; un
     return best;
   }, [d, measured, vertical]);
 
-  const annotate: Annotate = (pl, t) => {
+  const annotate: Annotate = (pl, th) => {
     const boxes: Box[] = [];
-    if (vertical) drawHLine(pl, pl.valToPos(0, 'y', true), t.zero);
-    nowLine(pl, t, d);
-    markCurrent(pl, t, d, measured, k, boxes);
+    if (vertical) drawHLine(pl, pl.valToPos(0, 'y', true), th.zero);
+    nowLine(pl, th, d);
+    markCurrent(pl, th, d, measured, k, boxes);
     if (extreme !== null) {
       const v = measured[extreme] as number;
       const x = pl.valToPos(d.x[extreme], 'x', true);
       const y = pl.valToPos(v * k, 'y', true);
-      drawDot(pl, x, y, t.ink, t.surface, 3);
-      const text = vertical ? `chute max ${fmtVSpeed(v, units)}` : `max ${fmtHSpeed(v, units)}`;
-      const b = drawLabel(pl, t, x, y, text, { prefer: 'right', above: !vertical, avoid: boxes });
+      drawDot(pl, x, y, th.ink, th.surface, 3);
+      const text = vertical ? t('charts.speed.maxFall', { value: fmtVSpeed(v, units) }) : t('charts.common.max', { value: fmtHSpeed(v, units) });
+      const b = drawLabel(pl, th, x, y, text, { prefer: 'right', above: !vertical, avoid: boxes });
       if (b) boxes.push(b);
     }
-    markNow(pl, t, d, live, boxes);
+    markNow(pl, th, d, live, boxes);
   };
 
-  const makeOptions = (t: ChartTheme) => ({
+  const makeOptions = (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t, syncKey),
+    cursor: cursorOptions(th, syncKey),
     scales: {
       x: { time: true },
       y: {
@@ -245,11 +254,11 @@ export function SpeedChart({ d, units, now, live, syncKey }: { d: FlightData; un
           vertical ? [-niceMax(Math.max(2, -Math.min(0, min)) * 1.1), niceMax(Math.max(2, max) * 1.15)] : [0, niceMax(Math.max(5, max) * 1.1)],
       },
     },
-    axes: [axis(t, { values: timeTicks, space: 64 }), axis(t, { values: vertical ? signedTicks(unit) : unitTicks(unit), size: vertical ? 64 : 58, space: 30 })],
+    axes: [axis(th, { values: timeTicks, space: 64 }), axis(th, { values: vertical ? signedTicks(unit) : unitTicks(unit), size: vertical ? 64 : 58, space: 30 })],
     series: [
       {},
-      { label: vertical ? 'Vitesse verticale mesurée' : 'Vitesse horizontale mesurée', stroke: t.accent, width: 2, points: { show: false } },
-      { label: 'Vitesse prévue', stroke: t.pred, width: 2, dash: [6, 4], points: { show: false } },
+      { label: vertical ? t('charts.speed.verticalMeasured') : t('charts.speed.horizontalMeasured'), stroke: th.accent, width: 2, points: { show: false } },
+      { label: t('charts.speed.predicted'), stroke: th.pred, width: 2, dash: [6, 4], points: { show: false } },
     ],
   });
 
@@ -263,8 +272,8 @@ export function SpeedChart({ d, units, now, live, syncKey }: { d: FlightData; un
         onChange={setMode}
         className="w-full [&>*]:flex-1"
         options={[
-          { value: 'vertical', label: 'Verticale', title: 'Vitesse de montée ou de descente' },
-          { value: 'horizontal', label: 'Horizontale', title: 'Vitesse de déplacement poussé par le vent' },
+          { value: 'vertical', label: t('charts.speed.vertical'), title: t('charts.speed.verticalTitle') },
+          { value: 'horizontal', label: t('charts.speed.horizontal'), title: t('charts.speed.horizontalTitle') },
         ]}
       />
       <Readout
@@ -277,16 +286,13 @@ export function SpeedChart({ d, units, now, live, syncKey }: { d: FlightData; un
         caption={
           <>
             <LineKey predicted={cur.predicted} />
-            <span className="truncate">
-              {cur.predicted ? 'Vitesse ' : 'Mesurée '}
-              {when(d, i, now, live)}
-            </span>
+            <span className="truncate">{when(d, i, now, live, 'speed')}</span>
           </>
         }
         aside={
           <>
-            <div className="text-foreground font-semibold">{alt !== null ? `à ${fmtAltShort(alt, units)}` : '—'}</div>
-            <div>{!vertical && hdg !== null && cur.v !== null ? `vers le ${towards(hdg)}` : 'd’altitude'}</div>
+            <div className="text-foreground font-semibold">{alt !== null ? t('charts.common.atAlt', { alt: fmtAltShort(alt, units) }) : '—'}</div>
+            <div>{!vertical && hdg !== null && cur.v !== null ? t('charts.speed.towards', { direction: towards(hdg) }) : t('charts.speed.ofAltitude')}</div>
           </>
         }
       />
@@ -297,27 +303,28 @@ export function SpeedChart({ d, units, now, live, syncKey }: { d: FlightData; un
         annotate={annotate}
         onIndex={setIdx}
         height={170}
-        label={vertical ? 'Vitesse verticale de la sonde au fil du temps' : 'Vitesse horizontale de la sonde au fil du temps'}
+        label={vertical ? t('charts.speed.verticalChartLabel') : t('charts.speed.horizontalChartLabel')}
       />
       <ChartLegend forecast={d.forecast} />
-      {vertical && <p className="text-[12px]">Au-dessus de 0, la sonde monte ; en dessous, elle descend. Courbe lissée sur 20 secondes.</p>}
+      {vertical && <p className="text-[12px]">{t('charts.speed.verticalNote')}</p>}
     </div>
   );
 }
 
 export function ProfileChart({ d, units, now, live }: { d: FlightData; units: Units; now: number; live: boolean }) {
+  const t = useT();
   const [idx, setIdx] = useState<number | null>(null);
   const u = unitsOf(units);
   const data = useMemo<AlignedData>(() => [d.path.map((v) => v * u.dist), scaled(d.alt, u.alt), scaled(d.altP, u.alt)], [d, u.alt, u.dist]);
   const i = safeIndex(d, idx);
   const cur = pick(d, d.alt, d.altP, i);
 
-  const annotate: Annotate = (pl, t) => {
+  const annotate: Annotate = (pl, th) => {
     const boxes: Box[] = [];
     const at = (j: number, v: number) => [pl.valToPos(d.path[j] * u.dist, 'x', true), pl.valToPos(v * u.alt, 'y', true)] as const;
     if (d.last >= 0 && d.alt[d.last] !== null) {
       const [x, y] = at(d.last, d.alt[d.last] as number);
-      drawDot(pl, x, y, t.accent, t.surface, 4);
+      drawDot(pl, x, y, th.accent, th.surface, 4);
       boxes.push({ x: x - 8, y: y - 8, w: 16, h: 16 });
     }
     const burst = d.burst ?? d.burstP;
@@ -325,31 +332,31 @@ export function ProfileChart({ d, units, now, live }: { d: FlightData; units: Un
       const v = (burst <= d.last ? d.alt[burst] : d.altP[burst]) as number | null;
       if (v !== null) {
         const [x, y] = at(burst, v);
-        drawDot(pl, x, y, burst <= d.last ? t.ink : t.pred, t.surface, 3.5, burst > d.last);
-        const b = drawLabel(pl, t, x, y, burst <= d.last ? 'Éclatement' : 'Éclatement prévu', { prefer: 'right', avoid: boxes });
+        drawDot(pl, x, y, burst <= d.last ? th.ink : th.pred, th.surface, 3.5, burst > d.last);
+        const b = drawLabel(pl, th, x, y, burst <= d.last ? t('charts.common.burst') : t('charts.common.burstPredicted'), { prefer: 'right', avoid: boxes });
         if (b) boxes.push(b);
       }
     }
     if (d.landingP !== null) {
       const [x, y] = at(d.landingP, d.altP[d.landingP] ?? 0);
-      drawDot(pl, x, y, t.pred, t.surface, 3.5, true);
-      const b = drawLabel(pl, t, x, y, 'Atterrissage', { prefer: 'left', avoid: boxes });
+      drawDot(pl, x, y, th.pred, th.surface, 3.5, true);
+      const b = drawLabel(pl, th, x, y, t('charts.common.landing'), { prefer: 'left', avoid: boxes });
       if (b) boxes.push(b);
     }
   };
 
-  const makeOptions = (t: ChartTheme) => ({
+  const makeOptions = (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t),
+    cursor: cursorOptions(th),
     scales: {
       x: { time: false },
       y: { range: (_: uPlot, _min: number, max: number): uPlot.Range.MinMax => [0, niceMax(max * 1.08)] },
     },
-    axes: [axis(t, { values: unitTicks(u.distU), space: 56 }), axis(t, { values: unitTicks(u.altU), size: 52, space: 36 })],
+    axes: [axis(th, { values: unitTicks(u.distU), space: 56 }), axis(th, { values: unitTicks(u.altU), size: 52, space: 36 })],
     series: [
       {},
-      { label: 'Altitude mesurée', stroke: t.accent, width: 2, fill: t.accentFill, points: { show: false } },
-      { label: 'Altitude prévue', stroke: t.pred, width: 2, dash: [6, 4], points: { show: false } },
+      { label: t('charts.common.altitudeMeasured'), stroke: th.accent, width: 2, fill: th.accentFill, points: { show: false } },
+      { label: t('charts.common.altitudePredicted'), stroke: th.pred, width: 2, dash: [6, 4], points: { show: false } },
     ],
   });
 
@@ -360,13 +367,13 @@ export function ProfileChart({ d, units, now, live }: { d: FlightData; units: Un
         caption={
           <>
             <LineKey predicted={cur.predicted} />
-            <span className="truncate">après {fmtDist(d.path[i], units)} parcourus</span>
+            <span className="truncate">{t('charts.profile.afterDistance', { distance: fmtDist(d.path[i], units) })}</span>
           </>
         }
         aside={
           <>
-            <div className="text-foreground font-semibold">{i > d.last ? `prévue ${clock(d.x[i])}` : fmtClock(d.x[i] * 1000).slice(0, 5)}</div>
-            <div>{i > d.last ? relative(d.x[i] * 1000, now) : i === d.last && live ? 'en direct' : 'mesurée'}</div>
+            <div className="text-foreground font-semibold">{i > d.last ? t('charts.profile.predictedAt', { time: clock(d.x[i]) }) : fmtClock(d.x[i] * 1000).slice(0, 5)}</div>
+            <div>{i > d.last ? relative(d.x[i] * 1000, now) : i === d.last && live ? t('charts.common.live') : t('charts.profile.measured')}</div>
           </>
         }
       />
@@ -377,7 +384,7 @@ export function ProfileChart({ d, units, now, live }: { d: FlightData; units: Un
         annotate={annotate}
         onIndex={setIdx}
         height={190}
-        label="Profil du vol : altitude en fonction de la distance parcourue"
+        label={t('charts.profile.chartLabel')}
       />
       <ChartLegend forecast={d.forecast} />
     </div>
@@ -385,6 +392,7 @@ export function ProfileChart({ d, units, now, live }: { d: FlightData; units: Un
 }
 
 export function SoundingCharts({ s, units, syncKey }: { s: Sounding; units: Units; syncKey: string }) {
+  const t = useT();
   const [idx, setIdx] = useState<number | null>(null);
   const u = unitsOf(units);
   const metric = units === 'metric';
@@ -408,29 +416,29 @@ export function SoundingCharts({ s, units, syncKey }: { s: Sounding; units: Unit
     return { tMin, hMax };
   }, [s]);
 
-  const opts = (unit: string, range: ((u: uPlot, min: number, max: number) => uPlot.Range.MinMax) | undefined, name: string) => (t: ChartTheme) => ({
+  const opts = (unit: string, range: ((u: uPlot, min: number, max: number) => uPlot.Range.MinMax) | undefined, name: string) => (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t, syncKey),
+    cursor: cursorOptions(th, syncKey),
     scales: { x: { time: false }, y: range ? { range } : { auto: true } },
-    axes: [axis(t, { values: unitTicks(u.altU), space: 56 }), axis(t, { values: unitTicks(unit), size: 52, space: 28 })],
-    series: [{}, { label: name, stroke: t.accent, width: 2, points: { show: false }, spanGaps: true }],
+    axes: [axis(th, { values: unitTicks(u.altU), space: 56 }), axis(th, { values: unitTicks(unit), size: 52, space: 28 })],
+    series: [{}, { label: name, stroke: th.accent, width: 2, points: { show: false }, spanGaps: true }],
   });
 
-  const tAnnotate: Annotate = (pl, t) => {
+  const tAnnotate: Annotate = (pl, th) => {
     if (extremes.tMin < 0) return;
     const v = tData[1][extremes.tMin] as number;
     const px = pl.valToPos(x[extremes.tMin], 'x', true);
     const py = pl.valToPos(v, 'y', true);
-    drawDot(pl, px, py, t.ink, t.surface, 3);
-    drawLabel(pl, t, px, py, `min ${fmtTemp(s.temp[extremes.tMin] as number, units)}`, { prefer: 'right', above: false });
+    drawDot(pl, px, py, th.ink, th.surface, 3);
+    drawLabel(pl, th, px, py, t('charts.common.min', { value: fmtTemp(s.temp[extremes.tMin] as number, units) }), { prefer: 'right', above: false });
   };
-  const hAnnotate: Annotate = (pl, t) => {
+  const hAnnotate: Annotate = (pl, th) => {
     if (extremes.hMax < 0) return;
     const v = s.hum[extremes.hMax] as number;
     const px = pl.valToPos(x[extremes.hMax], 'x', true);
     const py = pl.valToPos(v, 'y', true);
-    drawDot(pl, px, py, t.ink, t.surface, 3);
-    drawLabel(pl, t, px, py, `max ${fmtNum(v, ' %', 0)}`, { prefer: 'right', above: false });
+    drawDot(pl, px, py, th.ink, th.surface, 3);
+    drawLabel(pl, th, px, py, t('charts.common.max', { value: fmtNum(v, ' %', 0) }), { prefer: 'right', above: false });
   };
 
   if (last < 1) return null;
@@ -441,36 +449,36 @@ export function SoundingCharts({ s, units, syncKey }: { s: Sounding; units: Unit
         value={
           <span>
             {hasT ? fmtTemp(s.temp[i] ?? undefined, units) : '—'}
-            {hasH && <span className="text-muted-foreground font-sans text-[15px] font-normal"> · {fmtNum(s.hum[i] ?? undefined, ' %', 0)} d’humidité</span>}
+            {hasH && <span className="text-muted-foreground font-sans text-[15px] font-normal"> {t('charts.sounding.humidity', { value: fmtNum(s.hum[i] ?? undefined, ' %', 0) })}</span>}
           </span>
         }
-        caption={<span className="truncate">à {fmtAltShort(s.alt[i], units)} d’altitude, pendant la montée</span>}
+        caption={<span className="truncate">{t('charts.sounding.caption', { alt: fmtAltShort(s.alt[i], units) })}</span>}
       />
       {hasT && (
         <div className="space-y-1">
-          <div className="text-foreground text-[12.5px] font-semibold">Température</div>
+          <div className="text-foreground text-[12.5px] font-semibold">{t('charts.common.temperature')}</div>
           <Chart
             key={`t-${units}`}
             data={tData}
-            makeOptions={opts(metric ? '°C' : '°F', undefined, 'Température')}
+            makeOptions={opts(metric ? '°C' : '°F', undefined, t('charts.common.temperature'))}
             annotate={tAnnotate}
             onIndex={setIdx}
             height={130}
-            label="Température de l’air en fonction de l’altitude"
+            label={t('charts.sounding.temperatureChartLabel')}
           />
         </div>
       )}
       {hasH && (
         <div className="space-y-1">
-          <div className="text-foreground text-[12.5px] font-semibold">Humidité relative</div>
+          <div className="text-foreground text-[12.5px] font-semibold">{t('charts.sounding.relativeHumidity')}</div>
           <Chart
             key={`h-${units}`}
             data={hData}
-            makeOptions={opts('%', () => [0, 100], 'Humidité')}
+            makeOptions={opts('%', () => [0, 100], t('charts.sounding.humiditySeries'))}
             annotate={hAnnotate}
             onIndex={setIdx}
             height={110}
-            label="Humidité relative de l’air en fonction de l’altitude"
+            label={t('charts.sounding.humidityChartLabel')}
           />
         </div>
       )}
@@ -479,6 +487,7 @@ export function SoundingCharts({ s, units, syncKey }: { s: Sounding; units: Unit
 }
 
 export function FlightTable({ d, units }: { d: FlightData; units: Units }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const rows = useMemo(() => {
     if (!open || d.x.length < 2) return [];
@@ -492,17 +501,17 @@ export function FlightTable({ d, units }: { d: FlightData; units: Units }) {
     <div>
       <Button variant="ghost" size="sm" className="-ml-2 text-[13px]" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <ChevronDown className={cx('transition-transform', open && 'rotate-180')} />
-        {open ? 'Masquer le tableau' : 'Voir les valeurs en tableau'}
+        {open ? t('charts.table.hide') : t('charts.table.show')}
       </Button>
       {open && (
         <div className="mt-2 overflow-x-auto rounded-md border">
           <table className="tabular w-full text-[12.5px]">
             <thead className="bg-surface text-left">
               <tr>
-                <th className="px-2.5 py-2 font-semibold">Heure</th>
-                <th className="px-2.5 py-2 text-right font-semibold">Altitude</th>
-                <th className="px-2.5 py-2 text-right font-semibold">V. vert.</th>
-                <th className="px-2.5 py-2 text-right font-semibold">V. horiz.</th>
+                <th className="px-2.5 py-2 font-semibold">{t('charts.table.time')}</th>
+                <th className="px-2.5 py-2 text-right font-semibold">{t('charts.table.altitude')}</th>
+                <th className="px-2.5 py-2 text-right font-semibold">{t('charts.table.vSpeed')}</th>
+                <th className="px-2.5 py-2 text-right font-semibold">{t('charts.table.hSpeed')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -511,7 +520,18 @@ export function FlightTable({ d, units }: { d: FlightData; units: Units }) {
                 const alt = pick(d, d.alt, d.altP, j).v;
                 const vv = pick(d, d.vv, d.vvP, j).v;
                 const hs = pick(d, d.hs, d.hsP, j).v;
-                const tag = j === d.burst ? 'éclatement' : j === d.burstP ? 'éclatement prévu' : j === d.landingP ? 'atterrissage prévu' : j === d.last ? 'dernière mesure' : p ? 'prévue' : '';
+                const tag =
+                  j === d.burst
+                    ? t('charts.common.burstLower')
+                    : j === d.burstP
+                      ? t('charts.common.burstPredictedLower')
+                      : j === d.landingP
+                        ? t('charts.table.landingPredicted')
+                        : j === d.last
+                          ? t('charts.table.lastMeasurement')
+                          : p
+                            ? t('charts.table.predicted')
+                            : '';
                 return (
                   <tr key={j} className={cx(j === d.last && 'bg-surface', p && 'text-muted-foreground')}>
                     <td className="px-2.5 py-1.5 align-top whitespace-nowrap">

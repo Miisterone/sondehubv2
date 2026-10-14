@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useLocale } from '@/i18n';
 
 export const cx = cn;
 
@@ -53,6 +54,7 @@ export function Logo({ className }: { className?: string }) {
 }
 
 export function PhaseBadge({ phase, className }: { phase: FlightPhase; className?: string }) {
+  useLocale();
   return (
     <span
       className={cn(

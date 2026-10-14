@@ -3,6 +3,7 @@
 import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
+import { t } from '@/i18n';
 
 export async function enableAlerts(): Promise<boolean> {
   const ok = await locateUser({ fly: false });
@@ -10,14 +11,14 @@ export async function enableAlerts(): Promise<boolean> {
   const st = useStore.getState();
   st.setAlerts({ enabled: true });
   const a = useStore.getState().settings.alerts;
-  toast.success(`Alertes activées — rayon ${a.radiusKm} km`, {
+  toast.success(t('lib.alerts.enabled', { radius: a.radiusKm }), {
     id: 'alerts',
-    description: a.favourites ? 'Et pour vos sondes favorites, où qu’elles soient.' : undefined,
+    description: a.favourites ? t('lib.alerts.enabledFavourites') : undefined,
   });
   return true;
 }
 
 export function disableAlerts() {
   useStore.getState().setAlerts({ enabled: false });
-  toast('Alertes d’atterrissage désactivées', { id: 'alerts' });
+  toast(t('lib.alerts.disabled'), { id: 'alerts' });
 }

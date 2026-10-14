@@ -1,7 +1,8 @@
 import type { FlightPhase, Prediction, Sonde } from './types';
+import { t } from '@/i18n';
 
 export function typeKey(s: Pick<Sonde, 'type' | 'manufacturer'>): string {
-  return s.type || s.manufacturer || 'Inconnu';
+  return s.type || s.manufacturer || t('lib.filter.unknownType');
 }
 
 export function makeVisible(query: string, phases: Record<FlightPhase, boolean>, type: string | null = null) {

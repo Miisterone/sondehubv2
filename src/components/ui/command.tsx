@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useT } from "@/i18n"
 
 function Command({
   className,
@@ -28,8 +29,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
+  title,
+  description,
   children,
   className,
   showCloseButton = true,
@@ -40,11 +41,12 @@ function CommandDialog({
   className?: string
   showCloseButton?: boolean
 }) {
+  const t = useT()
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        <DialogTitle>{title ?? t("app.command.title")}</DialogTitle>
+        <DialogDescription>{description ?? t("app.command.dialogDescription")}</DialogDescription>
       </DialogHeader>
       <DialogContent
         className={cn("overflow-hidden p-0", className)}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useT } from '@/i18n';
 
 export function LineKey({ predicted }: { predicted: boolean }) {
   return <span aria-hidden className={predicted ? 'key-dashed' : 'key-solid'} />;
@@ -16,15 +17,16 @@ export function Readout({ value, caption, aside }: { value: ReactNode; caption: 
   );
 }
 
-export function ChartLegend({ forecast, measuredLabel = 'Mesurée', forecastLabel = 'Prévue (modèle Tawhiri)' }: { forecast: boolean; measuredLabel?: string; forecastLabel?: string }) {
+export function ChartLegend({ forecast, measuredLabel, forecastLabel }: { forecast: boolean; measuredLabel?: string; forecastLabel?: string }) {
+  const t = useT();
   if (!forecast) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
       <span className="flex items-center gap-1.5">
-        <LineKey predicted={false} /> {measuredLabel}
+        <LineKey predicted={false} /> {measuredLabel ?? t('charts.legend.measured')}
       </span>
       <span className="flex items-center gap-1.5">
-        <LineKey predicted /> {forecastLabel}
+        <LineKey predicted /> {forecastLabel ?? t('charts.legend.forecast')}
       </span>
     </div>
   );

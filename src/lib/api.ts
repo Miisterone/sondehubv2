@@ -1,11 +1,12 @@
 import type { FlightPoint, Frame, LaunchSite, Listener, PastFlight, Prediction, PredictionPoint, Recovery, ReversePrediction, SiteForecast } from './types';
 import { decodeEntities } from './text';
+import { t } from '@/i18n';
 
 const API = 'https://api.v2.sondehub.org';
 
 async function getJSON<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API}${path}`, { signal });
-  if (!res.ok) throw new Error(`SondeHub API ${res.status} sur ${path}`);
+  if (!res.ok) throw new Error(t('lib.api.httpError', { status: res.status, path }));
   return res.json() as Promise<T>;
 }
 
@@ -243,7 +244,7 @@ export async function fetchSiteForecast(site: LaunchSite, launchTime: number, si
   const ascent = data.prediction.find((s) => s.stage === 'ascent')?.trajectory ?? [];
   const descent = data.prediction.find((s) => s.stage === 'descent')?.trajectory ?? [];
   const path = [...ascent, ...descent].map(toPoint);
-  if (path.length < 2) throw new Error('Prévision vide');
+  if (path.length < 2) throw new Error(t('lib.api.emptyForecast'));
   return {
     launchTime,
     burst: toPoint(ascent[ascent.length - 1] ?? descent[0]),
@@ -269,7 +270,7 @@ export async function listSiteFlights(siteId: string, year: number, month: numbe
     const q = new URLSearchParams({ 'list-type': '2', prefix });
     if (token) q.set('continuation-token', token);
     const res = await fetch(`${HISTORY}/?${q}`, { signal });
-    if (!res.ok) throw new Error(`Archives SondeHub ${res.status}`);
+    if (!res.ok) throw new Error(t('lib.api.archiveError', { status: res.status }));
     const xml = await res.text();
     for (const m of xml.matchAll(/<Key>([^<]+)<\/Key>/g)) {
       const key = decodeEntities(m[1]);
@@ -352,6 +353,6 @@ export async function submitRecovery(report: RecoveryReport): Promise<void> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `Erreur SondeHub ${res.status}`);
+    throw new Error(text || t('lib.api.sondehubError', { status: res.status }));
   }
 }

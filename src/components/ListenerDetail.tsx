@@ -10,11 +10,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { HelpHint } from './HelpHint';
 import { IconButton, Section, Stat } from './ui';
 import { Icon3D } from './Icon3D';
+import { intlTag, useT } from '@/i18n';
 
 const LIVE_MS = 120_000;
 const SECTORS = 36;
 const LIST_MAX = 40;
 const PERIOD: Record<string, string> = { '1h': '1 h', '3h': '3 h', '6h': '6 h', '12h': '12 h', '1d': '24 h' };
+
+const fmtDeg = (v: number) => v.toLocaleString(intlTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 interface Sample {
   serial: string;
@@ -63,6 +66,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
   const now = useStore((s) => s.now);
   const me = useStore((s) => s.userLocation);
   const { selectListener, select, requestFly } = useStore.getState();
+  const t = useT();
 
   const data = useMemo(() => {
     const heard: Heard[] = [];
@@ -108,13 +112,13 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
   }, [data, now]);
 
   const mobile = listener?.mobile ?? false;
-  const title = mobile ? 'Véhicule de poursuite' : 'Station de réception';
+  const title = mobile ? t('map.listener.chaseVehicle') : t('map.listener.station');
   const fromMe = me && data.pos ? distance(me.lat, me.lon, data.pos.lat, data.pos.lon) : null;
 
   return (
     <div className="animate-in flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-3">
-        <IconButton label="Retour à la liste" side="bottom" onClick={() => selectListener(null)}>
+        <IconButton label={t('map.common.backToList')} side="bottom" onClick={() => selectListener(null)}>
           <ArrowLeft />
         </IconButton>
         <Icon3D id={mobile ? 'chase' : 'station'} size={38} className="-my-1.5" />
@@ -123,7 +127,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
           <div className="truncate text-[12.5px]">{title}</div>
         </div>
         {data.pos && (
-          <IconButton label="Centrer la carte sur la station" side="bottom" onClick={() => requestFly(data.pos!.lon, data.pos!.lat, 9)}>
+          <IconButton label={t('map.listener.centre')} side="bottom" onClick={() => requestFly(data.pos!.lon, data.pos!.lat, 9)}>
             <Crosshair className="size-[18px]" />
           </IconButton>
         )}
@@ -133,16 +137,14 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
         <div className="space-y-8 px-5 pt-5 pb-10">
           <div className="space-y-4">
             <p className="text-[13.5px] leading-relaxed">
-              {mobile
-                ? 'Récepteur embarqué dans un véhicule, utilisé pour poursuivre les sondes jusqu’à leur point de chute.'
-                : 'Station radio amateur qui capte les sondes et partage leurs positions avec SondeHub.'}
-              {data.lastActivity > 0 ? ` Dernière activité ${ago(data.lastActivity, now)}.` : ''}
+              {mobile ? t('map.listener.chaseIntro') : t('map.listener.stationIntro')}
+              {data.lastActivity > 0 ? ` ${t('map.listener.lastActivity', { ago: ago(data.lastActivity, now) })}` : ''}
             </p>
             <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <Stat label="Antenne" value={listener?.antenna || '—'} />
-              <Stat label="Logiciel" value={listener?.software || '—'} />
-              <Stat label="Altitude" value={listener?.alt !== undefined ? fmtAlt(listener.alt, units) : '—'} />
-              <Stat label="Distance" value={fromMe !== null ? fmtDist(fromMe, units) : '—'} sub={fromMe !== null ? 'de vous' : undefined} />
+              <Stat label={t('map.listener.antenna')} value={listener?.antenna || '—'} />
+              <Stat label={t('map.listener.software')} value={listener?.software || '—'} />
+              <Stat label={t('map.listener.altitude')} value={listener?.alt !== undefined ? fmtAlt(listener.alt, units) : '—'} />
+              <Stat label={t('map.listener.distance')} value={fromMe !== null ? fmtDist(fromMe, units) : '—'} sub={fromMe !== null ? t('map.listener.fromYou') : undefined} />
             </div>
             {data.pos && <div className="tabular text-faint text-[12.5px]">{fmtCoord(data.pos.lat, data.pos.lon)}</div>}
           </div>
@@ -150,28 +152,29 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
           <Section
             title={
               <>
-                Réception
-                <HelpHint title="Sur quelles données">
-                  Statistiques calculées à partir des sondes chargées dans l’application (historique réglé dans les filtres) et des trames reçues en direct depuis
-                  l’ouverture de la page. Elles sont donc partielles pour une station très active.
-                </HelpHint>
+                {t('map.listener.reception')}
+                <HelpHint title={t('map.listener.receptionHelpTitle')}>{t('map.listener.receptionHelp')}</HelpHint>
               </>
             }
             className="border-t pt-6"
           >
             {!stats ? (
-              <p className="text-[13px] leading-relaxed">Aucune sonde captée par cette station dans les données chargées (dernières {PERIOD[duration]}). Élargissez l’historique dans les filtres.</p>
+              <p className="text-[13px] leading-relaxed">{t('map.listener.noneHeard', { period: PERIOD[duration] })}</p>
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-4">
-                  <Stat label="Sondes captées" value={stats.count} sub={stats.live ? `${stats.live} en direct` : `sur ${PERIOD[duration]}`} />
-                  <Stat label="Portée max" value={stats.far ? fmtDist(stats.far.d, units) : '—'} sub={stats.far ? `à ${fmtAltShort(stats.far.alt, units)}` : undefined} />
-                  <Stat label="SNR médian" value={stats.snr !== null ? fmtNum(stats.snr, ' dB', 0) : '—'} sub={`${stats.frames} trames`} />
+                  <Stat label={t('map.listener.heardSondes')} value={stats.count} sub={stats.live ? t('map.listener.liveCount', { count: stats.live }) : t('map.listener.overPeriod', { period: PERIOD[duration] })} />
+                  <Stat label={t('map.listener.maxRange')} value={stats.far ? fmtDist(stats.far.d, units) : '—'} sub={stats.far ? t('map.listener.atAltitude', { alt: fmtAltShort(stats.far.alt, units) }) : undefined} />
+                  <Stat label={t('map.listener.medianSnr')} value={stats.snr !== null ? fmtNum(stats.snr, ' dB', 0) : '—'} sub={t('map.listener.frames', { count: stats.frames })} />
                 </div>
                 {stats.lowest && (
                   <p className="text-[12.5px] leading-relaxed">
-                    Signal le plus bas sur l’horizon : {stats.lowest.el.toFixed(1).replace('.', ',')}° d’élévation, à {fmtDist(stats.lowest.d, units)} vers le{' '}
-                    {compass(stats.lowest.az)} ({stats.lowest.serial}).
+                    {t('map.listener.lowestSignal', {
+                      el: fmtDeg(stats.lowest.el),
+                      dist: fmtDist(stats.lowest.d, units),
+                      dir: compass(stats.lowest.az),
+                      serial: stats.lowest.serial,
+                    })}
                   </p>
                 )}
               </>
@@ -182,11 +185,8 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
             <Section
               title={
                 <>
-                  Couverture
-                  <HelpHint title="Lire le diagramme">
-                    Chaque point est une position de sonde captée par la station, placée selon sa direction et sa distance. Les secteurs colorés montrent la portée
-                    maximale tous les 10° : ils dessinent l’horizon radio de l’antenne, avec ses masques (relief, bâtiments).
-                  </HelpHint>
+                  {t('map.listener.coverage')}
+                  <HelpHint title={t('map.listener.coverageHelpTitle')}>{t('map.listener.coverageHelp')}</HelpHint>
                 </>
               }
               className="border-t pt-6"
@@ -196,7 +196,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
           )}
 
           {stats && (
-            <Section title="Sondes captées" className="border-t pt-6">
+            <Section title={t('map.listener.heardSondes')} className="border-t pt-6">
               <ul className="divide-y rounded-md border">
                 {data.heard.slice(0, LIST_MAX).map((h) => {
                   const live = now - h.last < LIVE_MS;
@@ -211,9 +211,11 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
                         <span className="min-w-0 flex-1">
                           <span className="tabular text-foreground block truncate text-[13px] font-semibold">{h.sonde.serial}</span>
                           <span className="block truncate text-[12.5px]">
-                            {live ? 'En direct' : `Captée ${ago(h.last, now)}`}
-                            {h.maxD > 0 ? `, jusqu’à ${fmtDist(h.maxD, units)}` : ''}
-                            {`, ${PHASE_LABEL[h.sonde.phase].toLowerCase()}`}
+                            {t(h.maxD > 0 ? 'map.listener.heardRowRange' : 'map.listener.heardRow', {
+                              when: live ? t('map.listener.live') : t('map.listener.heardAgo', { ago: ago(h.last, now) }),
+                              dist: fmtDist(h.maxD, units),
+                              phase: PHASE_LABEL[h.sonde.phase].toLowerCase(),
+                            })}
                           </span>
                         </span>
                         {h.bestSnr !== null && <span className="tabular text-faint shrink-0 text-[12px]">{Math.round(h.bestSnr)} dB</span>}
@@ -222,7 +224,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
                   );
                 })}
               </ul>
-              {data.heard.length > LIST_MAX && <p className="text-[12.5px]">Et {data.heard.length - LIST_MAX} autres.</p>}
+              {data.heard.length > LIST_MAX && <p className="text-[12.5px]">{t('map.listener.andMore', { count: data.heard.length - LIST_MAX })}</p>}
             </Section>
           )}
         </div>
@@ -234,6 +236,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
 function Polar({ samples, units }: { samples: Sample[]; units: Units }) {
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
+  const tr = useT();
   const t = chartTheme(theme);
   const [hover, setHover] = useState<Sample | null>(null);
   const size = Math.min(width, 340);
@@ -291,16 +294,16 @@ function Polar({ samples, units }: { samples: Sample[]; units: Units }) {
             <div className="min-w-0">
               <div className="tabular text-foreground truncate font-semibold">{hover.serial}</div>
               <div className="truncate">
-                {fmtDist(hover.d, units)} vers le {compass(hover.az)}, à {fmtAltShort(hover.alt, units)}
+                {tr('map.polar.position', { dist: fmtDist(hover.d, units), dir: compass(hover.az), alt: fmtAltShort(hover.alt, units) })}
               </div>
             </div>
             <div className="tabular shrink-0 text-right">
-              <div className="text-foreground font-semibold">élévation {hover.el.toFixed(1).replace('.', ',')}°</div>
-              <div>{Number.isFinite(hover.snr) ? `SNR ${Math.round(hover.snr)} dB` : 'SNR —'}</div>
+              <div className="text-foreground font-semibold">{tr('map.polar.elevation', { el: fmtDeg(hover.el) })}</div>
+              <div>{Number.isFinite(hover.snr) ? tr('map.polar.snr', { snr: Math.round(hover.snr) }) : tr('map.polar.snrNone')}</div>
             </div>
           </>
         ) : (
-          <span>{samples.length} positions captées. Survolez un point pour le détail.</span>
+          <span>{tr('map.polar.summary', { count: samples.length })}</span>
         )}
       </div>
       <div ref={ref} className="flex w-full justify-center rounded-md border">
@@ -309,7 +312,7 @@ function Polar({ samples, units }: { samples: Sample[]; units: Units }) {
             width={size}
             height={size}
             role="img"
-            aria-label="Diagramme polaire de couverture de la station"
+            aria-label={tr('map.polar.ariaLabel')}
             className="block touch-pan-y select-none"
             onPointerMove={pick}
             onPointerDown={pick}
@@ -325,7 +328,7 @@ function Polar({ samples, units }: { samples: Sample[]; units: Units }) {
             ))}
             <path d={`M${geo.c},6V${size - 6}M6,${geo.c}H${size - 6}`} stroke={t.zero} strokeWidth={1} />
             <text x={geo.c + 4} y={14} fontSize={10.5} fontWeight={600} fill={t.text}>
-              N
+              {tr('map.polar.north')}
             </text>
             {geo.envelope && <path d={geo.envelope} fill={t.accentFill} stroke={t.accent} strokeWidth={1} strokeLinejoin="round" />}
             {geo.dots.map(({ p }, i) => (

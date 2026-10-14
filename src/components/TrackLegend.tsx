@@ -3,14 +3,15 @@ import type { FlightPhase } from '@/lib/types';
 import { ALT_BANDS, altBand, altColours } from '@/lib/altRamp';
 import { COLOURS, PHASE_COLOUR, PHASE_LABEL } from '@/lib/icons';
 import { fmtAltShort, type Units } from '@/lib/format';
+import { t, Trans, useT } from '@/i18n';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
 const TOP = 40000;
 
 function bandLabel(m: number, units: Units, last: boolean) {
-  if (m === 0) return 'Sol';
+  if (m === 0) return t('atmo3d.legend.ground');
   const v = units === 'metric' ? `${Math.round(m / 1000)} km` : `${Math.round((m * 3.28084) / 1000)} kft`;
-  return last ? `${v} et +` : v;
+  return last ? t('atmo3d.legend.andAbove', { value: v }) : v;
 }
 
 function position(alt: number) {
@@ -37,6 +38,7 @@ export function TrackLegend({
   showPrediction: boolean;
   showReverse: boolean;
 }) {
+  const t = useT();
   const colours = altColours(darkBase);
   const at = position(alt);
   const anchor = at < 18 ? 'left' : at > 82 ? 'right' : 'center';
@@ -45,16 +47,15 @@ export function TrackLegend({
     <div className="space-y-4 border-t pt-5">
       <h4 className="flex items-center gap-2 text-[14px] font-semibold">
         <MapIcon className="text-muted-foreground size-4" aria-hidden />
-        Lire le tracé sur la carte
+        {t('atmo3d.track.title')}
       </h4>
 
       <div className="space-y-2">
         <p className="text-[13px] leading-snug">
-          <span className="text-foreground font-semibold">Trait plein</span> : le chemin déjà parcouru. Sa couleur donne l’altitude à chaque endroit,{' '}
-          {darkBase ? 'du bleu foncé près du sol au bleu très clair en haute altitude.' : 'du bleu clair près du sol au bleu nuit en haute altitude.'}
+          <Trans k={darkBase ? 'atmo3d.track.solidDark' : 'atmo3d.track.solidLight'} tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }} />
         </p>
 
-        <div className="pt-7" role="img" aria-label={`Échelle d’altitude par tranches de ${bandLabel(ALT_BANDS[1], units, false)}. La sonde est actuellement à ${fmtAltShort(alt, units)}.`}>
+        <div className="pt-7" role="img" aria-label={t('atmo3d.track.scaleAria', { step: bandLabel(ALT_BANDS[1], units, false), alt: fmtAltShort(alt, units) })}>
           <div className="relative">
             <div
               className="absolute bottom-full mb-1.5 flex flex-col"
@@ -65,7 +66,7 @@ export function TrackLegend({
               }}
             >
               <span className="tabular text-foreground text-[12px] leading-none font-semibold whitespace-nowrap">
-                {live ? 'Maintenant' : 'Dernier point'} · {fmtAltShort(alt, units)}
+                {t(live ? 'atmo3d.track.now' : 'atmo3d.track.lastPoint', { alt: fmtAltShort(alt, units) })}
               </span>
             </div>
             <div className="flex gap-[2px]">
@@ -91,7 +92,7 @@ export function TrackLegend({
             <li className="flex items-start gap-3">
               <span className="mt-[9px] w-7 shrink-0 border-t-[2.5px] border-dashed" style={{ borderColor: COLOURS.landing }} aria-hidden />
               <span>
-                <span className="text-foreground font-semibold">Tirets roses</span> : le trajet prévu jusqu’à l’atterrissage, recalculé chaque minute.
+                <Trans k="atmo3d.track.prediction" tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }} />
               </span>
             </li>
           )}
@@ -99,7 +100,7 @@ export function TrackLegend({
             <li className="flex items-start gap-3">
               <span className="border-muted-foreground mt-[9px] w-7 shrink-0 border-t-[2.5px] border-dotted" aria-hidden />
               <span>
-                <span className="text-foreground font-semibold">Pointillés gris</span> : le départ estimé, avant que les stations captent la sonde.
+                <Trans k="atmo3d.track.reverse" tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }} />
               </span>
             </li>
           )}
@@ -107,7 +108,7 @@ export function TrackLegend({
       )}
 
       <div className="space-y-1.5">
-        <p className="text-[13px] leading-snug">Les traits des autres ballons, plus discrets, sont colorés selon leur étape :</p>
+        <p className="text-[13px] leading-snug">{t('atmo3d.track.othersIntro')}</p>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
           {PHASES.map((p) => (
             <li key={p} className="flex items-center gap-1.5">

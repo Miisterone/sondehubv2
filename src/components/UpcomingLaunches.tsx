@@ -5,6 +5,7 @@ import { fmtDist, relative } from '@/lib/format';
 import { bearing, cardinal, distance } from '@/lib/geo';
 import { fmtDay, fmtHour, siteCountry, siteLabel, upcomingLaunches } from '@/lib/sonde';
 import { Icon3D } from './Icon3D';
+import { useT } from '@/i18n';
 
 const HORIZON_MS = 36 * 3_600_000;
 const NEAR_RADIUS_M = 400_000;
@@ -36,16 +37,17 @@ export function UpcomingLaunches({ limit = 5, className }: { limit?: number; cla
   const minute = Math.floor(now / 60_000);
   const rows = useMemo(() => nextLaunches(sites, me, minute * 60_000, limit), [sites, me, minute, limit]);
   const { selectSite } = useStore.getState();
+  const tr = useT();
 
   if (!rows.length) return null;
 
   return (
-    <section aria-label="Prochains lâchers" className={className}>
-      <h2 className="flex items-baseline gap-2 px-5 pt-5 pb-1 text-[14px] font-semibold">{me ? 'Prochains lâchers près de vous' : 'Prochains lâchers'}</h2>
+    <section aria-label={tr('sidebar.launches.title')} className={className}>
+      <h2 className="flex items-baseline gap-2 px-5 pt-5 pb-1 text-[14px] font-semibold">{me ? tr('sidebar.launches.titleNear') : tr('sidebar.launches.title')}</h2>
       <p className="px-5 pb-2 text-[12.5px] leading-relaxed">
         {me
-          ? `Stations à moins de ${fmtDist(NEAR_RADIUS_M, units)}, heure de lâcher estimée 45 min avant l’heure de mesure.`
-          : 'Heure de lâcher estimée 45 min avant l’heure de mesure.'}
+          ? tr('sidebar.launches.hintNear', { distance: fmtDist(NEAR_RADIUS_M, units) })
+          : tr('sidebar.launches.hint')}
       </p>
       <ul>
         {rows.map((r) => (
@@ -59,13 +61,15 @@ export function UpcomingLaunches({ limit = 5, className }: { limit?: number; cla
               <span className="min-w-0 flex-1">
                 <span className="text-foreground block truncate text-[14px] font-semibold">{siteLabel(r.site.name)}</span>
                 <span className="block truncate text-[12.5px]">
-                  {r.d !== null && r.b !== null ? `${fmtDist(r.d, units)} ${cardinal(r.b)} de vous` : (siteCountry(r.site.name) ?? 'Site de lâcher')}
+                  {r.d !== null && r.b !== null
+                    ? tr('sidebar.launches.away', { distance: fmtDist(r.d, units), direction: cardinal(r.b) })
+                    : (siteCountry(r.site.name) ?? tr('sidebar.launches.site'))}
                 </span>
               </span>
               <span className="shrink-0 text-right">
                 <span className="tabular text-foreground block text-[14px] font-semibold">{relative(r.t, now)}</span>
                 <span className="tabular text-faint block text-[12px]">
-                  {fmtDay(r.t, now)}, {fmtHour(r.t)}
+                  {tr('sidebar.launches.when', { day: fmtDay(r.t, now), time: fmtHour(r.t) })}
                 </span>
               </span>
             </button>

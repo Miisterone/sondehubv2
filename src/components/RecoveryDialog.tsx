@@ -14,20 +14,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import { t, Trans, useT } from '@/i18n';
 
 type Status = 'recovered' | 'notfound' | 'planned';
 
+const statusOption = (value: Status, icon: ReactNode, recovered: boolean, planned: boolean) => ({
+  value,
+  icon,
+  recovered,
+  planned,
+  get label() {
+    return t(`map.recovery.status.${value}.label`);
+  },
+  get hint() {
+    return t(`map.recovery.status.${value}.hint`);
+  },
+});
+
 const STATUSES: { value: Status; label: string; hint: string; icon: ReactNode; recovered: boolean; planned: boolean }[] = [
-  { value: 'recovered', label: 'Récupérée', hint: 'Je l’ai en main', icon: <PackageCheck />, recovered: true, planned: false },
-  { value: 'notfound', label: 'Pas trouvée', hint: 'Cherchée sans succès', icon: <SearchX />, recovered: false, planned: false },
-  { value: 'planned', label: 'Je vais la récupérer', hint: 'En route ou prévu', icon: <Car />, recovered: false, planned: true },
+  statusOption('recovered', <PackageCheck />, true, false),
+  statusOption('notfound', <SearchX />, false, false),
+  statusOption('planned', <Car />, false, true),
 ];
 
 const PLACEHOLDER: Record<Status | 'none', string> = {
-  none: 'Trouvée dans un champ, parachute intact…',
-  recovered: 'Trouvée dans un champ, parachute intact…',
-  notfound: 'Zone fouillée sur 300 m autour du point, rien vu. Peut-être dans les arbres…',
-  planned: 'Je pars dans 30 min depuis Rambouillet, je donnerai des nouvelles…',
+  get none() {
+    return t('map.recovery.placeholder.recovered');
+  },
+  get recovered() {
+    return t('map.recovery.placeholder.recovered');
+  },
+  get notfound() {
+    return t('map.recovery.placeholder.notfound');
+  },
+  get planned() {
+    return t('map.recovery.placeholder.planned');
+  },
 };
 
 /** Escape closes the dialog only: stop it reaching App's global "Escape = deselect" shortcut. */
@@ -72,6 +94,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
   const prediction = useStore((s) => s.predictions[serial]);
   const savedCallsign = useStore((s) => s.settings.callsign);
   const now = useStore((s) => s.now);
+  const t = useT();
 
   // Default position: where the sonde was last heard, or the predicted landing if it was lost in the air.
   const [initial] = useState(() => {
@@ -84,7 +107,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
       lat: p.lat.toFixed(5),
       lon: p.lon.toFixed(5),
       alt: String(Math.max(0, Math.round(p.alt))),
-      source: landing ? (flying ? 'Atterrissage prévu' : 'Atterrissage estimé (signal perdu en vol)') : `Dernière position reçue · ${ago(sonde.lastTime, now)}`,
+      source: landing ? (flying ? t('map.recovery.source.predicted') : t('map.recovery.source.estimated')) : t('map.recovery.source.lastPosition', { ago: ago(sonde.lastTime, now) }),
     };
   });
 
@@ -104,12 +127,12 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
   const lonN = parseNum(lon);
   const altN = parseNum(alt);
   const errors = {
-    status: !status ? 'Choisissez un statut' : null,
-    callsign: !callsign.trim() ? 'Indiquez votre indicatif ou votre nom' : null,
-    lat: !Number.isFinite(latN) || Math.abs(latN) > 90 ? 'Latitude entre −90 et 90' : null,
-    lon: !Number.isFinite(lonN) || Math.abs(lonN) > 180 ? 'Longitude entre −180 et 180' : null,
-    alt: !Number.isFinite(altN) || altN < -500 || altN > 9000 ? 'Altitude du sol en mètres (−500 à 9 000)' : null,
-    description: description.trim().length < 3 ? 'Ajoutez une courte description' : null,
+    status: !status ? t('map.recovery.error.status') : null,
+    callsign: !callsign.trim() ? t('map.recovery.error.callsign') : null,
+    lat: !Number.isFinite(latN) || Math.abs(latN) > 90 ? t('map.recovery.error.lat') : null,
+    lon: !Number.isFinite(lonN) || Math.abs(lonN) > 180 ? t('map.recovery.error.lon') : null,
+    alt: !Number.isFinite(altN) || altN < -500 || altN > 9000 ? t('map.recovery.error.alt') : null,
+    description: description.trim().length < 3 ? t('map.recovery.error.description') : null,
   };
   const valid = Object.values(errors).every((e) => !e);
   const show = (k: keyof typeof errors) => (touched[k] ? errors[k] : null);
@@ -127,7 +150,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
     setLat(me.lat.toFixed(5));
     setLon(me.lon.toFixed(5));
     if (me.alt !== undefined && Number.isFinite(me.alt)) setAlt(String(Math.round(me.alt)));
-    setSource(`Votre position · précision ±${fmtDist(me.accuracy, 'metric')}`);
+    setSource(t('map.recovery.source.mine', { accuracy: fmtDist(me.accuracy, 'metric') }));
   };
 
   // Pasting "48.77, 2.01" into either coordinate field fills both.
@@ -137,7 +160,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
     e.preventDefault();
     setLat(pair[0].toFixed(5));
     setLon(pair[1].toFixed(5));
-    setSource('Coordonnées collées');
+    setSource(t('map.recovery.source.pasted'));
   };
 
   const submit = async () => {
@@ -164,10 +187,10 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
         [{ serial, lat: latN, lon: lonN, recovered: s.recovered, planned: s.planned, recoveredBy: recovered_by, description: description.trim(), datetime: Date.now() }],
         false,
       );
-      toast.success('Signalement publié sur SondeHub — merci !', { description: `${serial} · ${s.label}` });
+      toast.success(t('map.recovery.published'), { description: `${serial} · ${s.label}` });
       onDone();
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : 'Erreur inconnue');
+      setError(err instanceof Error && err.message ? err.message : t('map.recovery.unknownError'));
       setSubmitting(false);
     }
   };
@@ -181,16 +204,16 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
       }}
     >
       <DialogHeader className="border-b px-5 pt-5 pb-4 text-left">
-        <DialogTitle className="text-base">Signaler une récupération</DialogTitle>
+        <DialogTitle className="text-base">{t('map.recovery.title')}</DialogTitle>
         <DialogDescription className="text-[12.5px]">
-          Sonde <span className="text-foreground tabular font-medium">{serial}</span> — indiquez aux autres chasseurs ce qu’il en est.
+          <Trans k="map.recovery.description" params={{ serial }} tags={{ b: (c) => <span className="text-foreground tabular font-medium">{c}</span> }} />
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4 px-5 py-4">
         {/* Status */}
         <fieldset className="space-y-1.5">
-          <legend className="mb-1.5 text-[13px] font-medium">Statut</legend>
+          <legend className="mb-1.5 text-[13px] font-medium">{t('map.recovery.statusLegend')}</legend>
           <RadioGroup
             value={status}
             onValueChange={(v) => {
@@ -224,14 +247,14 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
         {/* Callsign */}
         <div className="space-y-1.5">
           <Label htmlFor="rec-callsign" className="text-[13px]">
-            Indicatif ou nom
+            {t('map.recovery.callsign')}
           </Label>
           <Input
             id="rec-callsign"
             value={callsign}
             onChange={(e) => setCallsign(e.target.value)}
             onBlur={touch('callsign')}
-            placeholder="F4ABC ou Camille"
+            placeholder={t('map.recovery.callsignPlaceholder')}
             autoComplete="nickname"
             maxLength={40}
             aria-invalid={!!show('callsign')}
@@ -243,26 +266,26 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="rec-lat" className="text-[13px]">
-              Position
+              {t('map.recovery.position')}
             </Label>
             <Button type="button" variant="outline" size="xs" onClick={fillMyPosition} disabled={locating}>
               {locating ? <Loader2 className="animate-spin" /> : <LocateFixed />}
-              Utiliser ma position
+              {t('map.recovery.useMyPosition')}
             </Button>
           </div>
           <div className="grid grid-cols-[1fr_1fr_5.5rem] gap-2">
-            <CoordField id="rec-lat" label="Latitude" value={lat} onChange={(v) => { setLat(v); setSource(''); }} onBlur={touch('lat')} onPaste={onPasteCoords} invalid={!!show('lat')} />
-            <CoordField id="rec-lon" label="Longitude" value={lon} onChange={(v) => { setLon(v); setSource(''); }} onBlur={touch('lon')} onPaste={onPasteCoords} invalid={!!show('lon')} />
-            <CoordField id="rec-alt" label="Alt. (m)" value={alt} onChange={setAlt} onBlur={touch('alt')} invalid={!!show('alt')} />
+            <CoordField id="rec-lat" label={t('map.recovery.latitude')} value={lat} onChange={(v) => { setLat(v); setSource(''); }} onBlur={touch('lat')} onPaste={onPasteCoords} invalid={!!show('lat')} />
+            <CoordField id="rec-lon" label={t('map.recovery.longitude')} value={lon} onChange={(v) => { setLon(v); setSource(''); }} onBlur={touch('lon')} onPaste={onPasteCoords} invalid={!!show('lon')} />
+            <CoordField id="rec-alt" label={t('map.recovery.altitude')} value={alt} onChange={setAlt} onBlur={touch('alt')} invalid={!!show('alt')} />
           </div>
           <FieldError>{show('lat') ?? show('lon') ?? show('alt')}</FieldError>
           <p className="text-muted-foreground text-[11.5px]">
-            {source || 'Saisie manuelle'}
+            {source || t('map.recovery.source.manual')}
             {offset !== null && offset >= 50 && (
               // Far from where the sonde was last heard: likely a typo or swapped lat/lon.
               <span className={cn(offset > 30_000 && 'text-foreground font-semibold')}>
                 {' '}
-                · à {fmtDist(offset, 'metric')} de la dernière position reçue{offset > 30_000 ? ' — vérifiez les coordonnées' : ''}
+                · {offset > 30_000 ? t('map.recovery.offsetCheck', { dist: fmtDist(offset, 'metric') }) : t('map.recovery.offset', { dist: fmtDist(offset, 'metric') })}
               </span>
             )}
           </p>
@@ -271,7 +294,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
         {/* Description */}
         <div className="space-y-1.5">
           <Label htmlFor="rec-desc" className="text-[13px]">
-            Description
+            {t('map.recovery.descriptionLabel')}
           </Label>
           <Textarea
             id="rec-desc"
@@ -291,8 +314,7 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
         <div className="bg-surface flex gap-2.5 rounded-md border px-3 py-2.5 text-[12.5px] leading-snug">
           <Globe className="text-foreground mt-0.5 size-4 shrink-0" />
           <p>
-            <span className="font-semibold">Ce signalement est public.</span> Il sera publié sur SondeHub avec votre indicatif, la position et la description, et
-            restera visible par tout le monde.
+            <Trans k="map.recovery.publicWarning" tags={{ b: (c) => <span className="font-semibold">{c}</span> }} />
           </p>
         </div>
 
@@ -300,9 +322,9 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
           <div role="alert" className="border-destructive/40 bg-destructive/10 text-destructive flex gap-2.5 rounded-lg border px-3 py-2.5 text-[12px] leading-snug">
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0">
-              <p className="font-semibold">L’envoi a échoué</p>
+              <p className="font-semibold">{t('map.recovery.sendFailed')}</p>
               <p className="line-clamp-3 break-words opacity-90">{error}</p>
-              <p className="text-foreground/80 mt-0.5">Vérifiez votre connexion puis réessayez.</p>
+              <p className="text-foreground/80 mt-0.5">{t('map.recovery.checkConnection')}</p>
             </div>
           </div>
         )}
@@ -310,11 +332,11 @@ function RecoveryForm({ serial, onDone }: { serial: string; onDone: () => void }
 
       <DialogFooter className="border-t px-5 py-3.5">
         <Button type="button" variant="ghost" onClick={onDone}>
-          Annuler
+          {t('map.recovery.cancel')}
         </Button>
         <Button type="submit" disabled={!valid || submitting}>
           {submitting ? <Loader2 className="animate-spin" /> : <Send />}
-          {submitting ? 'Publication…' : 'Publier sur SondeHub'}
+          {submitting ? t('map.recovery.publishing') : t('map.recovery.publish')}
         </Button>
       </DialogFooter>
     </form>

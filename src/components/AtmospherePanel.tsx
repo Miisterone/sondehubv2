@@ -11,18 +11,19 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { LineKey, Readout } from './ChartParts';
 import { IconButton } from './ui';
 import { canReplay, startReplay, useReplayDriver } from './ReplayBar';
+import { intlTag, t, useT } from '@/i18n';
 
 const Atmosphere3D = lazy(() => import('./Atmosphere3D'));
 const SPEED = 600;
 
-const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
 
-function scaleNote(scene: AtmoScene): string {
+function scaleNote(scene: AtmoScene, lower = false): string {
   const k = exaggeration(scene);
-  const n = (v: number) => (v >= 10 ? Math.round(v).toString() : v.toLocaleString('fr-FR', { maximumFractionDigits: 1 }));
-  if (k >= 1.25) return `Hauteurs exagérées ×${n(k)} pour la lisibilité`;
-  if (k <= 0.8) return `Distances au sol exagérées ×${n(1 / k)} pour la lisibilité`;
-  return 'Hauteurs et distances à la même échelle';
+  const n = (v: number) => (v >= 10 ? Math.round(v).toString() : v.toLocaleString(intlTag(), { maximumFractionDigits: 1 }));
+  if (k >= 1.25) return t(lower ? 'atmo3d.scale.heightsLower' : 'atmo3d.scale.heights', { factor: n(k) });
+  if (k <= 0.8) return t(lower ? 'atmo3d.scale.distancesLower' : 'atmo3d.scale.distances', { factor: n(1 / k) });
+  return t(lower ? 'atmo3d.scale.sameLower' : 'atmo3d.scale.same');
 }
 
 export function AtmospherePanel({
@@ -40,6 +41,7 @@ export function AtmospherePanel({
   units: Units;
   live: boolean;
 }) {
+  const t = useT();
   const theme = useStore((s) => s.settings.theme);
   const replay = useStore((s) => (s.replay?.serial === sonde.serial ? s.replay : null));
   const { setReplay } = useStore.getState();
@@ -55,7 +57,7 @@ export function AtmospherePanel({
   const alt = index !== null ? (flight.alt[index] ?? 0) : sonde.last.alt;
   const phase: FlightPhase = index !== null ? (flight.burst !== null && index > flight.burst ? 'descending' : index === flight.last ? sonde.phase : 'ascending') : sonde.phase;
   const where = whereabouts(alt, scene, phase, (m) => fmtAltShort(m, units));
-  const label = `Vue en trois dimensions : la sonde est à ${fmtAltShort(alt, units)}, ${where.caption}. Tropopause à ${fmtAltShort(scene.tropopause.z, units)}.`;
+  const label = t('atmo3d.panel.ariaLabel', { alt: fmtAltShort(alt, units), where: where.caption, tropopause: fmtAltShort(scene.tropopause.z, units) });
   const replayable = canReplay(flight);
   const atEnd = replay ? replay.t >= end : false;
 
@@ -99,8 +101,8 @@ export function AtmospherePanel({
         step={1}
         value={Math.round(replay.t)}
         onChange={(e) => setReplay({ ...replay, t: Number(e.target.value) })}
-        aria-label="Position dans le vol"
-        aria-valuetext={`${clock(replay.t)}, ${fmtAlt(alt, units)}`}
+        aria-label={t('atmo3d.panel.positionInFlight')}
+        aria-valuetext={t('atmo3d.panel.positionValue', { time: clock(replay.t), alt: fmtAlt(alt, units) })}
         className="accent-primary h-1.5 w-full cursor-pointer"
       />
       <div className="tabular text-faint flex justify-between text-[12px]">
@@ -115,41 +117,41 @@ export function AtmospherePanel({
           onClick={() => (atEnd ? setReplay({ ...replay, t: flight.x[0], playing: true }) : setReplay({ ...replay, playing: !replay.playing }))}
         >
           {atEnd ? <RotateCcw /> : replay.playing ? <Pause /> : <Play />}
-          {atEnd ? 'Recommencer' : replay.playing ? 'Pause' : 'Lecture'}
+          {atEnd ? t('atmo3d.panel.restart') : replay.playing ? t('atmo3d.panel.pause') : t('atmo3d.panel.play')}
         </Button>
         <Button variant="ghost" size="sm" className="ml-auto text-[13px]" onClick={() => setReplay(null)}>
-          <X /> Quitter
+          <X /> {t('atmo3d.panel.quit')}
         </Button>
       </div>
     </div>
   ) : replayable ? (
     <Button variant="outline" size="sm" className="text-[13px]" onClick={() => startReplay(sonde.serial, flight, { speed: SPEED, follow: false })}>
-      <Play /> Voir la sonde traverser les couches
+      <Play /> {t('atmo3d.panel.watchCrossing')}
     </Button>
   ) : null;
 
   const legend = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px]">
       <span className="flex items-center gap-1.5">
-        <LineKey predicted={false} /> Trajet mesuré
+        <LineKey predicted={false} /> {t('atmo3d.legend.measured')}
       </span>
       {flight.forecast && (
         <span className="flex items-center gap-1.5">
-          <LineKey predicted /> Trajet prévu
+          <LineKey predicted /> {t('atmo3d.legend.predicted')}
         </span>
       )}
       <span className="flex items-center gap-1.5">
         <svg width="16" height="8" aria-hidden>
           <path d="M0,4 H16" stroke="currentColor" strokeWidth="1.5" strokeDasharray={scene.tropopause.measured ? undefined : '4 3'} className="text-faint" />
         </svg>
-        Tropopause {scene.tropopause.measured ? 'mesurée' : 'typique'}
+        {scene.tropopause.measured ? t('atmo3d.legend.tropopauseMeasured') : t('atmo3d.legend.tropopauseTypical')}
       </span>
       {scene.freezing !== null && (
         <span className="flex items-center gap-1.5">
           <svg width="16" height="8" aria-hidden>
             <path d="M0,4 H16" stroke="var(--chart-pred)" strokeWidth="1.5" strokeDasharray="4 3" />
           </svg>
-          Isotherme 0&nbsp;°C
+          {t('atmo3d.legend.freezing')}
         </span>
       )}
     </div>
@@ -160,11 +162,11 @@ export function AtmospherePanel({
       {readout}
       <div className="relative h-[320px] w-full overflow-hidden rounded-md border">
         {!full && view('preview')}
-        <IconButton label="Agrandir la vue 3D" side="left" className="bg-background/90 absolute top-2 right-2 border" onClick={() => setFull(true)}>
+        <IconButton label={t('atmo3d.panel.expand')} side="left" className="bg-background/90 absolute top-2 right-2 border" onClick={() => setFull(true)}>
           <Maximize2 className="size-4" />
         </IconButton>
       </div>
-      <p className="text-faint text-[12px]">Faites glisser pour tourner autour de la colonne. {scaleNote(scene)}.</p>
+      <p className="text-faint text-[12px]">{t('atmo3d.panel.dragHint', { scale: scaleNote(scene) })}</p>
       {controls}
       {legend}
 
@@ -175,16 +177,16 @@ export function AtmospherePanel({
         >
           <div className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
             <div className="min-w-0 flex-1">
-              <DialogTitle className="font-heading text-[16px] font-semibold">Atmosphère en 3D</DialogTitle>
+              <DialogTitle className="font-heading text-[16px] font-semibold">{t('atmo3d.dialog.title')}</DialogTitle>
               <DialogDescription className="tabular truncate text-[12.5px]">
-                {sonde.serial}, {scaleNote(scene).toLowerCase()}
+                {t('atmo3d.dialog.description', { serial: sonde.serial, scale: scaleNote(scene, true) })}
               </DialogDescription>
             </div>
             <Button variant="ghost" size="sm" className="text-[13px]" onClick={() => setResetKey((k) => k + 1)}>
-              <RotateCcw /> Recentrer
+              <RotateCcw /> {t('atmo3d.dialog.recenter')}
             </Button>
             <DialogClose asChild>
-              <IconButton label="Fermer la vue 3D" side="bottom">
+              <IconButton label={t('atmo3d.dialog.close')} side="bottom">
                 <X className="size-[18px]" />
               </IconButton>
             </DialogClose>

@@ -5,8 +5,9 @@ import { ago, fmtAltShort, fmtDuration, fmtVSpeed, relative, type Units } from '
 import { siteLabel, type Launch } from '@/lib/sonde';
 import { cx } from './ui';
 import { Icon3D, type Icon3DId } from './Icon3D';
+import { intlTag, Trans, useT } from '@/i18n';
 
-const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
 
 export function FlightTimeline({
   d,
@@ -23,6 +24,7 @@ export function FlightTimeline({
   now: number;
   launch: Launch | null;
 }) {
+  const t = useT();
   if (d.last < 1) return null;
   const t0 = d.x[0];
   const tn = d.x[d.last];
@@ -51,13 +53,19 @@ export function FlightTimeline({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
           <span>
-            <span className="text-foreground font-semibold">Montée</span> {fmtDuration((ascEnd - start) * 1000)}
-            {tb === null && !ended ? ' et plus' : ''}
+            <Trans
+              k={tb === null && !ended ? 'sonde.timeline.ascentOngoing' : 'sonde.timeline.ascent'}
+              params={{ duration: fmtDuration((ascEnd - start) * 1000) }}
+              tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }}
+            />
           </span>
           {tb !== null && (
             <span className="text-right">
-              <span className="text-foreground font-semibold">Descente</span> {fmtDuration((tEnd - tb) * 1000)}
-              {landingPredicted ? ' prévue' : ''}
+              <Trans
+                k={landingPredicted ? 'sonde.timeline.descentPredicted' : 'sonde.timeline.descent'}
+                params={{ duration: fmtDuration((tEnd - tb) * 1000) }}
+                tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }}
+              />
             </span>
           )}
         </div>
@@ -77,10 +85,10 @@ export function FlightTimeline({
         {nowFrac < 0.999 && (
           <div className="flex items-center gap-3 text-[12px]">
             <span className="flex items-center gap-1.5">
-              <span className="bg-primary inline-block h-2 w-3.5 rounded-[2px]" /> Écoulé
+              <span className="bg-primary inline-block h-2 w-3.5 rounded-[2px]" /> {t('sonde.timeline.elapsed')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="bg-primary/20 inline-block h-2 w-3.5 rounded-[2px]" /> À venir, selon la prévision
+              <span className="bg-primary/20 inline-block h-2 w-3.5 rounded-[2px]" /> {t('sonde.timeline.upcoming')}
             </span>
           </div>
         )}
@@ -89,31 +97,40 @@ export function FlightTimeline({
       <div className="grid grid-cols-3 gap-4">
         <Event
           icon={launch?.fromGround === false && !launch?.estimated ? 'station' : 'launch'}
-          label={launch?.estimated ? 'Lâcher estimé' : launch?.fromGround === false ? 'Premier signal' : 'Lâcher'}
+          label={launch?.estimated ? t('sonde.timeline.launchEstimated') : launch?.fromGround === false ? t('sonde.common.firstSignal') : t('sonde.common.launch')}
           value={clock(start)}
           sub={launch?.site ? siteLabel(launch.site) : ago(start * 1000, now)}
           muted={launch?.estimated}
         />
         <Event
           icon="burst"
-          label="Éclatement"
+          label={t('sonde.common.burst')}
           value={tb !== null ? clock(tb) : '—'}
-          sub={tb !== null && burstAlt !== null ? `${burstPredicted ? 'prévu ' : ''}à ${fmtAltShort(burstAlt, units)}` : 'pas encore estimé'}
+          sub={
+            tb !== null && burstAlt !== null
+              ? burstPredicted
+                ? t('sonde.timeline.burstPredictedAt', { alt: fmtAltShort(burstAlt, units) })
+                : t('sonde.common.atAlt', { alt: fmtAltShort(burstAlt, units) })
+              : t('sonde.timeline.notEstimated')
+          }
           muted={burstPredicted}
         />
         <Event
           icon={landingPredicted || !ended ? 'landing' : phase === 'lost' ? 'lost' : 'landed'}
-          label={landingPredicted || !ended ? 'Atterrissage' : 'Dernier signal'}
+          label={landingPredicted || !ended ? t('sonde.timeline.landing') : t('sonde.timeline.lastSignal')}
           value={tl !== null ? clock(tl) : '—'}
-          sub={tl !== null ? (landingPredicted && tl * 1000 > now ? relative(tl * 1000, now) : ago(tl * 1000, now)) : 'pas encore estimé'}
+          sub={tl !== null ? (landingPredicted && tl * 1000 > now ? relative(tl * 1000, now) : ago(tl * 1000, now)) : t('sonde.timeline.notEstimated')}
           muted={landingPredicted}
         />
       </div>
 
       {prediction && (
         <p className="text-[12.5px] leading-relaxed">
-          Prévision du modèle Tawhiri, recalculée {ago(prediction.time, now)} avec une montée de {fmtVSpeed(prediction.ascentRate, units).replace('+', '')} et une
-          descente de {fmtVSpeed(prediction.descentRate, units).replace('+', '')} près du sol.
+          {t('sonde.timeline.model', {
+            ago: ago(prediction.time, now),
+            ascent: fmtVSpeed(prediction.ascentRate, units).replace('+', ''),
+            descent: fmtVSpeed(prediction.descentRate, units).replace('+', ''),
+          })}
         </p>
       )}
     </div>

@@ -1,5 +1,6 @@
 import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
 import type { BasemapId } from '../store/useStore';
+import { t } from '@/i18n';
 import darkPreview from '../assets/basemaps/dark.webp';
 import libertyPreview from '../assets/basemaps/liberty.webp';
 import positronPreview from '../assets/basemaps/positron.webp';
@@ -33,23 +34,53 @@ export interface Basemap {
 }
 
 export const BASEMAPS: Basemap[] = [
-  { id: 'dark', label: 'Nuit', dark: true, style: 'https://tiles.openfreemap.org/styles/dark', preview: darkPreview, swatch: '#1b1b1b' },
-  { id: 'liberty', label: 'Plan', dark: false, style: 'https://tiles.openfreemap.org/styles/liberty', preview: libertyPreview, swatch: '#f3efe6' },
-  { id: 'positron', label: 'Clair', dark: false, style: 'https://tiles.openfreemap.org/styles/positron', preview: positronPreview, swatch: '#f2f2f2' },
+  {
+    id: 'dark',
+    get label() {
+      return t('lib.basemap.dark');
+    },
+    dark: true,
+    style: 'https://tiles.openfreemap.org/styles/dark',
+    preview: darkPreview,
+    swatch: '#1b1b1b',
+  },
+  {
+    id: 'liberty',
+    get label() {
+      return t('lib.basemap.liberty');
+    },
+    dark: false,
+    style: 'https://tiles.openfreemap.org/styles/liberty',
+    preview: libertyPreview,
+    swatch: '#f3efe6',
+  },
+  {
+    id: 'positron',
+    get label() {
+      return t('lib.basemap.positron');
+    },
+    dark: false,
+    style: 'https://tiles.openfreemap.org/styles/positron',
+    preview: positronPreview,
+    swatch: '#f2f2f2',
+  },
   {
     id: 'satellite',
-    label: 'Satellite',
+    get label() {
+      return t('lib.basemap.satellite');
+    },
     dark: true,
-    style: raster(
-      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      'Imagerie © Esri, Maxar, Earthstar Geographics',
-    ),
+    get style() {
+      return raster(['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], t('lib.basemap.attributionEsri'));
+    },
     preview: satellitePreview,
     swatch: '#3d4a32',
   },
   {
     id: 'topo',
-    label: 'Relief',
+    get label() {
+      return t('lib.basemap.topo');
+    },
     dark: false,
     style: raster(
       ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png', 'https://b.tile.opentopomap.org/{z}/{x}/{y}.png', 'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'],
@@ -63,7 +94,9 @@ export const BASEMAPS: Basemap[] = [
     id: 'osm',
     label: 'OSM',
     dark: false,
-    style: raster(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], '© les contributeurs OpenStreetMap'),
+    get style() {
+      return raster(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], t('lib.basemap.attributionOsm'));
+    },
     preview: osmPreview,
     swatch: '#f2efe9',
   },

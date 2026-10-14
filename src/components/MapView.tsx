@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Map as MlMap, Marker, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
+import { AttributionControl, Map as MlMap, Marker, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { ExpressionSpecification, LayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -29,6 +29,7 @@ import { circleRing, viewForTimeZone } from '../lib/region';
 import { makeVisible } from '../lib/filter';
 import { altStepExpression } from '../lib/altRamp';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
+import { intlTag, t, useLocale } from '../i18n';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
 setWorkerUrl(workerUrl);
@@ -68,6 +69,20 @@ const PHASE_MATCH = (values: Record<'ascending' | 'descending' | 'landed' | 'los
 /** Background tracks: landed flights recede, and everything dims while one sonde is selected. */
 const trackOpacity = (dim: boolean) =>
   PHASE_MATCH(dim ? { ascending: 0.3, descending: 0.3, landed: 0.16, lost: 0.12 } : { ascending: 0.85, descending: 0.85, landed: 0.4, lost: 0.3 });
+
+function burstText(): ExpressionSpecification {
+  const [before, after = ''] = t('map.layer.burstLabel').split('{alt}');
+  return ['concat', before, ['to-string', ['get', 'alt']], after] as ExpressionSpecification;
+}
+
+function mapUiStrings(): Record<string, string> {
+  return {
+    'Map.Title': t('map.ui.map'),
+    'Popup.Close': t('map.ui.closePopup'),
+    'AttributionControl.ToggleAttribution': t('map.ui.toggleAttribution'),
+    'AttributionControl.MapFeedback': t('map.ui.mapFeedback'),
+  };
+}
 
 function installOverlays(map: MlMap, darkBase: boolean) {
   addIcons(map);
@@ -255,7 +270,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     layout: {
       'icon-image': 'burst',
       'icon-allow-overlap': true,
-      'text-field': ['concat', 'Éclatement ', ['to-string', ['get', 'alt']], ' m'],
+      'text-field': burstText(),
       'text-font': FONT,
       'text-size': 11,
       'text-offset': [0, 1.3],
@@ -401,6 +416,8 @@ function installOverlays(map: MlMap, darkBase: boolean) {
 export function MapView() {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
+  const relocalizeRef = useRef<() => void>(() => {});
+  const locale = useLocale();
 
   // Create the map once.
   useEffect(() => {
@@ -414,6 +431,7 @@ export function MapView() {
       center: hashCenter.center,
       zoom: hashCenter.zoom,
       attributionControl: { compact: true },
+      locale: mapUiStrings(),
       maxPitch: 75,
       fadeDuration: 120,
       // Rendering at 3x on phones costs a lot of GPU for no visible gain.
@@ -654,6 +672,8 @@ export function MapView() {
 
     const popup = new Popup({ closeButton: true, maxWidth: '280px', className: 'st-popup', offset: 14 });
     const hoverPopup = new Popup({ closeButton: false, closeOnClick: false, className: 'st-popup st-hover', offset: 18 });
+    let popupHtml: (() => string) | null = null;
+    let hoverHtml: (() => string) | null = null;
 
     map.on('click', LISTENER_LAYERS, (e: MapLayerMouseEvent) => {
       const callsign = e.features?.[0]?.properties?.callsign as string;
@@ -670,12 +690,13 @@ export function MapView() {
       const p = f?.properties;
       if (!f || !p || f.geometry.type !== 'Point') return;
       const units = useStore.getState().settings.units;
-      const when = new Date(Number(p.time)).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      popupHtml = () => {
+        const when = new Date(Number(p.time)).toLocaleString(intlTag(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `<div class="pp-title">${esc(String(p.serial))}</div><div class="pp-row">${t('map.popup.launched', { when: esc(when) })}</div><div class="pp-row">${t('map.popup.burstAt', { alt: fmtAltShort(Number(p.top), units) })}</div><div class="pp-row muted">${t('map.popup.lastSignalAt', { alt: fmtAlt(Number(p.alt), units) })}</div>`;
+      };
       popup
         .setLngLat(f.geometry.coordinates as [number, number])
-        .setHTML(
-          `<div class="pp-title">${esc(String(p.serial))}</div><div class="pp-row">Lâchée ${esc(when)}</div><div class="pp-row">Éclatement à ${fmtAltShort(Number(p.top), units)}</div><div class="pp-row muted">Dernier signal à ${fmtAlt(Number(p.alt), units)}</div>`,
-        )
+        .setHTML(popupHtml())
         .addTo(map);
     });
 
@@ -683,15 +704,18 @@ export function MapView() {
       const serial = e.features?.[0]?.properties?.serial as string;
       const r = useStore.getState().recoveries[serial];
       if (!r) return;
-      const rows = [
-        r.recovered ? 'Récupérée' : r.planned ? 'Récupération prévue' : 'Non retrouvée',
-        r.recoveredBy && `Par ${esc(r.recoveredBy)}`,
-        `Signalé ${ago(r.datetime)}`,
-        r.description && `<em>${esc(r.description)}</em>`,
-      ].filter(Boolean);
+      popupHtml = () => {
+        const rows = [
+          r.recovered ? t('map.popup.recovered') : r.planned ? t('map.popup.recoveryPlanned') : t('map.popup.notFound'),
+          r.recoveredBy && t('map.popup.recoveredBy', { name: esc(r.recoveredBy) }),
+          t('map.popup.reported', { ago: ago(r.datetime) }),
+          r.description && `<em>${esc(r.description)}</em>`,
+        ].filter(Boolean);
+        return `<div class="pp-title">${esc(r.serial)}</div>${rows.map((x) => `<div class="pp-row">${x}</div>`).join('')}`;
+      };
       popup
         .setLngLat([r.lon, r.lat])
-        .setHTML(`<div class="pp-title">${esc(r.serial)}</div>${rows.map((x) => `<div class="pp-row">${x}</div>`).join('')}`)
+        .setHTML(popupHtml())
         .addTo(map);
     });
 
@@ -702,11 +726,11 @@ export function MapView() {
       if (!s) return;
       useStore.getState().setHovered(s.serial);
       const units = useStore.getState().settings.units;
+      hoverHtml = () =>
+        `<div class="pp-title">${esc(s.serial)}</div><div class="pp-row">${esc(s.subtype ?? s.type ?? '')} · ${fmtAlt(s.last.alt, units)}</div><div class="pp-row muted">${ago(s.lastTime)}</div>`;
       hoverPopup
         .setLngLat([s.last.lon, s.last.lat])
-        .setHTML(
-          `<div class="pp-title">${esc(s.serial)}</div><div class="pp-row">${esc(s.subtype ?? s.type ?? '')} · ${fmtAlt(s.last.alt, units)}</div><div class="pp-row muted">${ago(s.lastTime)}</div>`,
-        )
+        .setHTML(hoverHtml())
         .addTo(map);
     });
     map.on('mouseleave', SONDE_LAYERS, () => {
@@ -722,7 +746,30 @@ export function MapView() {
     // Keep the view in the URL so links reopen the same place.
     map.on('moveend', () => writeHashView(map));
 
+    relocalizeRef.current = () => {
+      map._locale = { ...map._locale, ...mapUiStrings() };
+      map.getCanvas().setAttribute('aria-label', map._getUIString('Map.Title'));
+      const attribution = map._controls.find((c): c is AttributionControl => c instanceof AttributionControl);
+      if (attribution?._container) {
+        const style = basemapById(useStore.getState().settings.basemap).style;
+        const src = map.getSource('base');
+        const text = typeof style === 'object' ? (style.sources.base as { attribution?: string } | undefined)?.attribution : undefined;
+        if (src && text !== undefined) src.attribution = text;
+        attribution._setElementTitle(attribution._compactButton, 'ToggleAttribution');
+        attribution._updateAttributions();
+      }
+      if (map.getLayer('burst-icon')) map.setLayoutProperty('burst-icon', 'text-field', burstText());
+      if (popup.isOpen()) {
+        if (popupHtml) popup.setHTML(popupHtml());
+        popup.getElement()?.querySelector('.maplibregl-popup-close-button')?.setAttribute('aria-label', map._getUIString('Popup.Close'));
+      }
+      if (hoverPopup.isOpen() && hoverHtml) hoverPopup.setHTML(hoverHtml());
+      synced = {};
+      schedule();
+    };
+
     return () => {
+      relocalizeRef.current = () => {};
       window.removeEventListener('resize', applyPadding);
       unsub();
       unsubSettings();
@@ -737,6 +784,13 @@ export function MapView() {
       mapRef.current = null;
     };
   }, []);
+
+  const localeRef = useRef(locale);
+  useEffect(() => {
+    if (localeRef.current === locale) return;
+    localeRef.current = locale;
+    relocalizeRef.current();
+  }, [locale]);
 
   // MapLibre's own CSS forces `position: relative` on the map element, so position a wrapper instead.
   return (

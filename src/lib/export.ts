@@ -1,4 +1,5 @@
 import type { Prediction, Sonde } from './types';
+import { t } from '@/i18n';
 
 function save(name: string, mime: string, content: string) {
   const url = URL.createObjectURL(new Blob([content], { type: mime }));
@@ -33,17 +34,17 @@ export function downloadKML(s: Sonde, pred?: Prediction) {
   <name>${xml(s.serial)}</name>
   <Style id="track"><LineStyle><color>fff8bd38</color><width>3</width></LineStyle></Style>
   <Style id="pred"><LineStyle><color>ff8571fb</color><width>2</width></LineStyle></Style>
-  <Placemark><name>Trajectoire ${xml(s.serial)}</name><styleUrl>#track</styleUrl>
+  <Placemark><name>${xml(t('lib.export.track', { serial: s.serial }))}</name><styleUrl>#track</styleUrl>
     <LineString><altitudeMode>absolute</altitudeMode><coordinates>${coords}</coordinates></LineString></Placemark>
-  <Placemark><name>${xml(s.serial)} (dernière position)</name>
+  <Placemark><name>${xml(t('lib.export.lastPosition', { serial: s.serial }))}</name>
     <Point><altitudeMode>absolute</altitudeMode><coordinates>${s.last.lon},${s.last.lat},${s.last.alt.toFixed(0)}</coordinates></Point></Placemark>
 ${
   predCoords
-    ? `  <Placemark><name>Prédiction</name><styleUrl>#pred</styleUrl>
+    ? `  <Placemark><name>${xml(t('lib.export.prediction'))}</name><styleUrl>#pred</styleUrl>
     <LineString><altitudeMode>absolute</altitudeMode><coordinates>${predCoords}</coordinates></LineString></Placemark>`
     : ''
 }
-${landing ? `  <Placemark><name>Atterrissage prévu</name><Point><coordinates>${landing.lon},${landing.lat},0</coordinates></Point></Placemark>` : ''}
+${landing ? `  <Placemark><name>${xml(t('lib.export.landing'))}</name><Point><coordinates>${landing.lon},${landing.lat},0</coordinates></Point></Placemark>` : ''}
 </Document>
 </kml>`;
   save(`${s.serial}.kml`, 'application/vnd.google-earth.kml+xml', kml);

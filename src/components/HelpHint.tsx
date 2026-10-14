@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { cn } from 'cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { t, useT } from '@/i18n';
 
 /** Escape closes the popover only: stop it reaching App's global "Escape = deselect" shortcut. */
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
@@ -24,12 +25,13 @@ export function HelpHint({
   align?: 'start' | 'center' | 'end';
   className?: string;
 }) {
+  const t = useT();
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`Qu’est-ce que « ${title} » ?`}
+          aria-label={t('app.helpHint.ariaLabel', { title })}
           // The extra ::after area makes the 14 px icon an easy touch target without changing the layout.
           className={cn(
             'text-faint hover:text-foreground focus-visible:ring-ring/50 data-[state=open]:text-primary relative inline-grid size-3.5 shrink-0 cursor-help place-items-center rounded-full align-middle transition-colors outline-none after:absolute after:-inset-2 focus-visible:ring-2',
@@ -57,59 +59,115 @@ export function HelpHint({
 /** Plain-language explanations of the jargon shown in the sonde panel. */
 export const HELP = {
   burst: {
-    title: 'Éclatement',
-    text: 'En montant, le ballon gonfle à mesure que la pression baisse, jusqu’à éclater, en général entre 20 et 35 km d’altitude. La sonde redescend ensuite sous un petit parachute.',
+    get title() {
+      return t('app.help.burst.title');
+    },
+    get text() {
+      return t('app.help.burst.text');
+    },
   },
   maxAlt: {
-    title: 'Altitude max',
-    text: 'Point le plus haut atteint jusqu’ici. Pendant la montée, l’altitude d’éclatement prévue est indiquée en dessous.',
+    get title() {
+      return t('app.help.maxAlt.title');
+    },
+    get text() {
+      return t('app.help.maxAlt.text');
+    },
   },
   prediction: {
-    title: 'Prédiction',
-    text: 'Trajectoire et point d’atterrissage calculés par le modèle Tawhiri à partir des prévisions de vent, puis recalculés au fil du vol. L’incertitude est typiquement de quelques kilomètres, et diminue à l’approche du sol.',
+    get title() {
+      return t('app.help.prediction.title');
+    },
+    get text() {
+      return t('app.help.prediction.text');
+    },
   },
   landing: {
-    title: 'Atterrissage prévu',
-    text: 'Point où la sonde devrait toucher le sol, calculé par le modèle Tawhiri à partir des prévisions de vent et mis à jour au fil du vol. Comptez typiquement quelques kilomètres d’incertitude.',
+    get title() {
+      return t('app.help.landing.title');
+    },
+    get text() {
+      return t('app.help.landing.text');
+    },
   },
   lost: {
-    title: 'Signal perdu',
-    text: 'La sonde n’est plus entendue par aucun récepteur. Le plus souvent, elle est simplement passée sous l’horizon radio des stations en descendant et a continué sa chute : elle se trouve alors probablement près de l’atterrissage estimé.',
+    get title() {
+      return t('app.help.lost.title');
+    },
+    get text() {
+      return t('app.help.lost.text');
+    },
   },
   rate: {
-    title: 'Taux de montée / descente',
-    text: 'Vitesse verticale moyenne du vol, utilisée pour la prédiction. Un ballon monte typiquement à 4–6 m/s ; sous parachute, la sonde descend vite en altitude puis ralentit vers 5 m/s près du sol, où l’air est plus dense.',
+    get title() {
+      return t('app.help.rate.title');
+    },
+    get text() {
+      return t('app.help.rate.text');
+    },
   },
   vspeed: {
-    title: 'Vitesse verticale',
-    text: 'Vitesse à laquelle la sonde monte (+) ou descend (−). Le ballon monte vers 5 m/s ; juste après l’éclatement, la sonde chute très vite dans l’air raréfié, puis ralentit sous son parachute à l’approche du sol.',
+    get title() {
+      return t('app.help.vspeed.title');
+    },
+    get text() {
+      return t('app.help.vspeed.text');
+    },
   },
   hspeed: {
-    title: 'Vitesse horizontale',
-    text: 'Vitesse de déplacement au-dessus du sol, imposée par le vent. Elle culmine souvent vers 10 à 12 km d’altitude, dans le courant-jet. Elle est calculée à partir des positions GPS successives.',
+    get title() {
+      return t('app.help.hspeed.title');
+    },
+    get text() {
+      return t('app.help.hspeed.text');
+    },
   },
   trajectory: {
-    title: 'Trajectoire',
-    text: 'Chemin suivi par la sonde depuis son lâcher, vu de dessus (nord en haut) ou de profil (altitude selon la distance parcourue). Les pointillés montrent la suite prévue jusqu’à l’atterrissage.',
+    get title() {
+      return t('app.help.trajectory.title');
+    },
+    get text() {
+      return t('app.help.trajectory.text');
+    },
   },
   sensors: {
-    title: 'Capteurs & télémesure',
-    text: 'Mesures envoyées par radio par la sonde : température, humidité et pression de l’air (le « sondage » météo, qui alimente les prévisions), plus des données techniques (batterie, satellites GPS, numéro de trame).',
+    get title() {
+      return t('app.help.sensors.title');
+    },
+    get text() {
+      return t('app.help.sensors.text');
+    },
   },
   profile: {
-    title: 'Sondage T° / HR',
-    text: 'Profil de température et d’humidité relative mesuré pendant la montée, en fonction de l’altitude. C’est la donnée météo que la sonde est chargée de recueillir.',
+    get title() {
+      return t('app.help.profile.title');
+    },
+    get text() {
+      return t('app.help.profile.text');
+    },
   },
   snr: {
-    title: 'SNR',
-    text: 'Rapport signal/bruit (en dB) mesuré par le récepteur : plus il est élevé, meilleure est la réception. En dessous de ~6 dB, le décodage devient difficile.',
+    get title() {
+      return t('app.help.snr.title');
+    },
+    get text() {
+      return t('app.help.snr.text');
+    },
   },
   elevation: {
-    title: 'Élévation',
-    text: 'Angle de la sonde au-dessus de votre horizon (0° = horizon, 90° = juste au-dessus de vous). Négatif, elle est sous l’horizon et hors de portée radio directe.',
+    get title() {
+      return t('app.help.elevation.title');
+    },
+    get text() {
+      return t('app.help.elevation.text');
+    },
   },
   receivers: {
-    title: 'Récepteurs',
-    text: 'Stations de radioamateurs et de passionnés qui captent et décodent le signal de la sonde (vers 400 MHz) et partagent ses positions sur SondeHub. Les icônes de voiture sont des récepteurs mobiles.',
+    get title() {
+      return t('app.help.receivers.title');
+    },
+    get text() {
+      return t('app.help.receivers.text');
+    },
   },
 } satisfies Record<string, { title: string; text: string }>;

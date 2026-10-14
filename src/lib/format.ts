@@ -1,9 +1,24 @@
+import { intlTag, t } from '@/i18n';
+
 export type Units = 'metric' | 'imperial';
 
 const NB = '\u00a0';
 
-const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+const formats = new Map<string, Intl.NumberFormat>();
+
+function numberFormat(options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const tag = intlTag();
+  const key = `${tag}|${JSON.stringify(options)}`;
+  let f = formats.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(tag, options);
+    formats.set(key, f);
+  }
+  return f;
+}
+
+const nf0 = { format: (v: number) => numberFormat({ maximumFractionDigits: 0 }).format(v) };
+const nf1 = { format: (v: number) => numberFormat({ maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(v) };
 
 export function fmtAlt(m: number | undefined, units: Units): string {
   if (m === undefined || !Number.isFinite(m)) return '—';
@@ -43,10 +58,10 @@ export function fmtTemp(c: number | undefined, units: Units): string {
 
 export function fmtNum(v: number | undefined, suffix = '', digits = 1): string {
   if (v === undefined || v === null || !Number.isFinite(v)) return '—';
-  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: digits }).format(v)}${suffix}`;
+  return `${numberFormat({ maximumFractionDigits: digits }).format(v)}${suffix}`;
 }
 
-const nf3 = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const nf3 = { format: (v: number) => numberFormat({ minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(v) };
 
 export function fmtFreq(mhz: number | undefined, unit = true): string {
   if (mhz === undefined || !Number.isFinite(mhz) || mhz <= 0) return '—';
@@ -60,36 +75,36 @@ export function fmtCoord(lat: number, lon: number): string {
 /** "il y a 12 s", "il y a 3 min"… */
 export function ago(ts: number, now = Date.now()): string {
   const s = Math.max(0, Math.round((now - ts) / 1000));
-  if (s < 60) return `il${NB}y${NB}a${NB}${s}${NB}s`;
+  if (s < 60) return t('lib.time.agoSeconds', { n: s });
   const m = Math.floor(s / 60);
-  if (m < 60) return `il${NB}y${NB}a${NB}${m}${NB}min`;
+  if (m < 60) return t('lib.time.agoMinutes', { n: m });
   const h = Math.floor(m / 60);
-  if (h < 48) return `il${NB}y${NB}a${NB}${h}${NB}h${NB}${String(m % 60).padStart(2, '0')}`;
-  return `il${NB}y${NB}a${NB}${Math.floor(h / 24)}${NB}j`;
+  if (h < 48) return t('lib.time.agoHours', { h, m: String(m % 60).padStart(2, '0') });
+  return t('lib.time.agoDays', { n: Math.floor(h / 24) });
 }
 
 /** "dans 14 min" / "il y a 3 min" relative to now. */
 export function relative(ts: number, now = Date.now()): string {
   if (ts < now) return ago(ts, now);
   const s = Math.round((ts - now) / 1000);
-  if (s < 60) return `dans${NB}${s}${NB}s`;
+  if (s < 60) return t('lib.time.inSeconds', { n: s });
   const m = Math.round(s / 60);
-  if (m < 60) return `dans${NB}${m}${NB}min`;
-  return `dans${NB}${Math.floor(m / 60)}${NB}h${NB}${String(m % 60).padStart(2, '0')}`;
+  if (m < 60) return t('lib.time.inMinutes', { n: m });
+  return t('lib.time.inHours', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') });
 }
 
 export function fmtDuration(ms: number): string {
   const m = Math.max(0, Math.round(ms / 60000));
-  if (m < 60) return `${m}${NB}min`;
-  return `${Math.floor(m / 60)}${NB}h${NB}${String(m % 60).padStart(2, '0')}`;
+  if (m < 60) return t('lib.time.durationMinutes', { n: m });
+  return t('lib.time.durationHours', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') });
 }
 
 export function fmtClock(ts: number): string {
-  return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(ts).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 export function fmtDateTime(ts: number): string {
-  return new Date(ts).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleString(intlTag(), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Search/alert radius (stored in km) in the user's units: "50 km" or "31 mi". */

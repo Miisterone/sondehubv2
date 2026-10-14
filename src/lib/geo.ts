@@ -1,3 +1,5 @@
+import { t, type TKey } from '@/i18n';
+
 const R = 6371008.8;
 const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
@@ -28,39 +30,56 @@ export function elevation(lat1: number, lon1: number, alt1: number, lat2: number
   return deg(Math.atan2(x, y));
 }
 
-const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
+const COMPASS: TKey[] = [
+  'lib.compass.n',
+  'lib.compass.nne',
+  'lib.compass.ne',
+  'lib.compass.ene',
+  'lib.compass.e',
+  'lib.compass.ese',
+  'lib.compass.se',
+  'lib.compass.sse',
+  'lib.compass.s',
+  'lib.compass.ssw',
+  'lib.compass.sw',
+  'lib.compass.wsw',
+  'lib.compass.w',
+  'lib.compass.wnw',
+  'lib.compass.nw',
+  'lib.compass.nnw',
+];
+const compassIndex = (deg: number) => Math.round(((deg % 360) + 360) % 360 / 22.5) % 16;
 export function compass(deg: number): string {
-  return COMPASS[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+  return t(COMPASS[compassIndex(deg)]);
 }
 
-const COMPASS_WORD: Record<string, string> = {
-  N: 'nord',
-  NNE: 'nord-nord-est',
-  NE: 'nord-est',
-  ENE: 'est-nord-est',
-  E: 'est',
-  ESE: 'est-sud-est',
-  SE: 'sud-est',
-  SSE: 'sud-sud-est',
-  S: 'sud',
-  SSO: 'sud-sud-ouest',
-  SO: 'sud-ouest',
-  OSO: 'ouest-sud-ouest',
-  O: 'ouest',
-  ONO: 'ouest-nord-ouest',
-  NO: 'nord-ouest',
-  NNO: 'nord-nord-ouest',
-};
+const COMPASS_WORD: TKey[] = [
+  'lib.compassWord.n',
+  'lib.compassWord.nne',
+  'lib.compassWord.ne',
+  'lib.compassWord.ene',
+  'lib.compassWord.e',
+  'lib.compassWord.ese',
+  'lib.compassWord.se',
+  'lib.compassWord.sse',
+  'lib.compassWord.s',
+  'lib.compassWord.ssw',
+  'lib.compassWord.sw',
+  'lib.compassWord.wsw',
+  'lib.compassWord.w',
+  'lib.compassWord.wnw',
+  'lib.compassWord.nw',
+  'lib.compassWord.nnw',
+];
 
 export function towards(deg: number): string {
-  return COMPASS_WORD[compass(deg)] ?? compass(deg);
+  return t(COMPASS_WORD[compassIndex(deg)]);
 }
 
-const WIND8 = ['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ouest', 'ouest', 'nord-ouest'];
+const WIND8: TKey[] = ['lib.cardinal.n', 'lib.cardinal.ne', 'lib.cardinal.e', 'lib.cardinal.se', 'lib.cardinal.s', 'lib.cardinal.sw', 'lib.cardinal.w', 'lib.cardinal.nw'];
 
 export function cardinal(deg: number): string {
-  const w = WIND8[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
-  return w === 'est' || w === 'ouest' ? `à l’${w}` : `au ${w}`;
+  return t(WIND8[Math.round((((deg % 360) + 360) % 360) / 45) % 8]);
 }
 
 export function parseLatLon(v: unknown): [number, number] | undefined {

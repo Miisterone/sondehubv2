@@ -1,5 +1,6 @@
 import type { Map as MlMap } from 'maplibre-gl';
 import type { FlightPhase } from './types';
+import { t } from '@/i18n';
 
 export const PHASE_COLOUR: Record<FlightPhase, string> = {
   ascending: '#38bdf8',
@@ -9,10 +10,18 @@ export const PHASE_COLOUR: Record<FlightPhase, string> = {
 };
 
 export const PHASE_LABEL: Record<FlightPhase, string> = {
-  ascending: 'En montée',
-  descending: 'En descente',
-  landed: 'Au sol',
-  lost: 'Signal perdu',
+  get ascending() {
+    return t('lib.phase.ascending');
+  },
+  get descending() {
+    return t('lib.phase.descending');
+  },
+  get landed() {
+    return t('lib.phase.landed');
+  },
+  get lost() {
+    return t('lib.phase.lost');
+  },
 };
 
 export const COLOURS = {

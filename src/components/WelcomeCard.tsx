@@ -6,6 +6,7 @@ import { cx } from '@/components/ui';
 import { Icon3D } from '@/components/Icon3D';
 import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
+import { Trans, useT } from '@/i18n';
 
 /** Window event asking the sidebar to switch to its "Près de moi" mode. */
 const NEARBY_EVENT = 'sondehubv2:nearby';
@@ -36,6 +37,7 @@ function Tip({ icon, bare, children }: { icon: ReactNode; bare?: boolean; childr
  * Dismissed for good (settings.onboarded) by its buttons, Escape, or selecting a sonde.
  */
 export function WelcomeCard() {
+  const t = useT();
   const onboarded = useStore((s) => s.settings.onboarded);
   const loading = useStore((s) => s.loading);
   const selected = useStore((s) => s.selected);
@@ -103,7 +105,7 @@ export function WelcomeCard() {
     >
       <section
         role="region"
-        aria-label="Bienvenue sur SondeHub V2"
+        aria-label={t('app.welcome.title')}
         className={cx(
           'glass animate-in pointer-events-auto relative w-full max-w-[440px] rounded-lg p-3.5 text-[12.5px] md:p-5 md:text-[13px] transition-[opacity,transform] duration-150',
           leaving && 'translate-y-1 opacity-0',
@@ -112,40 +114,41 @@ export function WelcomeCard() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Fermer l’introduction"
+          aria-label={t('app.welcome.close')}
           onClick={dismiss}
           className="text-muted-foreground hover:text-foreground absolute top-2 right-2 size-8 rounded-lg"
         >
           <X className="size-4" />
         </Button>
 
-        <h2 className="pr-8 text-[14.5px] font-semibold tracking-tight md:text-[15px]">Bienvenue sur SondeHub V2</h2>
-        <p className="text-muted-foreground mt-1 leading-snug md:mt-1.5 md:leading-relaxed">
-          Les radiosondes sont de petits capteurs lâchés sous des ballons météo, environ deux fois par jour, par les services météorologiques. Elles
-          montent au-delà de 30 km puis retombent en parachute&nbsp;; des radioamateurs les suivent ici en direct.
-        </p>
+        <h2 className="pr-8 text-[14.5px] font-semibold tracking-tight md:text-[15px]">{t('app.welcome.title')}</h2>
+        <p className="text-muted-foreground mt-1 leading-snug md:mt-1.5 md:leading-relaxed">{t('app.welcome.text')}</p>
 
         <ul className="mt-3 space-y-2 md:mt-3.5 md:space-y-2.5">
           <Tip bare icon={<Icon3D id="descending" size={40} />}>
-            {isTouch ? 'Touchez' : 'Cliquez sur'} un ballon pour voir sa trajectoire, ses mesures et son point d’atterrissage prévu.
+            {t(isTouch ? 'app.welcome.tipSondeTouch' : 'app.welcome.tipSondeClick')}
           </Tip>
-          <Tip bare icon={<Icon3D id="landing" size={40} />}>Activez votre position pour voir ce qui atterrit près de chez vous et être alerté.</Tip>
+          <Tip bare icon={<Icon3D id="landing" size={40} />}>{t('app.welcome.tipLocate')}</Tip>
           {isTouch ? (
-            <Tip icon={<Search className="text-muted-foreground size-4" />}>Touchez la loupe pour rechercher une sonde, une station ou un site.</Tip>
+            <Tip icon={<Search className="text-muted-foreground size-4" />}>{t('app.welcome.tipSearchTouch')}</Tip>
           ) : (
             <Tip icon={<Search className="text-muted-foreground size-4" />}>
-              <Kbd className="bg-chip text-foreground tabular">{isMac ? '⌘K' : 'Ctrl K'}</Kbd> pour tout rechercher : sondes, stations, sites, actions.
+              <Trans
+                k="app.welcome.tipSearchKey"
+                params={{ shortcut: isMac ? '⌘K' : t('app.key.ctrlK') }}
+                tags={{ kbd: (c) => <Kbd className="bg-chip text-foreground tabular">{c}</Kbd> }}
+              />
             </Tip>
           )}
         </ul>
 
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2 md:mt-4">
           <Button variant="ghost" size="sm" onClick={dismiss} className="rounded-xl">
-            Découvrir
+            {t('app.welcome.discover')}
           </Button>
           <Button size="sm" onClick={locate} className="rounded-xl">
             <LocateFixed className="size-4" />
-            Me localiser
+            {t('app.common.locateMe')}
           </Button>
         </div>
       </section>

@@ -10,10 +10,20 @@ import { Chart, axis, cursorOptions, drawDot, drawLabel, type Annotate, type Cha
 import { Readout } from './ChartParts';
 import { unitsOf } from './FlightCharts';
 import { Segmented } from './ui';
+import { intlTag, useT } from '@/i18n';
 
 type View = 'profile' | 'hodograph';
 
-const nf = (d: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d });
+const nfCache = new Map<string, Intl.NumberFormat>();
+const nf = (d: number) => {
+  const key = `${intlTag()}|${d}`;
+  let f = nfCache.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(intlTag(), { maximumFractionDigits: d });
+    nfCache.set(key, f);
+  }
+  return f;
+};
 
 function fromWord(deg: number): string {
   const c = compass(deg);
@@ -21,6 +31,7 @@ function fromWord(deg: number): string {
 }
 
 export function WindProfile({ winds, units, syncKey }: { winds: WindLevel[]; units: Units; syncKey: string }) {
+  const t = useT();
   const [view, setView] = useState<View>('profile');
   const jet = useMemo(() => winds.reduce<WindLevel | null>((best, w) => (!best || w.speed > best.speed ? w : best), null), [winds]);
   if (winds.length < 6) return null;
@@ -32,8 +43,8 @@ export function WindProfile({ winds, units, syncKey }: { winds: WindLevel[]; uni
         onChange={setView}
         className="w-full [&>*]:flex-1"
         options={[
-          { value: 'profile', label: 'Profil', title: 'Vitesse et direction du vent selon l’altitude' },
-          { value: 'hodograph', label: 'Hodographe', title: 'Vecteurs du vent, de bas en haut' },
+          { value: 'profile', label: t('charts.wind.profile'), title: t('charts.wind.profileTitle') },
+          { value: 'hodograph', label: t('charts.wind.hodograph'), title: t('charts.wind.hodographTitle') },
         ]}
       />
       {view === 'profile' ? <ProfileCharts winds={winds} units={units} syncKey={syncKey} jet={jet} /> : <Hodograph winds={winds} units={units} />}
@@ -42,6 +53,7 @@ export function WindProfile({ winds, units, syncKey }: { winds: WindLevel[]; uni
 }
 
 function ProfileCharts({ winds, units, syncKey, jet }: { winds: WindLevel[]; units: Units; syncKey: string; jet: WindLevel | null }) {
+  const t = useT();
   const [idx, setIdx] = useState<number | null>(null);
   const u = unitsOf(units);
   const x = useMemo(() => winds.map((w) => w.z * u.alt), [winds, u.alt]);
@@ -51,50 +63,56 @@ function ProfileCharts({ winds, units, syncKey, jet }: { winds: WindLevel[]; uni
   const w = winds[i];
 
   const altTicks = (_: uPlot, ticks: number[]) => ticks.map((v) => `${nf(0).format(v)} ${u.altU}`);
-  const sOpts = (t: ChartTheme) => ({
+  const sOpts = (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t, syncKey),
+    cursor: cursorOptions(th, syncKey),
     scales: { x: { time: false }, y: { range: (_: uPlot, _min: number, max: number): uPlot.Range.MinMax => [0, Math.max(10, Math.ceil((max * 1.1) / 20) * 20)] } },
-    axes: [axis(t, { values: altTicks, space: 56 }), axis(t, { values: (_: uPlot, ticks: number[]) => ticks.map((v) => `${nf(0).format(v)} ${u.hsU}`), size: 64, space: 28 })],
-    series: [{}, { label: 'Vitesse du vent', stroke: t.accent, width: 2, fill: t.accentFill, points: { show: false } }],
+    axes: [axis(th, { values: altTicks, space: 56 }), axis(th, { values: (_: uPlot, ticks: number[]) => ticks.map((v) => `${nf(0).format(v)} ${u.hsU}`), size: 64, space: 28 })],
+    series: [{}, { label: t('charts.wind.speedSeries'), stroke: th.accent, width: 2, fill: th.accentFill, points: { show: false } }],
   });
-  const dOpts = (t: ChartTheme) => ({
+  const dOpts = (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t, syncKey),
+    cursor: cursorOptions(th, syncKey),
     scales: { x: { time: false }, y: { range: (): uPlot.Range.MinMax => [0, 360] } },
     axes: [
-      axis(t, { values: altTicks, space: 56 }),
-      axis(t, { values: (_: uPlot, ticks: number[]) => ticks.map((v) => ({ 0: 'N', 90: 'E', 180: 'S', 270: 'O', 360: 'N' })[v] ?? ''), splits: () => [0, 90, 180, 270, 360], size: 64 }),
+      axis(th, { values: altTicks, space: 56 }),
+      axis(th, { values: (_: uPlot, ticks: number[]) => ticks.map((v) => ({ 0: t('charts.cardinal.n'), 90: t('charts.cardinal.e'), 180: t('charts.cardinal.s'), 270: t('charts.cardinal.w'), 360: t('charts.cardinal.n') })[v] ?? ''), splits: () => [0, 90, 180, 270, 360], size: 64 }),
     ],
-    series: [{}, { label: 'Direction d’où vient le vent', stroke: t.ink, width: 0, paths: () => null, points: { show: true, size: 4, fill: t.ink, stroke: t.ink } }],
+    series: [{}, { label: t('charts.wind.direction'), stroke: th.ink, width: 0, paths: () => null, points: { show: true, size: 4, fill: th.ink, stroke: th.ink } }],
   });
-  const annotate: Annotate = (pl, t) => {
+  const annotate: Annotate = (pl, th) => {
     if (!jet) return;
     const px = pl.valToPos(jet.z * u.alt, 'x', true);
     const py = pl.valToPos(jet.speed * u.hs, 'y', true);
-    drawDot(pl, px, py, t.ink, t.surface, 3);
-    drawLabel(pl, t, px, py, `max ${fmtHSpeed(jet.speed, units)}`, { prefer: 'right' });
+    drawDot(pl, px, py, th.ink, th.surface, 3);
+    drawLabel(pl, th, px, py, t('charts.common.max', { value: fmtHSpeed(jet.speed, units) }), { prefer: 'right' });
   };
 
   return (
     <div className="space-y-3">
       <Readout
         value={fmtHSpeed(w.speed, units)}
-        caption={<span className="truncate">à {fmtAltShort(w.z, units)}{w.p !== null ? ` · ${nf(0).format(w.p)} hPa` : ''}</span>}
+        caption={
+          <span className="truncate">
+            {w.p !== null
+              ? t('charts.wind.atWithPressure', { alt: fmtAltShort(w.z, units), pressure: nf(0).format(w.p) })
+              : t('charts.common.atAlt', { alt: fmtAltShort(w.z, units) })}
+          </span>
+        }
         aside={
           <>
-            <div className="text-foreground font-semibold">vient du {fromWord(w.dir)}</div>
-            <div>moyenne sur 250 m</div>
+            <div className="text-foreground font-semibold">{t('charts.wind.from', { direction: fromWord(w.dir) })}</div>
+            <div>{t('charts.wind.average')}</div>
           </>
         }
       />
       <div className="space-y-1">
-        <div className="text-foreground text-[12.5px] font-semibold">Vitesse</div>
-        <Chart key={`s-${units}`} data={sData} makeOptions={sOpts} annotate={annotate} onIndex={setIdx} height={150} label="Vitesse du vent selon l’altitude, pendant la montée" />
+        <div className="text-foreground text-[12.5px] font-semibold">{t('charts.wind.speed')}</div>
+        <Chart key={`s-${units}`} data={sData} makeOptions={sOpts} annotate={annotate} onIndex={setIdx} height={150} label={t('charts.wind.speedChartLabel')} />
       </div>
       <div className="space-y-1">
-        <div className="text-foreground text-[12.5px] font-semibold">Direction d’où vient le vent</div>
-        <Chart key={`d-${units}`} data={dData} makeOptions={dOpts} onIndex={setIdx} height={120} label="Direction d’où vient le vent selon l’altitude" />
+        <div className="text-foreground text-[12.5px] font-semibold">{t('charts.wind.direction')}</div>
+        <Chart key={`d-${units}`} data={dData} makeOptions={dOpts} onIndex={setIdx} height={120} label={t('charts.wind.directionChartLabel')} />
       </div>
     </div>
   );
@@ -117,9 +135,10 @@ function useWidth() {
 }
 
 function Hodograph({ winds, units }: { winds: WindLevel[]; units: Units }) {
+  const t = useT();
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
-  const t = chartTheme(theme);
+  const th = chartTheme(theme);
   const u = unitsOf(units);
   const [hover, setHover] = useState<number | null>(null);
   const [upper, setUpper] = useState(false);
@@ -183,11 +202,11 @@ function Hodograph({ winds, units }: { winds: WindLevel[]; units: Units }) {
     <div className="space-y-3">
       <Readout
         value={w ? fmtHSpeed(w.speed, units) : '—'}
-        caption={<span className="truncate">{w ? `à ${fmtAltShort(w.z, units)}, vient du ${fromWord(w.dir)}` : ''}</span>}
+        caption={<span className="truncate">{w ? t('charts.wind.hodographCaption', { alt: fmtAltShort(w.z, units), direction: fromWord(w.dir) }) : ''}</span>}
         aside={
           <label className="flex cursor-pointer items-center gap-1.5">
             <input type="checkbox" className="accent-primary" checked={upper} onChange={(e) => setUpper(e.target.checked)} />
-            Au-delà de 16 km
+            {t('charts.wind.above16km')}
           </label>
         }
       />
@@ -197,7 +216,7 @@ function Hodograph({ winds, units }: { winds: WindLevel[]; units: Units }) {
             width={size}
             height={size}
             role="img"
-            aria-label="Hodographe : extrémités des vecteurs vent, reliées de bas en haut"
+            aria-label={t('charts.wind.hodographAriaLabel')}
             className="block touch-pan-y select-none"
             onPointerMove={pick}
             onPointerDown={pick}
@@ -205,35 +224,34 @@ function Hodograph({ winds, units }: { winds: WindLevel[]; units: Units }) {
           >
             {geo.rings.map((r) => (
               <g key={r}>
-                <circle cx={geo.c} cy={geo.c} r={r * geo.k} fill="none" stroke={t.axis} />
-                <text x={geo.c + r * geo.k * 0.707 + 2} y={geo.c - r * geo.k * 0.707 - 2} fontSize={10} fill={t.text}>
+                <circle cx={geo.c} cy={geo.c} r={r * geo.k} fill="none" stroke={th.axis} />
+                <text x={geo.c + r * geo.k * 0.707 + 2} y={geo.c - r * geo.k * 0.707 - 2} fontSize={10} fill={th.text}>
                   {r}
                 </text>
               </g>
             ))}
-            <path d={`M${geo.c},6V${size - 6}M6,${geo.c}H${size - 6}`} stroke={t.zero} strokeWidth={1} />
-            <text x={geo.c + 4} y={14} fontSize={10.5} fontWeight={600} fill={t.text}>
-              N
+            <path d={`M${geo.c},6V${size - 6}M6,${geo.c}H${size - 6}`} stroke={th.zero} strokeWidth={1} />
+            <text x={geo.c + 4} y={14} fontSize={10.5} fontWeight={600} fill={th.text}>
+              {t('charts.cardinal.n')}
             </text>
-            <text x={size - 12} y={geo.c - 4} fontSize={10.5} fontWeight={600} fill={t.text}>
-              E
+            <text x={size - 12} y={geo.c - 4} fontSize={10.5} fontWeight={600} fill={th.text}>
+              {t('charts.cardinal.e')}
             </text>
-            <path d={geo.d} fill="none" stroke={t.accent} strokeWidth={2} strokeLinejoin="round" />
+            <path d={geo.d} fill="none" stroke={th.accent} strokeWidth={2} strokeLinejoin="round" />
             {geo.labels.map((l) => (
               <g key={l.text}>
-                <circle cx={geo.pts[l.i][0]} cy={geo.pts[l.i][1]} r={3} fill={t.ink} stroke={t.surface} strokeWidth={1.5} />
-                <text x={geo.pts[l.i][0] + 6} y={geo.pts[l.i][1] - 5} fontSize={10.5} fontWeight={600} fill={t.ink} stroke={t.surface} strokeWidth={3} paintOrder="stroke">
+                <circle cx={geo.pts[l.i][0]} cy={geo.pts[l.i][1]} r={3} fill={th.ink} stroke={th.surface} strokeWidth={1.5} />
+                <text x={geo.pts[l.i][0] + 6} y={geo.pts[l.i][1] - 5} fontSize={10.5} fontWeight={600} fill={th.ink} stroke={th.surface} strokeWidth={3} paintOrder="stroke">
                   {l.text}
                 </text>
               </g>
             ))}
-            {hover !== null && <circle cx={geo.pts[hover][0]} cy={geo.pts[hover][1]} r={5.5} fill="none" stroke={t.accent} strokeWidth={2} />}
+            {hover !== null && <circle cx={geo.pts[hover][0]} cy={geo.pts[hover][1]} r={5.5} fill="none" stroke={th.accent} strokeWidth={2} />}
           </svg>
         )}
       </div>
       <p className="text-[12.5px] leading-relaxed">
-        Chaque point est l’extrémité du vecteur vent (vers où il souffle) à une altitude, lissé sur 1 km, cercles en {u.hsU}. Une courbe qui tourne dans le sens horaire en montant
-        signale un vent qui « vire » avec l’altitude, typique d’une advection chaude.
+        {t('charts.wind.hodographNote', { unit: u.hsU })}
       </p>
     </div>
   );

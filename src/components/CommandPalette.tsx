@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed, MapPinned, Moon, RotateCcw, Sun, X } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Moon, RotateCcw, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
@@ -11,6 +11,7 @@ import { ago, fmtAltShort } from '@/lib/format';
 import { locateUser } from '@/lib/geolocation';
 import { disableAlerts, enableAlerts } from '@/lib/alerts';
 import type { LaunchSite, Listener, Sonde } from '@/lib/types';
+import { LOCALES, setLocale, useLocale, useT, type TKey } from '@/i18n';
 
 /** Window event other UI elements dispatch to open the palette. */
 export const COMMAND_EVENT = 'sondehubv2:command';
@@ -22,22 +23,34 @@ const MAX_FLYING = 6;
 const MAX_STATIONS = 5;
 const MAX_SITES = 5;
 
-const DURATION_LABEL: Record<Duration, string> = {
-  '1h': '1 heure',
-  '3h': '3 heures',
-  '6h': '6 heures',
-  '12h': '12 heures',
-  '1d': '24 heures',
+const DURATION_HOURS: Record<Duration, number> = {
+  '1h': 1,
+  '3h': 3,
+  '6h': 6,
+  '12h': 12,
+  '1d': 24,
 };
 
-const LAYER_LABEL: Record<keyof Layers, string> = {
-  listeners: 'les stations de réception',
-  chase: 'les véhicules de poursuite',
-  sites: 'les sites de lâcher',
-  recoveries: 'les sondes récupérées',
-  landings: 'les points d’atterrissage',
-  allPredictions: 'toutes les trajectoires prévues',
-  receiverLinks: 'les liens sonde ↔ récepteurs',
+const LAYER_LABEL: Record<keyof Layers, { show: TKey; hide: TKey }> = {
+  listeners: { show: 'app.command.layer.listeners.show', hide: 'app.command.layer.listeners.hide' },
+  chase: { show: 'app.command.layer.chase.show', hide: 'app.command.layer.chase.hide' },
+  sites: { show: 'app.command.layer.sites.show', hide: 'app.command.layer.sites.hide' },
+  recoveries: { show: 'app.command.layer.recoveries.show', hide: 'app.command.layer.recoveries.hide' },
+  landings: { show: 'app.command.layer.landings.show', hide: 'app.command.layer.landings.hide' },
+  allPredictions: { show: 'app.command.layer.allPredictions.show', hide: 'app.command.layer.allPredictions.hide' },
+  receiverLinks: { show: 'app.command.layer.receiverLinks.show', hide: 'app.command.layer.receiverLinks.hide' },
+};
+
+type GroupId = 'selected' | 'position' | 'display' | 'basemap' | 'history' | 'layers' | 'language' | 'help';
+
+const GROUP_LABEL: Record<Exclude<GroupId, 'language'>, TKey> = {
+  selected: 'app.command.group.selected',
+  position: 'app.command.group.position',
+  display: 'app.command.group.display',
+  basemap: 'app.command.group.basemap',
+  history: 'app.command.group.history',
+  layers: 'app.command.group.layers',
+  help: 'app.command.group.help',
 };
 
 const isMac =
@@ -88,7 +101,7 @@ const isFlying = (s: Sonde) => s.phase === 'ascending' || s.phase === 'descendin
 
 interface Action {
   id: string;
-  group: 'Ma position' | 'Affichage' | 'Fond de carte' | 'Historique' | 'Couches' | 'Sonde sélectionnée' | 'Aide';
+  group: GroupId;
   label: string;
   keywords?: string;
   icon: ReactNode;
@@ -98,6 +111,7 @@ interface Action {
 }
 
 export function CommandPalette({ onAbout }: { onAbout: () => void }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -122,8 +136,8 @@ export function CommandPalette({ onAbout }: { onAbout: () => void }) {
         showCloseButton={false}
         className="top-[12dvh] translate-y-0 gap-0 overflow-hidden rounded-lg border p-0 shadow-2xl sm:max-w-xl"
       >
-        <DialogTitle className="sr-only">Palette de commandes</DialogTitle>
-        <DialogDescription className="sr-only">Rechercher une sonde, une station, un site de lâcher ou une action.</DialogDescription>
+        <DialogTitle className="sr-only">{t('app.command.title')}</DialogTitle>
+        <DialogDescription className="sr-only">{t('app.command.description')}</DialogDescription>
         {/* Mounted only while open, so the store subscriptions below cost nothing when closed. */}
         <PaletteBody close={() => setOpen(false)} onAbout={onAbout} />
       </DialogContent>
@@ -132,6 +146,8 @@ export function CommandPalette({ onAbout }: { onAbout: () => void }) {
 }
 
 function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => void }) {
+  const t = useT();
+  const locale = useLocale();
   const sondesMap = useStore((s) => s.sondes);
   const listenersMap = useStore((s) => s.listeners);
   const sites = useStore((s) => s.sites);
@@ -185,9 +201,9 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
     if (selected) {
       list.push({
         id: 'follow',
-        group: 'Sonde sélectionnée',
-        label: follow ? `Arrêter de suivre ${selected}` : `Suivre la sonde ${selected}`,
-        keywords: 'suivre suivi camera centrer follow',
+        group: 'selected',
+        label: follow ? t('app.command.follow.stop', { serial: selected }) : t('app.command.follow.start', { serial: selected }),
+        keywords: `${t('app.command.follow.keywords')} follow track suivre`,
         icon: <Crosshair />,
         hint: <Kbd>F</Kbd>,
         active: follow,
@@ -195,28 +211,28 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       });
       list.push({
         id: 'deselect',
-        group: 'Sonde sélectionnée',
-        label: 'Désélectionner la sonde',
-        keywords: 'deselectionner fermer annuler selection',
+        group: 'selected',
+        label: t('app.command.deselect.label'),
+        keywords: `${t('app.command.deselect.keywords')} deselect close fermer`,
         icon: <X />,
-        hint: <Kbd>Échap</Kbd>,
+        hint: <Kbd>{t('app.key.escape')}</Kbd>,
         run: () => sel(null),
       });
     }
     list.push({
       id: 'locate',
-      group: 'Ma position',
-      label: 'Me localiser',
-      keywords: 'position localiser geolocalisation gps ou suis je centrer moi',
+      group: 'position',
+      label: t('app.common.locateMe'),
+      keywords: `${t('app.command.locate.keywords')} locate location gps position localiser`,
       icon: <LocateFixed />,
       active: !!userLocation,
       run: () => void locateUser({ fly: true }),
     });
     list.push({
       id: 'nearby',
-      group: 'Ma position',
-      label: 'Sondes près de moi',
-      keywords: 'proximite proche autour position atterrissage pres chez moi distance',
+      group: 'position',
+      label: t('app.command.nearby.label'),
+      keywords: `${t('app.command.nearby.keywords')} nearby near proximite`,
       icon: <MapPinned />,
       run: () =>
         void locateUser({ fly: true }).then((ok) => {
@@ -226,18 +242,18 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
     const alertsOn = settings.alerts.enabled;
     list.push({
       id: 'alerts',
-      group: 'Ma position',
-      label: alertsOn ? 'Désactiver les alertes d’atterrissage' : 'Activer les alertes d’atterrissage',
-      keywords: 'alerte alertes notification prevenir atterrissage position',
+      group: 'position',
+      label: alertsOn ? t('app.command.alerts.disable') : t('app.command.alerts.enable'),
+      keywords: `${t('app.command.alerts.keywords')} alert alerte notification`,
       icon: alertsOn ? <BellOff /> : <Bell />,
-      hint: <span className={cx('text-[11px] tracking-normal', alertsOn ? 'text-foreground' : 'text-muted-foreground')}>{alertsOn ? 'activées' : 'désactivées'}</span>,
+      hint: <span className={cx('text-[11px] tracking-normal', alertsOn ? 'text-foreground' : 'text-muted-foreground')}>{alertsOn ? t('app.command.alerts.on') : t('app.command.alerts.off')}</span>,
       run: () => (alertsOn ? disableAlerts() : void enableAlerts()),
     });
     list.push({
       id: 'theme',
-      group: 'Affichage',
-      label: dark ? 'Passer au thème clair' : 'Passer au thème sombre',
-      keywords: 'theme clair sombre jour nuit light dark mode apparence',
+      group: 'display',
+      label: dark ? t('app.command.theme.light') : t('app.command.theme.dark'),
+      keywords: `${t('app.command.theme.keywords')} theme dark light sombre clair`,
       icon: dark ? <Sun /> : <Moon />,
       run: () => {
         const next = dark ? 'light' : 'dark';
@@ -250,9 +266,9 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
     for (const b of BASEMAPS) {
       list.push({
         id: `basemap-${b.id}`,
-        group: 'Fond de carte',
-        label: `Fond de carte : ${b.label}`,
-        keywords: `fond carte basemap ${b.id}`,
+        group: 'basemap',
+        label: t('app.command.basemap.label', { name: b.label }),
+        keywords: `${t('app.command.basemap.keywords')} basemap map fond carte ${b.id}`,
         icon: (
           <img
             src={b.preview}
@@ -268,12 +284,12 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         run: () => setSettings({ basemap: b.id }),
       });
     }
-    for (const d of Object.keys(DURATION_LABEL) as Duration[]) {
+    for (const d of Object.keys(DURATION_HOURS) as Duration[]) {
       list.push({
         id: `duration-${d}`,
-        group: 'Historique',
-        label: `Historique : ${DURATION_LABEL[d]}`,
-        keywords: `historique periode duree ${d} heures jour`,
+        group: 'history',
+        label: t('app.command.duration.label', { duration: t('app.command.duration.hours', { count: DURATION_HOURS[d] }) }),
+        keywords: `${t('app.command.duration.keywords')} history historique ${d}`,
         icon: <Clock />,
         active: settings.duration === d,
         run: () => setSettings({ duration: d }),
@@ -283,27 +299,50 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       const on = settings.layers[key];
       list.push({
         id: `layer-${key}`,
-        group: 'Couches',
-        label: `${on ? 'Masquer' : 'Afficher'} ${LAYER_LABEL[key]}`,
-        keywords: 'couche calque afficher masquer cacher montrer',
+        group: 'layers',
+        label: t(on ? LAYER_LABEL[key].hide : LAYER_LABEL[key].show),
+        keywords: `${t('app.command.layer.keywords')} layer show hide couche`,
         icon: on ? <EyeOff /> : <Eye />,
-        hint: <span className={cx('text-[11px] tracking-normal', on ? 'text-foreground' : 'text-muted-foreground')}>{on ? 'affiché' : 'masqué'}</span>,
+        hint: <span className={cx('text-[11px] tracking-normal', on ? 'text-foreground' : 'text-muted-foreground')}>{on ? t('app.command.layer.shown') : t('app.command.layer.hidden')}</span>,
         run: () => setLayer(key, !on),
       });
     }
-    list.push({ id: 'about', group: 'Aide', label: 'À propos de SondeHub V2', keywords: 'a propos aide info credits sondehub faq questions', icon: <Info />, run: onAbout });
+    for (const l of LOCALES) {
+      list.push({
+        id: `locale-${l.code}`,
+        group: 'language',
+        label: l.name,
+        keywords: `language langue ${l.code}`,
+        icon: <Languages />,
+        active: locale === l.code,
+        run: () => void setLocale(l.code),
+      });
+    }
+    list.push({
+      id: 'about',
+      group: 'help',
+      label: t('app.command.about.label'),
+      keywords: `${t('app.command.about.keywords')} about help aide sondehub faq`,
+      icon: <Info />,
+      run: onAbout,
+    });
     list.push({
       id: 'intro',
-      group: 'Aide',
-      label: 'Revoir l’introduction',
-      keywords: 'introduction bienvenue tutoriel aide decouvrir debut onboarding',
+      group: 'help',
+      label: t('app.common.replayIntro'),
+      keywords: `${t('app.command.intro.keywords')} introduction onboarding welcome bienvenue`,
       icon: <RotateCcw />,
       run: () => setSettings({ onboarded: false }),
     });
     return list;
-  }, [settings, selected, follow, userLocation, onAbout]);
+  }, [settings, selected, follow, userLocation, onAbout, t, locale]);
 
-  const actionKeys = useMemo(() => actions.map((a) => ({ a, label: norm(a.label), kw: norm(`${a.group} ${a.keywords ?? ''}`) })), [actions]);
+  const groupLabel = useCallback((g: GroupId) => (g === 'language' ? t('app.language') : t(GROUP_LABEL[g])), [t]);
+
+  const actionKeys = useMemo(
+    () => actions.map((a) => ({ a, label: norm(a.label), kw: norm(`${groupLabel(a.group)} ${a.keywords ?? ''}`) })),
+    [actions, groupLabel],
+  );
 
   const actionHits: Action[] = useMemo(() => {
     if (!q) return actions;
@@ -352,7 +391,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
 
   if (sondeHits.length) {
     sections.push(
-      <CommandGroup key="sondes" heading={q ? 'Sondes' : 'Sondes en vol'}>
+      <CommandGroup key="sondes" heading={q ? t('app.command.section.sondes') : t('app.command.section.flying')}>
         {sondeHits.map((s) => (
           <CommandItem key={s.serial} value={`sonde:${s.serial}`} onSelect={() => run(() => useStore.getState().select(s.serial, true))}>
             <Icon3D id={s.phase} className="-my-1 size-8!" />
@@ -372,7 +411,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
 
   if (stationHits.length) {
     sections.push(
-      <CommandGroup key="stations" heading="Stations de réception">
+      <CommandGroup key="stations" heading={t('app.command.section.stations')}>
         {stationHits.map((l) => (
           <CommandItem
             key={l.callsign}
@@ -383,7 +422,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
           >
             <Icon3D id={l.mobile ? 'chase' : 'station'} className="-my-1 size-8!" />
             <span className="truncate tabular font-medium">{l.callsign}</span>
-            <span className="text-muted-foreground ml-auto shrink-0 text-xs">{l.mobile ? 'Poursuite' : 'Fixe'}</span>
+            <span className="text-muted-foreground ml-auto shrink-0 text-xs">{l.mobile ? t('app.command.station.mobile') : t('app.command.station.fixed')}</span>
           </CommandItem>
         ))}
       </CommandGroup>,
@@ -392,7 +431,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
 
   if (siteHits.length) {
     sections.push(
-      <CommandGroup key="sites" heading="Sites de lâcher">
+      <CommandGroup key="sites" heading={t('app.command.section.sites')}>
         {siteHits.map((site) => (
           <CommandItem key={site.id} value={`site:${site.id}`} onSelect={() => run(() => useStore.getState().selectSite(site.id, true))}>
             <Icon3D id="launch" className="-my-1 size-8!" />
@@ -406,7 +445,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
 
   for (const [group, items] of actionGroups) {
     sections.push(
-      <CommandGroup key={`a-${group}`} heading={group}>
+      <CommandGroup key={`a-${group}`} heading={groupLabel(group)}>
         {items.map((a) => (
           <CommandItem key={a.id} value={`action:${a.id}`} onSelect={() => run(a.run)}>
             {a.icon}
@@ -432,11 +471,11 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       className="**:data-[slot=command-input-wrapper]:h-12 [&_[cmdk-group-heading]]:text-muted-foreground bg-popover rounded-none [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[12px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-item]]:py-2"
     >
       <div className="relative">
-        <CommandInput value={query} onValueChange={setQuery} placeholder="Sonde, indicatif, site de lâcher, action…" className="h-12 text-[15px] sm:pr-14" autoFocus />
-        <Kbd className="absolute top-1/2 right-3 -translate-y-1/2 max-sm:hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
+        <CommandInput value={query} onValueChange={setQuery} placeholder={t('app.command.placeholder')} className="h-12 text-[15px] sm:pr-14" autoFocus />
+        <Kbd className="absolute top-1/2 right-3 -translate-y-1/2 max-sm:hidden">{isMac ? '⌘K' : t('app.key.ctrlK')}</Kbd>
       </div>
       <CommandList className="max-h-[min(440px,58dvh)] overscroll-contain">
-        <CommandEmpty>Aucun résultat.</CommandEmpty>
+        <CommandEmpty>{t('app.command.empty')}</CommandEmpty>
         {sections.flatMap((s, i) => (i === 0 ? [s] : [<CommandSeparator key={`sep-${i}`} className="mx-0 my-1" />, s]))}
       </CommandList>
       <div className="text-muted-foreground bg-muted/40 flex items-center gap-4 border-t px-3 py-2 text-[11px] max-sm:hidden">
@@ -445,18 +484,19 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
             <Kbd>↑</Kbd>
             <Kbd>↓</Kbd>
           </KbdGroup>
-          naviguer
+          {t('app.command.footer.navigate')}
         </span>
         <span className="flex items-center gap-1.5">
           <Kbd>↵</Kbd>
-          ouvrir
+          {t('app.command.footer.open')}
         </span>
         <span className="flex items-center gap-1.5">
-          <Kbd>Échap</Kbd>
-          fermer
+          <Kbd>{t('app.key.escape')}</Kbd>
+          {t('app.command.footer.close')}
         </span>
         <span className="ml-auto truncate">
-          {sondes.length} sondes · {listeners.length} stations · {sites.length} sites
+          {t('app.command.footer.sondes', { count: sondes.length })} · {t('app.command.footer.stations', { count: listeners.length })} ·{' '}
+          {t('app.command.footer.sites', { count: sites.length })}
         </span>
       </div>
     </Command>

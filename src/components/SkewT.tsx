@@ -5,6 +5,7 @@ import { atPressure, dryAdiabat, mixingRatioTemp, moistAdiabat, type Profile, ty
 import { fmtAlt, fmtHSpeed, fmtNum, fmtTemp, type Units } from '@/lib/format';
 import { Readout } from './ChartParts';
 import { Segmented } from './ui';
+import { useT } from '@/i18n';
 
 type View = 'tropo' | 'full';
 
@@ -71,9 +72,10 @@ function Barb({ x, y, w, colour }: { x: number; y: number; w: WindLevel; colour:
 }
 
 export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
+  const t = useT();
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
-  const t = chartTheme(theme);
+  const th = chartTheme(theme);
   const minP = profile.levels[profile.levels.length - 1].p;
   const [view, setView] = useState<View>('tropo');
   const [hover, setHover] = useState<number | null>(null);
@@ -169,8 +171,8 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
         onChange={setView}
         className="w-full [&>*]:flex-1"
         options={[
-          { value: 'tropo', label: 'Jusqu’à 100 hPa', title: 'Troposphère et basse stratosphère' },
-          { value: 'full', label: 'Vol complet', title: `Jusqu’à ${Math.round(minP)} hPa` },
+          { value: 'tropo', label: t('charts.skewt.viewTropo'), title: t('charts.skewt.viewTropoTitle') },
+          { value: 'full', label: t('charts.skewt.viewFull'), title: t('charts.skewt.viewFullTitle', { pressure: Math.round(minP) }) },
         ]}
       />
       <Readout
@@ -180,20 +182,22 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
           ) : (
             <span>
               {fmtTemp(T ?? undefined, units)}
-              {Td !== null && <span className="text-muted-foreground font-sans text-[15px] font-normal"> · rosée {fmtTemp(Td, units)}</span>}
+              {Td !== null && <span className="text-muted-foreground font-sans text-[15px] font-normal"> {t('charts.skewt.dew', { temp: fmtTemp(Td, units) })}</span>}
             </span>
           )
         }
         caption={
           <span className="truncate">
-            {outside ? 'Sous le point de départ de la sonde' : `${fmtNum(p, ' hPa', 0)} · ${fmtAlt(z ?? undefined, units)}${hover === null ? ' · départ' : ''}`}
+            {outside
+              ? t('charts.skewt.belowStart')
+              : t(hover === null ? 'charts.skewt.levelStart' : 'charts.skewt.level', { pressure: fmtNum(p, ' hPa', 0), alt: fmtAlt(z ?? undefined, units) })}
           </span>
         }
         aside={
           !outside && (
             <>
               <div className="text-foreground font-semibold">{wind ? `${windFrom(wind.dir)} · ${fmtHSpeed(wind.speed, units)}` : '—'}</div>
-              <div>{rh !== null ? `HR ${fmtNum(rh, ' %', 0)}` : 'vent'}</div>
+              <div>{rh !== null ? t('charts.skewt.rh', { value: fmtNum(rh, ' %', 0) }) : t('charts.skewt.wind')}</div>
             </>
           )
         }
@@ -204,7 +208,7 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
             width={width}
             height={height}
             role="img"
-            aria-label="Émagramme Skew-T : température et point de rosée selon la pression, avec adiabatiques et vent"
+            aria-label={t('charts.skewt.ariaLabel')}
             className="block touch-pan-y select-none"
             onPointerMove={pick}
             onPointerDown={pick}
@@ -218,80 +222,80 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
             </defs>
             <g clipPath="url(#skewt-clip)" fill="none">
               {geo.dry.map((d, i) => (
-                <path key={`d${i}`} d={d} stroke={t.zero} strokeOpacity={0.45} strokeWidth={0.8} />
+                <path key={`d${i}`} d={d} stroke={th.zero} strokeOpacity={0.45} strokeWidth={0.8} />
               ))}
               {geo.moist.map((d, i) => (
-                <path key={`m${i}`} d={d} stroke={t.zero} strokeOpacity={0.55} strokeWidth={0.8} strokeDasharray="5 3" />
+                <path key={`m${i}`} d={d} stroke={th.zero} strokeOpacity={0.55} strokeWidth={0.8} strokeDasharray="5 3" />
               ))}
               {geo.mixing.map((m) => (
-                <path key={`w${m.g}`} d={m.d} stroke={t.zero} strokeOpacity={0.6} strokeWidth={0.8} strokeDasharray="1.5 3" />
+                <path key={`w${m.g}`} d={m.d} stroke={th.zero} strokeOpacity={0.6} strokeWidth={0.8} strokeDasharray="1.5 3" />
               ))}
               {geo.isotherms.map((i) => (
-                <path key={`t${i.T}`} d={i.d} stroke={i.T === 0 ? t.zero : t.axis} strokeWidth={i.T === 0 ? 1.2 : 1} />
+                <path key={`t${i.T}`} d={i.d} stroke={i.T === 0 ? th.zero : th.axis} strokeWidth={i.T === 0 ? 1.2 : 1} />
               ))}
               {ISOBARS.filter((q) => q >= pTop && q <= P_BOTTOM).map((q) => (
-                <path key={`p${q}`} d={`M${PAD.l},${geo.y(q)}H${PAD.l + geo.pw}`} stroke={t.axis} strokeWidth={1} />
+                <path key={`p${q}`} d={`M${PAD.l},${geo.y(q)}H${PAD.l + geo.pw}`} stroke={th.axis} strokeWidth={1} />
               ))}
               {geo.mixing.map((m) => (
-                <text key={`wl${m.g}`} x={m.x} y={geo.y(620) - 3} fontSize={9.5} fill={t.text} textAnchor="middle" stroke="none">
+                <text key={`wl${m.g}`} x={m.x} y={geo.y(620) - 3} fontSize={9.5} fill={th.text} textAnchor="middle" stroke="none">
                   {m.g}
                 </text>
               ))}
               {tropo && tropo.p >= pTop && (
                 <g>
-                  <path d={`M${PAD.l},${geo.y(tropo.p)}H${PAD.l + geo.pw}`} stroke={t.ink} strokeOpacity={0.35} strokeWidth={1} strokeDasharray="2 3" />
-                  <text x={PAD.l + 4} y={geo.y(tropo.p) - 4} fontSize={10.5} fill={t.text} stroke="none">
-                    Tropopause
+                  <path d={`M${PAD.l},${geo.y(tropo.p)}H${PAD.l + geo.pw}`} stroke={th.ink} strokeOpacity={0.35} strokeWidth={1} strokeDasharray="2 3" />
+                  <text x={PAD.l + 4} y={geo.y(tropo.p) - 4} fontSize={10.5} fill={th.text} stroke="none">
+                    {t('charts.skewt.tropopause')}
                   </text>
                 </g>
               )}
-              {geo.parcel && <path d={geo.parcel} stroke={t.pred} strokeWidth={1.5} strokeDasharray="6 4" />}
-              <path d={geo.dew} stroke={t.accent} strokeWidth={2} strokeLinejoin="round" />
-              <path d={geo.temp} stroke={t.ink} strokeWidth={2} strokeLinejoin="round" />
+              {geo.parcel && <path d={geo.parcel} stroke={th.pred} strokeWidth={1.5} strokeDasharray="6 4" />}
+              <path d={geo.dew} stroke={th.accent} strokeWidth={2} strokeLinejoin="round" />
+              <path d={geo.temp} stroke={th.ink} strokeWidth={2} strokeLinejoin="round" />
               {lcl && lcl.p >= pTop && (
                 <g>
-                  <circle cx={geo.x(lcl.t, lcl.p)} cy={geo.y(lcl.p)} r={3.5} fill={t.surface} stroke={t.pred} strokeWidth={1.5} />
-                  <text x={geo.x(lcl.t, lcl.p) + 7} y={geo.y(lcl.p) + 4} fontSize={10.5} fontWeight={600} fill={t.ink} stroke={t.surface} strokeWidth={3} paintOrder="stroke">
-                    LCL
+                  <circle cx={geo.x(lcl.t, lcl.p)} cy={geo.y(lcl.p)} r={3.5} fill={th.surface} stroke={th.pred} strokeWidth={1.5} />
+                  <text x={geo.x(lcl.t, lcl.p) + 7} y={geo.y(lcl.p) + 4} fontSize={10.5} fontWeight={600} fill={th.ink} stroke={th.surface} strokeWidth={3} paintOrder="stroke">
+                    {t('charts.skewt.lcl')}
                   </text>
                 </g>
               )}
-              {hover !== null && <path d={`M${PAD.l},${geo.y(hover)}H${PAD.l + geo.pw}`} stroke={t.ink} strokeOpacity={0.5} strokeWidth={1} />}
+              {hover !== null && <path d={`M${PAD.l},${geo.y(hover)}H${PAD.l + geo.pw}`} stroke={th.ink} strokeOpacity={0.5} strokeWidth={1} />}
             </g>
             {ISOBARS.filter((q) => q >= pTop && q <= 1000).map((q) => (
-              <text key={`pl${q}`} x={PAD.l - 5} y={geo.y(q) + 3.5} fontSize={10} fill={t.text} textAnchor="end">
+              <text key={`pl${q}`} x={PAD.l - 5} y={geo.y(q) + 3.5} fontSize={10} fill={th.text} textAnchor="end">
                 {q}
               </text>
             ))}
             {[-40, -20, 0, 20, 40].map((T) => (
-              <text key={`tl${T}`} x={geo.x(T, P_BOTTOM)} y={height - 6} fontSize={10} fill={t.text} textAnchor="middle">
+              <text key={`tl${T}`} x={geo.x(T, P_BOTTOM)} y={height - 6} fontSize={10} fill={th.text} textAnchor="middle">
                 {T}
               </text>
             ))}
-            <text x={PAD.l + geo.pw - 2} y={height - 6} fontSize={10} fill={t.text} textAnchor="end">
+            <text x={PAD.l + geo.pw - 2} y={height - 6} fontSize={10} fill={th.text} textAnchor="end">
               °C
             </text>
-            <path d={`M${width - PAD.r + 2},${PAD.t}V${PAD.t + geo.ph}`} stroke={t.axis} />
+            <path d={`M${width - PAD.r + 2},${PAD.t}V${PAD.t + geo.ph}`} stroke={th.axis} />
             {geo.barbs.map((w) => (
-              <Barb key={w.z} x={width - PAD.r / 2 + 1} y={geo.y(w.p as number)} w={w} colour={t.ink} />
+              <Barb key={w.z} x={width - PAD.r / 2 + 1} y={geo.y(w.p as number)} w={w} colour={th.ink} />
             ))}
           </svg>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px]">
         <span className="flex items-center gap-1.5">
-          <span aria-hidden className="bg-foreground inline-block h-0.5 w-4 rounded-full" /> Température
+          <span aria-hidden className="bg-foreground inline-block h-0.5 w-4 rounded-full" /> {t('charts.common.temperature')}
         </span>
         <span className="flex items-center gap-1.5">
-          <span aria-hidden className="bg-primary inline-block h-0.5 w-4 rounded-full" /> Point de rosée
+          <span aria-hidden className="bg-primary inline-block h-0.5 w-4 rounded-full" /> {t('charts.common.dewPoint')}
         </span>
         {profile.parcel.length > 0 && (
           <span className="flex items-center gap-1.5">
-            <span aria-hidden className="key-dashed" /> Particule de surface
+            <span aria-hidden className="key-dashed" /> {t('charts.common.surfaceParcel')}
           </span>
         )}
-        <span>Pointillés gris : adiabatiques humides, rapport de mélange (g/kg)</span>
-        <span>Barbules : vent en nœuds</span>
+        <span>{t('charts.skewt.legendLines')}</span>
+        <span>{t('charts.skewt.legendBarbs')}</span>
       </div>
     </div>
   );

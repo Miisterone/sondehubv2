@@ -1,20 +1,34 @@
 import { useStore } from '@/store/useStore';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { t, useT } from '@/i18n';
 import { cx } from './ui';
 
-const LABEL = { live: 'En direct', connecting: 'Connexion…', offline: 'Hors ligne' } as const;
+const LABEL = {
+  get live() {
+    return t('sidebar.connection.live');
+  },
+  get connecting() {
+    return t('sidebar.connection.connecting');
+  },
+  get offline() {
+    return t('sidebar.connection.offline');
+  },
+};
 const DOT = { live: 'bg-live', connecting: 'bg-faint', offline: 'bg-destructive' } as const;
 
 export function StatusPill() {
   const conn = useStore((s) => s.conn);
   const rate = useStore((s) => s.msgRate);
+  const t = useT();
   const hint =
     conn === 'live'
-      ? `Les positions se mettent à jour en temps réel${rate >= 1 ? ` (${rate.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} mesures reçues par seconde)` : ''}.`
+      ? rate >= 1
+        ? t('sidebar.connection.liveRateHint', { count: Math.round(rate) })
+        : t('sidebar.connection.liveHint')
       : conn === 'connecting'
-        ? 'Connexion au temps réel en cours…'
-        : 'Temps réel interrompu, reconnexion en cours : les positions affichées peuvent dater.';
+        ? t('sidebar.connection.connectingHint')
+        : t('sidebar.connection.offlineHint');
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -22,7 +36,7 @@ export function StatusPill() {
           variant="outline"
           tabIndex={0}
           role="status"
-          aria-label={`${LABEL[conn]}. ${hint}`}
+          aria-label={t('sidebar.connection.ariaLabel', { status: LABEL[conn], hint })}
           className="bg-background text-muted-foreground border-border h-7 cursor-default gap-1.5 rounded-md px-2 text-[12px] font-medium"
         >
           <span className={cx('relative size-2 shrink-0 rounded-full', DOT[conn], conn === 'live' && 'live-dot')} />

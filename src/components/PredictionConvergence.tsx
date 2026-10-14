@@ -8,10 +8,12 @@ import { Chart, axis, cursorOptions, drawEdgeLabel, drawVLine, type Annotate, ty
 import { Readout } from './ChartParts';
 import { unitsOf } from './FlightCharts';
 import { Stat } from './ui';
+import { intlTag, useT } from '@/i18n';
 
-const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
 
 export function PredictionConvergence({ sonde, samples, units, now }: { sonde: Sonde; samples: PredictionSample[]; units: Units; now: number }) {
+  const t = useT();
   const [idx, setIdx] = useState<number | null>(null);
   const u = unitsOf(units);
   const ended = sonde.phase === 'landed' || sonde.phase === 'lost';
@@ -37,30 +39,27 @@ export function PredictionConvergence({ sonde, samples, units, now }: { sonde: S
 
   if (samples.length < 2 || !ref || !stats) {
     return (
-      <p className="text-[13px] leading-relaxed">
-        SondeHub recalcule la prévision d’atterrissage à chaque nouvelle mesure. L’historique de ces prévisions se construit tant que cette page reste ouverte : revenez
-        dans quelques minutes pour voir si elle se stabilise.
-      </p>
+      <p className="text-[13px] leading-relaxed">{t('charts.convergence.empty')}</p>
     );
   }
 
   const i = idx === null || idx >= samples.length ? samples.length - 1 : idx;
-  const annotate: Annotate = (pl, t) => {
+  const annotate: Annotate = (pl, th) => {
     if (burstT === null) return;
     const x = pl.valToPos(burstT, 'x', true);
     if (x < pl.bbox.left || x > pl.bbox.left + pl.bbox.width) return;
-    drawVLine(pl, x, t.zero, [3, 3]);
-    drawEdgeLabel(pl, t, x, 'éclatement', 'right');
+    drawVLine(pl, x, th.zero, [3, 3]);
+    drawEdgeLabel(pl, th, x, t('charts.common.burstLower'), 'right');
   };
-  const makeOptions = (t: ChartTheme) => ({
+  const makeOptions = (th: ChartTheme) => ({
     legend: { show: false },
-    cursor: cursorOptions(t),
+    cursor: cursorOptions(th),
     scales: { x: { time: true }, y: { range: (_: uPlot, _min: number, max: number): uPlot.Range.MinMax => [0, Math.max(1, max * 1.15)] } },
     axes: [
-      axis(t, { values: (_: uPlot, ticks: number[]) => ticks.map(clock), space: 64 }),
-      axis(t, { values: (_: uPlot, ticks: number[]) => ticks.map((v) => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(v)} ${u.distU}`), size: 58, space: 28 }),
+      axis(th, { values: (_: uPlot, ticks: number[]) => ticks.map(clock), space: 64 }),
+      axis(th, { values: (_: uPlot, ticks: number[]) => ticks.map((v) => `${new Intl.NumberFormat(intlTag(), { maximumFractionDigits: 1 }).format(v)} ${u.distU}`), size: 58, space: 28 }),
     ],
-    series: [{}, { label: 'Écart', stroke: t.accent, width: 2, fill: t.accentFill, points: { show: samples.length < 40, size: 4 } }],
+    series: [{}, { label: t('charts.convergence.errorSeries'), stroke: th.accent, width: 2, fill: th.accentFill, points: { show: samples.length < 40, size: 4 } }],
   });
 
   const minutes = Math.round(stats.timeShift);
@@ -69,10 +68,10 @@ export function PredictionConvergence({ sonde, samples, units, now }: { sonde: S
     <div className="space-y-4">
       <Readout
         value={fmtDist(errs[i], units)}
-        caption={<span className="truncate">{truth ? 'de la dernière position reçue' : 'de la prévision la plus récente'}</span>}
+        caption={<span className="truncate">{truth ? t('charts.convergence.fromLastPosition') : t('charts.convergence.fromLatest')}</span>}
         aside={
           <>
-            <div className="text-foreground font-semibold">prévision de {clock(samples[i].at / 1000)}</div>
+            <div className="text-foreground font-semibold">{t('charts.convergence.forecastOf', { time: clock(samples[i].at / 1000) })}</div>
             <div>{ago(samples[i].at, now)}</div>
           </>
         }
@@ -84,22 +83,19 @@ export function PredictionConvergence({ sonde, samples, units, now }: { sonde: S
         annotate={annotate}
         onIndex={setIdx}
         height={150}
-        label="Écart entre chaque prévision d’atterrissage et la référence, au fil du temps"
+        label={t('charts.convergence.chartLabel')}
       />
       <div className="grid grid-cols-3 gap-4">
-        <Stat label="Correction" value={fmtDist(stats.step, units)} sub={ago(stats.last.at, now)} />
-        <Stat label="Déplacement" value={fmtDist(stats.drift15, units)} sub={`en ${fmtDuration(stats.span)}`} />
+        <Stat label={t('charts.convergence.correction')} value={fmtDist(stats.step, units)} sub={ago(stats.last.at, now)} />
+        <Stat label={t('charts.convergence.drift')} value={fmtDist(stats.drift15, units)} sub={t('charts.convergence.inDuration', { duration: fmtDuration(stats.span) })} />
         <Stat
-          label="Heure prévue"
-          value={Math.abs(minutes) < 1 ? 'stable' : `${minutes > 0 ? '+' : '−'}${Math.abs(minutes)} min`}
-          sub={`en ${fmtDuration(stats.span)}`}
+          label={t('charts.convergence.predictedTime')}
+          value={Math.abs(minutes) < 1 ? t('charts.convergence.stable') : `${minutes > 0 ? '+' : '−'}${Math.abs(minutes)} min`}
+          sub={t('charts.convergence.inDuration', { duration: fmtDuration(stats.span) })}
         />
       </div>
       <p className="text-[12.5px] leading-relaxed">
-        {truth
-          ? 'Écart entre chaque prévision et la dernière position reçue, qui reste proche du point de chute réel. '
-          : 'Écart entre chaque prévision et la plus récente : une courbe qui retombe vers zéro indique une prévision qui se stabilise. '}
-        {samples.length} prévisions enregistrées depuis l’ouverture de la page.
+        {truth ? t('charts.convergence.noteTruth') : t('charts.convergence.noteLatest')} {t('charts.convergence.samples', { count: samples.length })}
       </p>
     </div>
   );

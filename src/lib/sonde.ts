@@ -1,5 +1,6 @@
 import type { LaunchSite, ReversePrediction, Sonde } from './types';
 import { bearing, distance } from './geo';
+import { getLocale, intlTag, t, type TKey } from '@/i18n';
 
 export interface Launch {
   t: number;
@@ -49,50 +50,52 @@ export function siteLabel(name: string): string {
   return name.replace(/\s*\([^)]*\)\s*$/, '').trim() || name;
 }
 
-const COUNTRIES: Record<string, string> = {
-  France: 'France',
-  Switzerland: 'Suisse',
-  Germany: 'Allemagne',
-  Italy: 'Italie',
-  Spain: 'Espagne',
-  Portugal: 'Portugal',
-  Belgium: 'Belgique',
-  Netherlands: 'Pays-Bas',
-  Luxembourg: 'Luxembourg',
-  Austria: 'Autriche',
-  'United Kingdom': 'Royaume-Uni',
-  Ireland: 'Irlande',
-  Denmark: 'Danemark',
-  Norway: 'Norvège',
-  Sweden: 'Suède',
-  Finland: 'Finlande',
-  Poland: 'Pologne',
-  'Czech Republic': 'Tchéquie',
-  Czechia: 'Tchéquie',
-  Hungary: 'Hongrie',
-  Greece: 'Grèce',
-  Croatia: 'Croatie',
-  Slovenia: 'Slovénie',
-  Slovakia: 'Slovaquie',
-  Romania: 'Roumanie',
-  Bulgaria: 'Bulgarie',
-  Serbia: 'Serbie',
-  Morocco: 'Maroc',
-  Algeria: 'Algérie',
-  Tunisia: 'Tunisie',
-  'United States': 'États-Unis',
-  USA: 'États-Unis',
-  Canada: 'Canada',
-  Australia: 'Australie',
-  'New Zealand': 'Nouvelle-Zélande',
-  Japan: 'Japon',
-  'French Guyana': 'Guyane',
-  'French Polynesia': 'Polynésie française',
+const COUNTRIES: Record<string, TKey> = {
+  France: 'lib.country.france',
+  Switzerland: 'lib.country.switzerland',
+  Germany: 'lib.country.germany',
+  Italy: 'lib.country.italy',
+  Spain: 'lib.country.spain',
+  Portugal: 'lib.country.portugal',
+  Belgium: 'lib.country.belgium',
+  Netherlands: 'lib.country.netherlands',
+  Luxembourg: 'lib.country.luxembourg',
+  Austria: 'lib.country.austria',
+  'United Kingdom': 'lib.country.unitedKingdom',
+  Ireland: 'lib.country.ireland',
+  Denmark: 'lib.country.denmark',
+  Norway: 'lib.country.norway',
+  Sweden: 'lib.country.sweden',
+  Finland: 'lib.country.finland',
+  Poland: 'lib.country.poland',
+  'Czech Republic': 'lib.country.czechia',
+  Czechia: 'lib.country.czechia',
+  Hungary: 'lib.country.hungary',
+  Greece: 'lib.country.greece',
+  Croatia: 'lib.country.croatia',
+  Slovenia: 'lib.country.slovenia',
+  Slovakia: 'lib.country.slovakia',
+  Romania: 'lib.country.romania',
+  Bulgaria: 'lib.country.bulgaria',
+  Serbia: 'lib.country.serbia',
+  Morocco: 'lib.country.morocco',
+  Algeria: 'lib.country.algeria',
+  Tunisia: 'lib.country.tunisia',
+  'United States': 'lib.country.unitedStates',
+  USA: 'lib.country.unitedStates',
+  Canada: 'lib.country.canada',
+  Australia: 'lib.country.australia',
+  'New Zealand': 'lib.country.newZealand',
+  Japan: 'lib.country.japan',
+  'French Guyana': 'lib.country.frenchGuiana',
+  'French Polynesia': 'lib.country.frenchPolynesia',
 };
 
 export function siteCountry(name: string): string | null {
   const raw = name.match(/\(([^)]+)\)\s*$/)?.[1];
-  return raw ? (COUNTRIES[raw] ?? raw) : null;
+  if (!raw) return null;
+  const key = COUNTRIES[raw];
+  return key ? t(key) : raw;
 }
 
 export function verticalSpeed(s: Pick<Sonde, 'last' | 'lastTime' | 'track'>): number | undefined {
@@ -123,11 +126,19 @@ const RS_TYPES: Record<string, string> = {
 };
 
 export function sondeTypeName(code: string): string {
-  return RS_TYPES[code] ?? `type ${code}`;
+  return RS_TYPES[code] ?? t('lib.sonde.typeCode', { code });
 }
 
 const LAUNCH_LEAD_MS = 45 * 60_000;
-const WEEKDAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const WEEKDAYS: TKey[] = [
+  'lib.schedule.sunday',
+  'lib.schedule.monday',
+  'lib.schedule.tuesday',
+  'lib.schedule.wednesday',
+  'lib.schedule.thursday',
+  'lib.schedule.friday',
+  'lib.schedule.saturday',
+];
 
 interface Slot {
   day: number;
@@ -159,7 +170,8 @@ export function upcomingLaunches(times: string[], now: number, horizonMs = 168 *
 
 export function fmtHour(ts: number): string {
   const d = new Date(ts);
-  return `${d.getHours()}\u00a0h\u00a0${String(d.getMinutes()).padStart(2, '0')}`;
+  if (getLocale() !== 'fr') return d.toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit' });
+  return t('lib.time.hourMinute', { h: d.getHours(), m: String(d.getMinutes()).padStart(2, '0') });
 }
 
 export function fmtDay(ts: number, now: number): string {
@@ -168,15 +180,15 @@ export function fmtDay(ts: number, now: number): string {
   const dayDiff = Math.round(
     (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86_400_000,
   );
-  if (dayDiff === 0) return 'Aujourd’hui';
-  if (dayDiff === 1) return 'Demain';
-  if (dayDiff === -1) return 'Hier';
-  const s = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
+  if (dayDiff === 0) return t('lib.time.today');
+  if (dayDiff === 1) return t('lib.time.tomorrow');
+  if (dayDiff === -1) return t('lib.time.yesterday');
+  const s = d.toLocaleDateString(intlTag(), { weekday: 'long', day: 'numeric', month: 'short' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function joinFr(items: string[]): string {
-  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`;
+  return items.length <= 1 ? (items[0] ?? '') : new Intl.ListFormat(intlTag(), { style: 'long', type: 'conjunction' }).format(items);
 }
 
 export function scheduleText(times: string[], now: number): string | null {
@@ -191,11 +203,11 @@ export function scheduleText(times: string[], now: number): string | null {
   const daily = slots.filter((s) => s.day === 0).sort(byHour);
   const weekly = slots.filter((s) => s.day !== 0);
   const parts: string[] = [];
-  if (daily.length) parts.push(`tous les jours vers ${joinFr(daily.map((s) => fmtHour(local(s))))}`);
+  if (daily.length) parts.push(t('lib.schedule.daily', { hours: joinFr(daily.map((s) => fmtHour(local(s)))) }));
   const days = [...new Set(weekly.map((s) => s.day))].sort((a, b) => a - b);
   for (const day of days) {
     const hours = weekly.filter((s) => s.day === day).sort(byHour);
-    parts.push(`le ${WEEKDAYS[day % 7]} vers ${joinFr(hours.map((s) => fmtHour(local(s))))}`);
+    parts.push(t(WEEKDAYS[day % 7], { hours: joinFr(hours.map((s) => fmtHour(local(s)))) }));
   }
   return joinFr(parts);
 }

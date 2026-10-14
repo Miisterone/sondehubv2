@@ -2,6 +2,7 @@ import type { FlightData, Sounding } from './flight';
 import type { Profile } from './atmo';
 import type { FlightPhase } from './types';
 import { cloudLayers } from './insights';
+import { t, type TKey } from '@/i18n';
 
 const M_PER_DEG = 111_195;
 const MAX_MEASURED = 900;
@@ -88,11 +89,41 @@ export function buildAtmoScene(d: FlightData, sounding: Sounding, profile: Profi
 
   const clouds = (cloudLayers(sounding) ?? []).filter(([a, b]) => b > a && a < top);
   const bands: Band[] = [
-    { id: 'troposphere', from: 0, to: tropopause.z, label: 'Troposphère' },
-    { id: 'stratosphere', from: tropopause.z, to: top, label: 'Stratosphère' },
+    {
+      id: 'troposphere',
+      from: 0,
+      to: tropopause.z,
+      get label() {
+        return t('atmo3d.layer.troposphere');
+      },
+    },
+    {
+      id: 'stratosphere',
+      from: tropopause.z,
+      to: top,
+      get label() {
+        return t('atmo3d.layer.stratosphere');
+      },
+    },
   ];
-  if (top >= OZONE[0] + 4_000 && OZONE[0] > tropopause.z) bands.push({ id: 'ozone', from: OZONE[0], to: Math.min(OZONE[1], top), label: 'Couche d’ozone' });
-  for (const [a, b] of clouds) bands.push({ id: 'cloud', from: Math.max(0, a), to: Math.min(top, b), label: 'Nuages' });
+  if (top >= OZONE[0] + 4_000 && OZONE[0] > tropopause.z)
+    bands.push({
+      id: 'ozone',
+      from: OZONE[0],
+      to: Math.min(OZONE[1], top),
+      get label() {
+        return t('atmo3d.layer.ozone');
+      },
+    });
+  for (const [a, b] of clouds)
+    bands.push({
+      id: 'cloud',
+      from: Math.max(0, a),
+      to: Math.min(top, b),
+      get label() {
+        return t('atmo3d.layer.clouds');
+      },
+    });
 
   const tickStep = top > 30_000 ? 10_000 : 5_000;
   const ticks: number[] = [];
@@ -133,23 +164,36 @@ export interface Whereabouts {
   relation: string | null;
 }
 
+type Motion = 'ascending' | 'descending' | 'inside';
+
+const CAPTION: Record<'troposphere' | 'stratosphere', Record<Motion, TKey>> = {
+  troposphere: { ascending: 'atmo3d.where.troposphere.ascending', descending: 'atmo3d.where.troposphere.descending', inside: 'atmo3d.where.troposphere.inside' },
+  stratosphere: { ascending: 'atmo3d.where.stratosphere.ascending', descending: 'atmo3d.where.stratosphere.descending', inside: 'atmo3d.where.stratosphere.inside' },
+};
+
+const CAPTION_CLOUD: Record<Motion, TKey> = {
+  ascending: 'atmo3d.where.troposphere.ascendingInCloud',
+  descending: 'atmo3d.where.troposphere.descendingInCloud',
+  inside: 'atmo3d.where.troposphere.insideInCloud',
+};
+
 export function whereabouts(alt: number, scene: AtmoScene, phase: FlightPhase, fmt: (m: number) => string): Whereabouts {
   const tropo = scene.tropopause.z;
   const inCloud = scene.clouds.some(([a, b]) => alt >= a && alt <= b);
   if (phase === 'landed' || alt < 150) {
     const top = scene.burst?.[2] ?? Math.max(...scene.measured.map((p) => p[2]));
-    return { layer: 'sol', caption: 'au sol', amount: fmt(top), relation: top > tropo ? 'atteints dans la stratosphère' : 'altitude maximale' };
+    return { layer: 'sol', caption: t('atmo3d.where.ground'), amount: fmt(top), relation: top > tropo ? t('atmo3d.where.reachedInStratosphere') : t('atmo3d.where.maxAltitude') };
   }
-  const verb = phase === 'descending' ? 'redescend dans la ' : phase === 'ascending' ? 'monte dans la ' : 'dans la ';
+  const motion: Motion = phase === 'descending' ? 'descending' : phase === 'ascending' ? 'ascending' : 'inside';
   if (alt < tropo) {
     return {
       layer: 'troposphère',
-      caption: `${verb}troposphère${inCloud ? ', dans un nuage' : ''}`,
+      caption: t(inCloud ? CAPTION_CLOUD[motion] : CAPTION.troposphere[motion]),
       amount: fmt(tropo - alt),
-      relation: phase === 'ascending' ? 'avant la tropopause' : 'sous la tropopause',
+      relation: phase === 'ascending' ? t('atmo3d.where.beforeTropopause') : t('atmo3d.where.belowTropopause'),
     };
   }
-  return { layer: 'stratosphère', caption: `${verb}stratosphère`, amount: fmt(alt - tropo), relation: 'au-dessus de la tropopause' };
+  return { layer: 'stratosphère', caption: t(CAPTION.stratosphere[motion]), amount: fmt(alt - tropo), relation: t('atmo3d.where.aboveTropopause') };
 }
 
 export function exaggeration(scene: AtmoScene): number {

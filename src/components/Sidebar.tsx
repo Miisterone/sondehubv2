@@ -12,6 +12,7 @@ import { findLaunch, siteLabel, verticalSpeed, type Launch } from '@/lib/sonde';
 import { locateUser } from '@/lib/geolocation';
 import { enableAlerts } from '@/lib/alerts';
 import { PHASE_LABEL } from '@/lib/icons';
+import { t as translate, useT, type TKey } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerDescription, DrawerPortal, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import { SondeDetail } from './SondeDetail';
 import { SiteDetail } from './SiteDetail';
 import { ListenerDetail } from './ListenerDetail';
 import { StatusPill } from './StatusPill';
+import { LanguageSelect } from './LanguageSelect';
 import { FlightGuide } from './FlightGuide';
 import { UpcomingLaunches } from './UpcomingLaunches';
 import { getMap } from './MapView';
@@ -63,13 +65,36 @@ type GeoState = 'idle' | 'locating' | 'failed';
 const TAB_KEY = 'sondetrack.tab.v1';
 const HINT_KEY = 'sondetrack.listHint.v1';
 
-const DURATION_LABEL: Record<Duration, string> = { '1h': '1 h', '3h': '3 h', '6h': '6 h', '12h': '12 h', '1d': '24 h' };
-const DURATION_TITLE: Record<Duration, string> = {
-  '1h': 'la dernière heure',
-  '3h': 'les 3 dernières heures',
-  '6h': 'les 6 dernières heures',
-  '12h': 'les 12 dernières heures',
-  '1d': 'les dernières 24 heures',
+const DURATION_LABEL: Record<Duration, string> = {
+  get '1h'() {
+    return translate('sidebar.duration.hours', { n: 1 });
+  },
+  get '3h'() {
+    return translate('sidebar.duration.hours', { n: 3 });
+  },
+  get '6h'() {
+    return translate('sidebar.duration.hours', { n: 6 });
+  },
+  get '12h'() {
+    return translate('sidebar.duration.hours', { n: 12 });
+  },
+  get '1d'() {
+    return translate('sidebar.duration.hours', { n: 24 });
+  },
+};
+const NO_DATA_KEY: Record<Duration, TKey> = {
+  '1h': 'sidebar.following.noData1h',
+  '3h': 'sidebar.following.noData3h',
+  '6h': 'sidebar.following.noData6h',
+  '12h': 'sidebar.following.noData12h',
+  '1d': 'sidebar.following.noData1d',
+};
+const HISTORY_KEY: Record<Duration, TKey> = {
+  '1h': 'sidebar.filters.history1h',
+  '3h': 'sidebar.filters.history3h',
+  '6h': 'sidebar.filters.history6h',
+  '12h': 'sidebar.filters.history12h',
+  '1d': 'sidebar.filters.history1d',
 };
 
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
@@ -214,6 +239,7 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
 
 function BottomSheet({ snap, onSnapChange, children }: { snap: number; onSnapChange: (s: number) => void; children: ReactNode }) {
   const dragged = useRef(false);
+  const tr = useT();
   useUnhideOutsideSheet();
   const cycle = () => {
     if (dragged.current) return;
@@ -236,15 +262,15 @@ function BottomSheet({ snap, onSnapChange, children }: { snap: number; onSnapCha
           role="region"
           className="bg-background pointer-events-auto fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-lg border-t outline-none"
         >
-          <DrawerTitle className="sr-only">Radiosondes</DrawerTitle>
-          <DrawerDescription className="sr-only">Liste des radiosondes et détail de la sonde sélectionnée</DrawerDescription>
+          <DrawerTitle className="sr-only">{tr('sidebar.sheet.title')}</DrawerTitle>
+          <DrawerDescription className="sr-only">{tr('sidebar.sheet.description')}</DrawerDescription>
           <div
             className="flex min-h-0 flex-col transition-[height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
             style={{ height: `${snap * 100}%` }}
           >
             <button
               type="button"
-              aria-label={snap === FULL ? 'Réduire le panneau' : 'Agrandir le panneau'}
+              aria-label={snap === FULL ? tr('sidebar.sheet.collapse') : tr('sidebar.sheet.expand')}
               onPointerDown={() => (dragged.current = false)}
               onClick={cycle}
               className="flex h-5 w-full shrink-0 cursor-grab items-end justify-center outline-none"
@@ -312,20 +338,31 @@ interface Group {
 const STALE_MS = 60_000;
 
 function sentence(parts: (string | null | undefined | false)[]): string {
-  const s = parts.filter(Boolean).join(', ');
+  const s = parts.filter(Boolean).join(translate('sidebar.status.separator'));
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function originText(launch: Launch | null, me: UserLocation | null, units: Units, now: number): string | null {
   if (!launch) return null;
-  let text: string | null = null;
-  if (launch.fromGround) text = launch.site ? `lâchée de ${siteLabel(launch.site)}` : me ? null : 'lâchée';
-  else if (launch.estimated) {
-    if (launch.site) text = `probablement lâchée de ${siteLabel(launch.site)}`;
-    else if (launch.near) text = `probablement lâchée à ${fmtDist(launch.near.d, units)} ${cardinal(launch.near.bearing)} de ${siteLabel(launch.near.site)}`;
+  const at = me ? null : ago(launch.t, now);
+  if (launch.fromGround) {
+    if (launch.site) {
+      const site = siteLabel(launch.site);
+      return at ? translate('sidebar.origin.fromSiteAgo', { site, ago: at }) : translate('sidebar.origin.fromSite', { site });
+    }
+    return at ? translate('sidebar.origin.launchedAgo', { ago: at }) : null;
   }
-  if (!text) return null;
-  return me ? text : `${text} ${ago(launch.t, now)}`;
+  if (launch.estimated) {
+    if (launch.site) {
+      const site = siteLabel(launch.site);
+      return at ? translate('sidebar.origin.probablyFromSiteAgo', { site, ago: at }) : translate('sidebar.origin.probablyFromSite', { site });
+    }
+    if (launch.near) {
+      const params = { distance: fmtDist(launch.near.d, units), direction: cardinal(launch.near.bearing), site: siteLabel(launch.near.site) };
+      return at ? translate('sidebar.origin.probablyNearAgo', { ...params, ago: at }) : translate('sidebar.origin.probablyNear', params);
+    }
+  }
+  return null;
 }
 
 function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: UserLocation | null, units: Units, now: number): Item {
@@ -333,9 +370,9 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
   const landing = pred?.landing ?? null;
   const alt = fmtAltShort(s.last.alt, units);
   const away = (lat: number, lon: number) =>
-    me ? `${fmtDist(distance(me.lat, me.lon, lat, lon), units)} ${cardinal(bearing(me.lat, me.lon, lat, lon))} de vous` : null;
+    me ? { distance: fmtDist(distance(me.lat, me.lon, lat, lon), units), direction: cardinal(bearing(me.lat, me.lon, lat, lon)) } : null;
   const from = originText(launch, me, units, now);
-  const stale = now - s.lastTime > STALE_MS ? `dernier signal ${ago(s.lastTime, now)}` : null;
+  const stale = now - s.lastTime > STALE_MS ? translate('sidebar.status.lastSignal', { ago: ago(s.lastTime, now) }) : null;
   const vv = verticalSpeed(s);
   const speed = vv === undefined ? '—' : fmtVSpeed(Math.abs(vv), units, false);
 
@@ -344,11 +381,14 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
       const where = away(s.last.lat, s.last.lon);
       return {
         ...base,
-        status: sentence([where && `à ${where}`, from, stale]) || 'En montée',
+        status: sentence([where && translate('sidebar.status.near', where), from, stale]) || translate('sidebar.status.ascending'),
         metrics: [
-          { label: 'Altitude', value: alt },
-          { label: 'Montée', value: speed },
-          { label: 'Éclatement', value: pred && pred.burstAltitude > s.last.alt ? `vers ${fmtAltShort(pred.burstAltitude, units)}` : '—' },
+          { label: translate('sidebar.metric.altitude'), value: alt },
+          { label: translate('sidebar.metric.ascent'), value: speed },
+          {
+            label: translate('sidebar.metric.burst'),
+            value: pred && pred.burstAltitude > s.last.alt ? translate('sidebar.metric.burstAt', { altitude: fmtAltShort(pred.burstAltitude, units) }) : '—',
+          },
         ],
       };
     }
@@ -357,26 +397,43 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
       const t = landing ? landing.time * 1000 : 0;
       return {
         ...base,
-        status: sentence([where && (landing ? `devrait atterrir à ${where}` : `à ${where}`), from, stale]) || 'Redescend sous parachute',
+        status:
+          sentence([where && (landing ? translate('sidebar.status.landingNear', where) : translate('sidebar.status.near', where)), from, stale]) ||
+          translate('sidebar.status.descending'),
         strong: !!(landing && where),
         metrics: [
-          { label: 'Altitude', value: alt },
-          { label: 'Descente', value: speed },
-          { label: 'Atterrissage', value: landing ? (t > now ? relative(t, now) : 'imminent') : '—' },
+          { label: translate('sidebar.metric.altitude'), value: alt },
+          { label: translate('sidebar.metric.descent'), value: speed },
+          { label: translate('sidebar.metric.landing'), value: landing ? (t > now ? relative(t, now) : translate('sidebar.metric.imminent')) : '—' },
         ],
       };
     }
     case 'landed': {
       if (landing) {
         const where = away(landing.lat, landing.lon);
-        return { ...base, status: sentence([`probablement au sol${where ? ` à ${where}` : ''}`, `signal perdu ${ago(s.lastTime, now)}`]) };
+        return {
+          ...base,
+          status: sentence([
+            where ? translate('sidebar.status.probablyLandedNear', where) : translate('sidebar.status.probablyLanded'),
+            translate('sidebar.status.signalLost', { ago: ago(s.lastTime, now) }),
+          ]),
+        };
       }
       const where = away(s.last.lat, s.last.lon);
-      return { ...base, status: sentence([`au sol${where ? ` à ${where}` : ''}`, `dernier signal ${ago(s.lastTime, now)}`]) };
+      return {
+        ...base,
+        status: sentence([
+          where ? translate('sidebar.status.landedNear', where) : translate('sidebar.status.landed'),
+          translate('sidebar.status.lastSignal', { ago: ago(s.lastTime, now) }),
+        ]),
+      };
     }
     case 'lost': {
       const where = away(s.last.lat, s.last.lon);
-      return { ...base, status: sentence([`signal perdu ${ago(s.lastTime, now)} à ${alt} d’altitude`, where && `à ${where}`]) };
+      return {
+        ...base,
+        status: sentence([translate('sidebar.status.lostAt', { ago: ago(s.lastTime, now), altitude: alt }), where && translate('sidebar.status.near', where)]),
+      };
     }
   }
 }
@@ -410,6 +467,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   const reverse = useStore((s) => s.reverse);
   const duration = useStore((s) => s.settings.duration);
   const { setQuery, setAlerts, select } = useStore.getState();
+  const tr = useT();
   const searchRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<string | null>(null);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -450,7 +508,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     },
     [launches, sites, reverse],
   );
-  const item = useCallback((s: Sonde) => describe(s, predOf(s), launchOf(s), me, units, now), [predOf, launchOf, me, units, now]);
+  const item = useCallback((s: Sonde) => describe(s, predOf(s), launchOf(s), me, units, now), [predOf, launchOf, me, units, now, tr]);
 
   const counts = useMemo(() => {
     const c: Record<FlightPhase, number> = { ascending: 0, descending: 0, landed: 0, lost: 0 };
@@ -519,20 +577,20 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     overhead.sort((a, b) => a.d - b.d);
     ground.sort((a, b) => a.d - b.d);
     const out: Group[] = [
-      { id: 'landing', title: 'Atterrissent près de vous', items: landing.map((x) => item(x.s)) },
-      { id: 'overhead', title: 'En vol près de vous', items: overhead.map((x) => item(x.s)) },
-      { id: 'ground', title: 'Au sol près de vous', items: ground.map((x) => item(x.s)) },
+      { id: 'landing', title: tr('sidebar.groups.landingNearby'), items: landing.map((x) => item(x.s)) },
+      { id: 'overhead', title: tr('sidebar.groups.flyingNearby'), items: overhead.map((x) => item(x.s)) },
+      { id: 'ground', title: tr('sidebar.groups.groundNearby'), items: ground.map((x) => item(x.s)) },
     ];
     return out.filter((g) => g.items.length > 0);
-  }, [me, all, visible, landingOf, item, alerts.radiusKm]);
+  }, [me, all, visible, landingOf, item, alerts.radiusKm, tr]);
 
   const followed = useMemo(
     () =>
       favourites.map((serial): Item => {
         const s = sondes[serial];
-        return s ? item(s) : { serial, status: `Aucune mesure reçue pendant ${DURATION_TITLE[duration]}` };
+        return s ? item(s) : { serial, status: tr(NO_DATA_KEY[duration]) };
       }),
-    [favourites, sondes, item, duration],
+    [favourites, sondes, item, duration, tr],
   );
 
   const groups: Group[] = useMemo(() => {
@@ -540,11 +598,11 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     if (tab === 'nearby') return nearby ?? [];
     if (tab === 'following') return followed.length ? [{ id: 'following', items: followed }] : [];
     const g: Group[] = [];
-    if (flying.desc.length) g.push({ id: 'desc', title: 'Redescendent sous parachute', items: flying.desc.slice(0, MAX_ROWS).map(item) });
-    if (flying.asc.length) g.push({ id: 'asc', title: 'Montent', items: flying.asc.slice(0, MAX_ROWS).map(item) });
+    if (flying.desc.length) g.push({ id: 'desc', title: tr('sidebar.groups.descending'), items: flying.desc.slice(0, MAX_ROWS).map(item) });
+    if (flying.asc.length) g.push({ id: 'asc', title: tr('sidebar.groups.ascending'), items: flying.asc.slice(0, MAX_ROWS).map(item) });
     if (showGround && flying.ground.length) g.push({ id: 'ground', items: flying.ground.slice(0, MAX_ROWS).map(item) });
     return g;
-  }, [results, tab, nearby, followed, flying, showGround, item]);
+  }, [results, tab, nearby, followed, flying, showGround, item, tr]);
 
   const navSerials = useMemo(() => groups.flatMap((g) => g.items.map((i) => i.serial)), [groups]);
 
@@ -641,26 +699,26 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
       results.length === 0 ? (
         <EmptyState
           icon={<SearchX />}
-          title="Aucune sonde trouvée"
+          title={tr('sidebar.search.emptyTitle')}
           actions={
             <>
               <Button variant="outline" size="sm" onClick={() => setQuery('')}>
-                Effacer la recherche
+                {tr('sidebar.search.clear')}
               </Button>
               {filtered && (
                 <Button variant="ghost" size="sm" onClick={resetFilters}>
-                  Réinitialiser les filtres
+                  {tr('sidebar.filters.reset')}
                 </Button>
               )}
             </>
           }
         >
-          Cherchez le numéro de série d’une sonde (par exemple S3210837), son type (RS41, M20…) ou l’indicatif d’une station de réception.
+          {tr('sidebar.search.emptyText')}
         </EmptyState>
       ) : (
         <>
           <p className="px-5 pt-4 text-[13px]">
-            {results.length} {results.length > 1 ? 'sondes correspondent' : 'sonde correspond'} à « {query.trim()} »
+            {tr('sidebar.search.results', { count: results.length, query: query.trim() })}
           </p>
           {groups.map(renderGroup)}
         </>
@@ -671,36 +729,36 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         <div role="status" aria-live="polite">
           <p className="flex items-center gap-2 px-5 pt-5 text-[13px]">
             <LoaderCircle className="text-primary size-4 animate-spin" />
-            Recherche de votre position…
+            {tr('sidebar.nearby.locating')}
           </p>
           {skeleton(4)}
         </div>
       ) : (
         <EmptyState
           art="locate"
-          title={geo === 'failed' ? 'Position indisponible' : 'Où êtes-vous ?'}
+          title={geo === 'failed' ? tr('sidebar.nearby.unavailableTitle') : tr('sidebar.nearby.whereTitle')}
           actions={
             <Button size="sm" onClick={onLocate}>
               {geo === 'failed' ? <RotateCw /> : <MapPin />}
-              {geo === 'failed' ? 'Réessayer' : 'Me localiser'}
+              {geo === 'failed' ? tr('sidebar.nearby.retry') : tr('sidebar.nearby.locate')}
             </Button>
           }
         >
           {geo === 'failed'
-            ? 'Autorisez l’accès à votre position dans le navigateur pour voir les ballons qui passent ou vont atterrir autour de vous.'
-            : 'Votre position sert uniquement à trouver les ballons qui passent ou vont atterrir autour de vous. Elle n’est envoyée à personne.'}
+            ? tr('sidebar.nearby.unavailableText')
+            : tr('sidebar.nearby.whereText')}
         </EmptyState>
       )
     ) : (
       <>
         <div className="flex items-center justify-between gap-3 px-5 pt-4">
-          <span className="text-[13px]">Rayon</span>
-          <div role="group" aria-label="Rayon autour de vous">
+          <span className="text-[13px]">{tr('sidebar.nearby.radius')}</span>
+          <div role="group" aria-label={tr('sidebar.nearby.radiusLabel')}>
             <Segmented<string>
               size="sm"
               value={String(alerts.radiusKm)}
               onChange={(v) => setAlerts({ radiusKm: Number(v) })}
-              options={RADII.map((r) => ({ value: String(r), label: fmtRadius(r, units), title: `Dans un rayon de ${fmtRadius(r, units)}` }))}
+              options={RADII.map((r) => ({ value: String(r), label: fmtRadius(r, units), title: tr('sidebar.nearby.radiusTitle', { radius: fmtRadius(r, units) }) }))}
             />
           </div>
         </div>
@@ -711,23 +769,23 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           ) : (
             <EmptyState
               art="locate"
-              title={`Aucun ballon à moins de ${fmtRadius(alerts.radiusKm, units)}`}
+              title={tr('sidebar.nearby.emptyTitle', { radius: fmtRadius(alerts.radiusKm, units) })}
               actions={
                 <>
                   {alerts.radiusKm < RADII[RADII.length - 1] && (
                     <Button variant="outline" size="sm" onClick={() => setAlerts({ radiusKm: RADII.find((r) => r > alerts.radiusKm) ?? 200 })}>
-                      Élargir à {fmtRadius(RADII.find((r) => r > alerts.radiusKm) ?? 200, units)}
+                      {tr('sidebar.nearby.widen', { radius: fmtRadius(RADII.find((r) => r > alerts.radiusKm) ?? 200, units) })}
                     </Button>
                   )}
                   {filtered && (
                     <Button variant="ghost" size="sm" onClick={resetFilters}>
-                      Réinitialiser les filtres
+                      {tr('sidebar.filters.reset')}
                     </Button>
                   )}
                 </>
               }
             >
-              Les ballons qui passent au-dessus de votre région ou qui doivent y atterrir apparaîtront ici.
+              {tr('sidebar.nearby.emptyText')}
             </EmptyState>
           )
         ) : (
@@ -741,15 +799,15 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
       groups.length === 0 ? (
         <EmptyState
           icon={<Star />}
-          title="Aucun favori"
+          title={tr('sidebar.following.emptyTitle')}
           actions={
             <Button variant="outline" size="sm" onClick={() => onTab('flying')}>
-              Voir les ballons en vol
+              {tr('sidebar.following.seeFlying')}
             </Button>
           }
         >
-          {isTouch() ? 'Touchez' : 'Cliquez sur'} l’étoile d’une sonde pour l’ajouter à vos favoris et la retrouver ici à tout moment.
-          {alerts.enabled ? ' Vous serez prévenu peu avant son atterrissage.' : ' Activez les alertes pour être prévenu avant son atterrissage.'}
+          {tr(isTouch() ? 'sidebar.following.emptyTouch' : 'sidebar.following.emptyClick')}{' '}
+          {alerts.enabled ? tr('sidebar.following.alertsOn') : tr('sidebar.following.alertsOff')}
         </EmptyState>
       ) : (
         groups.map(renderGroup)
@@ -761,13 +819,12 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           <div className="bg-surface mx-5 mt-5 rounded-lg border px-4 py-3">
             <div className="flex items-start gap-3">
               <p className="min-w-0 flex-1 text-[13px] leading-relaxed">
-                Chaque point sur la carte est un ballon météo. {isTouch() ? 'Touchez' : 'Cliquez sur'} une sonde pour suivre son vol et voir où elle va
-                atterrir.
+                {tr(isTouch() ? 'sidebar.flying.hintTouch' : 'sidebar.flying.hintClick')}
               </p>
               <button
                 type="button"
                 onClick={onDismissHint}
-                aria-label="Masquer ce message"
+                aria-label={tr('sidebar.flying.dismissHint')}
                 className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mt-1 -mr-2 grid size-7 shrink-0 place-items-center rounded-md outline-none focus-visible:ring-2"
               >
                 <X className="size-4" />
@@ -781,18 +838,18 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         ) : flyingCount === 0 ? (
           <EmptyState
             art="ascending"
-            title={filtered ? 'Aucun ballon ne correspond aux filtres' : 'Aucun ballon en vol pour le moment'}
+            title={filtered ? tr('sidebar.flying.emptyFilteredTitle') : tr('sidebar.flying.emptyTitle')}
             actions={
               filtered && (
                 <Button variant="outline" size="sm" onClick={resetFilters}>
-                  Réinitialiser les filtres
+                  {tr('sidebar.filters.reset')}
                 </Button>
               )
             }
           >
             {filtered
-              ? 'Certaines étapes du vol ou certains types de sondes sont masqués.'
-              : 'La plupart des stations lâchent leurs ballons deux fois par jour, vers minuit et midi (heure UTC).'}
+              ? tr('sidebar.flying.emptyFilteredText')
+              : tr('sidebar.flying.emptyText')}
           </EmptyState>
         ) : (
           groups.filter((g) => g.id !== 'ground').map(renderGroup)
@@ -808,10 +865,10 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
             >
               <span className="min-w-0 flex-1">
                 <span className="font-heading text-foreground flex items-baseline gap-2 text-[14px] font-semibold">
-                  Au sol ou signal perdu
+                  {tr('sidebar.flying.groundTitle')}
                   <span className="tabular text-faint font-sans text-[12.5px] font-normal">{flying.ground.length}</span>
                 </span>
-                <span className="block text-[12.5px]">Sondes déjà retombées ou qui ne sont plus captées</span>
+                <span className="block text-[12.5px]">{tr('sidebar.flying.groundText')}</span>
               </span>
               <ChevronDown className={cx('text-muted-foreground size-4 transition-transform', showGround && 'rotate-180')} />
             </button>
@@ -830,14 +887,15 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   return (
     <div className="flex h-full flex-col">
       <div className={cx('shrink-0 border-b px-5 pt-3 md:pt-5', results && 'pb-4')}>
-        <div className="flex items-center gap-3">
-          <Logo className="size-8 shrink-0 md:size-9" />
+        <div className="flex items-center gap-2">
+          <Logo className="mr-1 size-8 shrink-0 md:size-9" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-[19px] leading-tight font-semibold">SondeHub V2</h1>
-            <p className="truncate text-[13px] leading-snug">Suivi des ballons météo</p>
+            <h1 className="text-[19px] leading-tight font-semibold whitespace-nowrap">SondeHub V2</h1>
+            <p className="truncate text-[13px] leading-snug">{tr('sidebar.header.subtitle')}</p>
           </div>
           <StatusPill />
-          <IconButton label="À propos et aide" side="bottom" className="-mr-2" onClick={onAbout}>
+          <LanguageSelect />
+          <IconButton label={tr('sidebar.header.about')} side="bottom" className="-mr-2" onClick={onAbout}>
             <Info className="size-[18px]" />
           </IconButton>
         </div>
@@ -853,8 +911,8 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
               onFocus={onFocusSearch}
               onBlur={() => setActive(null)}
               onKeyDown={onSearchKey}
-              placeholder="Rechercher une sonde"
-              aria-label="Rechercher une sonde par numéro, type ou station"
+              placeholder={tr('sidebar.search.placeholder')}
+              aria-label={tr('sidebar.search.ariaLabel')}
               aria-controls="sonde-list"
               aria-activedescendant={active ? rowId(active) : undefined}
               className="bg-background text-foreground placeholder:text-faint h-9 rounded-md pr-9 pl-9 text-[14px] md:text-[14px] [&::-webkit-search-cancel-button]:appearance-none"
@@ -868,7 +926,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
                   setQuery('');
                   searchRef.current?.focus();
                 }}
-                aria-label="Effacer la recherche"
+                aria-label={tr('sidebar.search.clear')}
               >
                 <X className="size-4" />
               </Button>
@@ -886,7 +944,15 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         <div
           id="sonde-list"
           role="tabpanel"
-          aria-label={results ? 'Résultats de recherche' : tab === 'nearby' ? 'Près de moi' : tab === 'following' ? 'Favoris' : 'En vol'}
+          aria-label={
+            results
+              ? tr('sidebar.search.resultsLabel')
+              : tab === 'nearby'
+                ? tr('sidebar.tabs.nearby')
+                : tab === 'following'
+                  ? tr('sidebar.tabs.following')
+                  : tr('sidebar.tabs.flying')
+          }
           className="pb-8"
           onKeyDown={onListKey}
         >
@@ -899,16 +965,32 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
 }
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'nearby', label: 'Près de moi' },
-  { id: 'flying', label: 'En vol' },
-  { id: 'following', label: 'Favoris' },
+  {
+    id: 'nearby',
+    get label() {
+      return translate('sidebar.tabs.nearby');
+    },
+  },
+  {
+    id: 'flying',
+    get label() {
+      return translate('sidebar.tabs.flying');
+    },
+  },
+  {
+    id: 'following',
+    get label() {
+      return translate('sidebar.tabs.following');
+    },
+  },
 ];
 
 function TabBar({ tab, onTab, counts }: { tab: Tab; onTab: (t: Tab) => void; counts: Record<Tab, number | undefined> }) {
+  const tr = useT();
   return (
     <div
       role="tablist"
-      aria-label="Listes de sondes"
+      aria-label={tr('sidebar.tabs.label')}
       className="mt-3 -mb-px flex gap-6 md:mt-4"
       onKeyDown={(e) => {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -951,6 +1033,7 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
   const typeFilter = useStore((s) => s.typeFilter);
   const duration = useStore((s) => s.settings.duration);
   const { togglePhase, setTypeFilter, setSettings } = useStore.getState();
+  const tr = useT();
   const hidden = PHASES.filter((p) => !phaseFilter[p]).length + (typeFilter ? 1 : 0);
   const reset = () => {
     setTypeFilter(null);
@@ -962,36 +1045,36 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
       <PopoverTrigger asChild>
         <Button variant="outline" className={cx('h-9 shrink-0 gap-1.5 px-3 text-[13.5px]', hidden > 0 && 'border-primary text-primary hover:text-primary')}>
           <SlidersHorizontal className="size-4" />
-          Filtres
+          {tr('sidebar.filters.title')}
           {hidden > 0 && <span className="tabular">({hidden})</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" collisionPadding={12} className="w-[320px] p-0" onEscapeKeyDown={keepSelection}>
         <div className="border-b px-4 py-3">
-          <h2 className="text-[15px] font-semibold">Filtres</h2>
-          <p className="text-[12.5px]">S’appliquent à la carte et aux listes.</p>
+          <h2 className="text-[15px] font-semibold">{tr('sidebar.filters.title')}</h2>
+          <p className="text-[12.5px]">{tr('sidebar.filters.subtitle')}</p>
         </div>
         <div className="space-y-5 px-4 py-4">
           <fieldset>
-            <legend className="text-foreground mb-1 text-[13px] font-semibold">Étapes du vol</legend>
+            <legend className="text-foreground mb-1 text-[13px] font-semibold">{tr('sidebar.filters.phases')}</legend>
             {PHASES.map((p) => (
               <label key={p} className="flex cursor-pointer items-center gap-3 py-1.5">
                 <Icon3D id={p} size={30} className="-my-1" />
                 <span className="text-foreground min-w-0 flex-1 text-[13.5px]">{PHASE_LABEL[p]}</span>
                 <span className="tabular text-faint text-[12.5px]">{counts[p]}</span>
-                <Switch checked={phaseFilter[p]} onCheckedChange={() => togglePhase(p)} aria-label={`Afficher : ${PHASE_LABEL[p].toLowerCase()}`} />
+                <Switch checked={phaseFilter[p]} onCheckedChange={() => togglePhase(p)} aria-label={tr('sidebar.filters.showPhase', { phase: PHASE_LABEL[p].toLowerCase() })} />
               </label>
             ))}
           </fieldset>
           <div>
-            <div className="text-foreground mb-2 text-[13px] font-semibold">Type de sonde</div>
+            <div className="text-foreground mb-2 text-[13px] font-semibold">{tr('sidebar.filters.type')}</div>
             <Select value={typeFilter ?? ALL_TYPES} onValueChange={(v) => setTypeFilter(v === ALL_TYPES ? null : v)}>
-              <SelectTrigger aria-label="Type de sonde" className="text-foreground h-9 w-full text-[13.5px]">
-                <SelectValue>{typeFilter ?? 'Tous les types'}</SelectValue>
+              <SelectTrigger aria-label={tr('sidebar.filters.type')} className="text-foreground h-9 w-full text-[13.5px]">
+                <SelectValue>{typeFilter ?? tr('sidebar.filters.allTypes')}</SelectValue>
               </SelectTrigger>
               <SelectContent position="popper" className="max-h-72">
                 <SelectItem value={ALL_TYPES} className="text-[13.5px]">
-                  Tous les types
+                  {tr('sidebar.filters.allTypes')}
                 </SelectItem>
                 {typeFilter && !types.some(([k]) => k === typeFilter) && (
                   <SelectItem value={typeFilter} className="text-[13.5px]">
@@ -1011,8 +1094,8 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
             </Select>
           </div>
           <div>
-            <div className="text-foreground text-[13px] font-semibold">Historique</div>
-            <p className="mb-2 text-[12.5px]">Sondes entendues pendant {DURATION_TITLE[duration]}.</p>
+            <div className="text-foreground text-[13px] font-semibold">{tr('sidebar.filters.history')}</div>
+            <p className="mb-2 text-[12.5px]">{tr(HISTORY_KEY[duration])}</p>
             <Segmented<Duration>
               size="sm"
               value={duration}
@@ -1024,7 +1107,7 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
         {hidden > 0 && (
           <div className="border-t px-4 py-3">
             <Button variant="ghost" size="sm" className="-ml-2" onClick={reset}>
-              Réinitialiser les filtres
+              {tr('sidebar.filters.reset')}
             </Button>
           </div>
         )}
@@ -1079,11 +1162,12 @@ function EmptyState({
 
 function AlertCta({ enabled, radiusKm, units }: { enabled: boolean; radiusKm: number; units: Units }) {
   const [busy, setBusy] = useState(false);
+  const tr = useT();
   if (enabled) {
     return (
       <p className="flex items-center gap-2 px-5 pt-3 text-[12.5px]">
         <BellRing className="text-foreground size-4 shrink-0" />
-        Alertes activées pour les atterrissages à moins de {fmtRadius(radiusKm, units)}.
+        {tr('sidebar.alerts.enabled', { radius: fmtRadius(radiusKm, units) })}
       </p>
     );
   }
@@ -1091,8 +1175,8 @@ function AlertCta({ enabled, radiusKm, units }: { enabled: boolean; radiusKm: nu
     <div className="mx-5 mt-4 flex items-center gap-3 rounded-lg border px-4 py-3">
       <Bell className="text-foreground size-5 shrink-0" />
       <p className="min-w-0 flex-1 text-[13px] leading-snug">
-        <span className="text-foreground block font-semibold">Être prévenu</span>
-        quand un ballon va atterrir à moins de {fmtRadius(radiusKm, units)}
+        <span className="text-foreground block font-semibold">{tr('sidebar.alerts.ctaTitle')}</span>
+        {tr('sidebar.alerts.ctaText', { radius: fmtRadius(radiusKm, units) })}
       </p>
       <Button
         size="sm"
@@ -1108,7 +1192,7 @@ function AlertCta({ enabled, radiusKm, units }: { enabled: boolean; radiusKm: nu
         }}
       >
         {busy && <LoaderCircle className="animate-spin" />}
-        Activer
+        {tr('sidebar.alerts.enable')}
       </Button>
     </div>
   );
@@ -1116,16 +1200,17 @@ function AlertCta({ enabled, radiusKm, units }: { enabled: boolean; radiusKm: nu
 
 function FavButton({ serial }: { serial: string }) {
   const fav = useStore((st) => st.settings.favourites.includes(serial));
+  const tr = useT();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           aria-pressed={fav}
-          aria-label={fav ? `Retirer ${serial} des favoris` : `Ajouter ${serial} aux favoris`}
+          aria-label={fav ? tr('sidebar.fav.removeLabel', { serial }) : tr('sidebar.fav.addLabel', { serial })}
           onClick={() => {
             useStore.getState().toggleFavourite(serial);
-            toast(fav ? `${serial} retirée des favoris` : `${serial} ajoutée aux favoris`, { id: 'fav' });
+            toast(fav ? tr('sidebar.fav.removed', { serial }) : tr('sidebar.fav.added', { serial }), { id: 'fav' });
           }}
           className={cx(
             'focus-visible:ring-ring/50 hover:bg-surface grid size-8 shrink-0 place-items-center rounded-md transition-[opacity,color,background-color] outline-none focus-visible:ring-2',
@@ -1137,12 +1222,13 @@ function FavButton({ serial }: { serial: string }) {
           <Star className={cx('size-4', fav && 'fill-current')} />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">{fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}</TooltipContent>
+      <TooltipContent side="right">{fav ? tr('sidebar.fav.remove') : tr('sidebar.fav.add')}</TooltipContent>
     </Tooltip>
   );
 }
 
 function TechToggle({ id, expanded, onClick }: { id: string; expanded: boolean; onClick: () => void }) {
+  const tr = useT();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -1150,7 +1236,7 @@ function TechToggle({ id, expanded, onClick }: { id: string; expanded: boolean; 
           type="button"
           aria-expanded={expanded}
           aria-controls={id}
-          aria-label="Détails techniques"
+          aria-label={tr('sidebar.tech.title')}
           onClick={onClick}
           className={cx(
             'focus-visible:ring-ring/50 hover:bg-surface grid size-8 shrink-0 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2',
@@ -1160,7 +1246,7 @@ function TechToggle({ id, expanded, onClick }: { id: string; expanded: boolean; 
           <ChevronDown className={cx('size-4 transition-transform', expanded && 'rotate-180')} />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="right">{expanded ? 'Masquer les détails techniques' : 'Afficher les détails techniques'}</TooltipContent>
+      <TooltipContent side="right">{expanded ? tr('sidebar.tech.hide') : tr('sidebar.tech.show')}</TooltipContent>
     </Tooltip>
   );
 }
@@ -1183,6 +1269,7 @@ function SondeItem({
   const { serial, sonde: s } = item;
   const hovered = useStore((st) => st.hovered === serial);
   const { select, setHovered } = useStore.getState();
+  useT();
   const techId = `tech-${serial}`;
   return (
     <li
@@ -1231,18 +1318,32 @@ function TechList({ id, sonde: s, units, now }: { id: string; sonde: Sonde; unit
   const f = s.last;
   const receivers = Object.values(s.receivers);
   const snrs = receivers.map((r) => r.snr).filter((v): v is number => v !== undefined);
+  const tr = useT();
+  const hSpeed = fmtHSpeed(f.vel_h, units);
+  const frameTime = { time: fmtClock(s.lastTime), ago: ago(s.lastTime, now) };
   const rows: [string, string][] = [
-    ['Modèle', `${s.subtype ?? s.type ?? '—'}${s.manufacturer ? ` (${s.manufacturer})` : ''}`],
-    ['Fréquence', fmtFreq(f.frequency)],
-    ['Vitesse horizontale', `${fmtHSpeed(f.vel_h, units)}${f.heading !== undefined ? `, cap ${compass(f.heading)} ${Math.round(f.heading)}°` : ''}`],
-    ['Température', fmtTemp(f.temp, units)],
-    ['Dernière trame', `${fmtClock(s.lastTime)}, ${ago(s.lastTime, now)}${f.frame !== undefined ? `, n° ${f.frame}` : ''}`],
-    ['Réception', `${receivers.length} station${receivers.length > 1 ? 's' : ''}${snrs.length ? `, SNR max ${Math.round(Math.max(...snrs))} dB` : ''}`],
-    ['Position', fmtCoord(f.lat, f.lon)],
+    [tr('sidebar.tech.model'), `${s.subtype ?? s.type ?? '—'}${s.manufacturer ? ` (${s.manufacturer})` : ''}`],
+    [tr('sidebar.tech.frequency'), fmtFreq(f.frequency)],
+    [
+      tr('sidebar.tech.hSpeed'),
+      f.heading !== undefined ? tr('sidebar.tech.speedHeading', { speed: hSpeed, direction: compass(f.heading), degrees: Math.round(f.heading) }) : hSpeed,
+    ],
+    [tr('sidebar.tech.temperature'), fmtTemp(f.temp, units)],
+    [
+      tr('sidebar.tech.lastFrame'),
+      f.frame !== undefined ? tr('sidebar.tech.lastFrameNumber', { ...frameTime, frame: f.frame }) : tr('sidebar.tech.lastFrameValue', frameTime),
+    ],
+    [
+      tr('sidebar.tech.reception'),
+      snrs.length
+        ? tr('sidebar.tech.receiversSnr', { count: receivers.length, snr: Math.round(Math.max(...snrs)) })
+        : tr('sidebar.tech.receivers', { count: receivers.length }),
+    ],
+    [tr('sidebar.tech.position'), fmtCoord(f.lat, f.lon)],
   ];
   return (
     <div id={id} className="bg-surface mx-5 mb-4 rounded-md border px-4 py-3 text-[12.5px]">
-      <p className="text-foreground mb-2 font-semibold">Détails techniques</p>
+      <p className="text-foreground mb-2 font-semibold">{tr('sidebar.tech.title')}</p>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5">
         {rows.map(([k, v]) => (
           <div key={k} className="contents">

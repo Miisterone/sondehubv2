@@ -6,13 +6,15 @@ import { fmtAlt, fmtDuration, fmtHSpeed, fmtTemp, fmtVSpeed, type Units } from '
 import { compass } from '@/lib/geo';
 import { Button } from '@/components/ui/button';
 import { Segmented, Stat } from './ui';
+import { intlTag, useT } from '@/i18n';
 
 const SPEEDS = [60, 300, 1200] as const;
-const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 export function ReplayStats({ serial, d, units }: { serial: string; d: FlightData; units: Units }) {
-  const t = useStore((s) => (s.replay?.serial === serial ? s.replay.t : null));
-  const point = useMemo(() => (t === null ? null : replayAt(d, t)), [d, t]);
+  const t = useT();
+  const at = useStore((s) => (s.replay?.serial === serial ? s.replay.t : null));
+  const point = useMemo(() => (at === null ? null : replayAt(d, at)), [d, at]);
 
   if (!point) return null;
 
@@ -21,23 +23,28 @@ export function ReplayStats({ serial, d, units }: { serial: string; d: FlightDat
 
   return (
     <div className="grid grid-cols-3 gap-4">
-      <Stat label="Altitude" value={fmtAlt(point.alt, units)} sub={fmtTemp(point.temp ?? undefined, units)} />
+      <Stat label={t('sonde.common.altitude')} value={fmtAlt(point.alt, units)} sub={fmtTemp(point.temp ?? undefined, units)} />
       <Stat
-        label={rising ? 'Montée' : 'Descente'}
+        label={rising ? t('sonde.common.ascent') : t('sonde.common.descent')}
         value={
           <span className="flex items-center gap-1">
             {point.vv !== null && (rising ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />)}
             {fmtVSpeed(point.vv ?? undefined, units)}
           </span>
         }
-        sub="vitesse verticale"
+        sub={t('sonde.common.verticalSpeedLower')}
       />
-      <Stat label="Dérive" value={fmtHSpeed(point.hs ?? undefined, units)} sub={moving ? `vers le ${compass(point.hdg as number)}` : 'vitesse horizontale'} />
+      <Stat
+        label={t('sonde.replay.drift')}
+        value={fmtHSpeed(point.hs ?? undefined, units)}
+        sub={moving ? t('sonde.common.towards', { direction: compass(point.hdg as number) }) : t('sonde.common.horizontalSpeedLower')}
+      />
     </div>
   );
 }
 
 export function ReplayControls({ serial, d, units }: { serial: string; d: FlightData; units: Units }) {
+  const t = useT();
   const replay = useStore((s) => (s.replay?.serial === serial ? s.replay : null));
   const { setReplay } = useStore.getState();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -64,18 +71,18 @@ export function ReplayControls({ serial, d, units }: { serial: string; d: Flight
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button ref={toggleRef} size="sm" className="text-[13px]" onClick={toggle} aria-label={atEnd ? 'Rejouer depuis le début' : playing ? 'Pause' : 'Lecture'}>
+        <Button ref={toggleRef} size="sm" className="text-[13px]" onClick={toggle} aria-label={atEnd ? t('sonde.replay.restartAria') : playing ? t('sonde.replay.pause') : t('sonde.replay.play')}>
           {atEnd ? <RotateCcw /> : playing ? <Pause /> : <Play />}
-          {atEnd ? 'Recommencer' : playing ? 'Pause' : 'Lecture'}
+          {atEnd ? t('sonde.replay.restart') : playing ? t('sonde.replay.pause') : t('sonde.replay.play')}
         </Button>
         <Segmented<string>
           size="sm"
           value={String(replay.speed)}
           onChange={(v) => setReplay({ ...replay, speed: Number(v) })}
-          options={SPEEDS.map((s) => ({ value: String(s), label: `×${s}`, title: `${s} fois plus vite que le vol réel` }))}
+          options={SPEEDS.map((s) => ({ value: String(s), label: `×${s}`, title: t('sonde.replay.speedTitle', { speed: s }) }))}
         />
         <Button variant="ghost" size="sm" className="ml-auto text-[13px]" onClick={() => setReplay(null)}>
-          <X /> Quitter
+          <X /> {t('sonde.replay.quit')}
         </Button>
       </div>
 
@@ -87,7 +94,7 @@ export function ReplayControls({ serial, d, units }: { serial: string; d: Flight
           step={1}
           value={Math.round(replay.t)}
           onChange={(e) => setReplay({ ...replay, t: Number(e.target.value) })}
-          aria-label="Position dans le vol"
+          aria-label={t('sonde.replay.position')}
           aria-valuetext={`${clock(point.t)}, ${fmtAlt(point.alt, units)}`}
           className="accent-primary h-1.5 w-full cursor-pointer"
         />
