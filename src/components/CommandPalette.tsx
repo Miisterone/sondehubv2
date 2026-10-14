@@ -332,7 +332,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       label: t('app.common.replayIntro'),
       keywords: `${t('app.command.intro.keywords')} introduction onboarding welcome bienvenue`,
       icon: <RotateCcw />,
-      run: () => setSettings({ onboarded: false }),
+      run: () => setSettings({ tutorialDone: false }),
     });
     return list;
   }, [settings, selected, follow, userLocation, onAbout, t, locale]);

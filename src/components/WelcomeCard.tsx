@@ -25,7 +25,7 @@ type Step = { icon: Icon3DId; title: string; body: ReactNode };
 
 export function WelcomeCard() {
   const t = useT();
-  const onboarded = useStore((s) => s.settings.onboarded);
+  const tutorialDone = useStore((s) => s.settings.tutorialDone);
   const loading = useStore((s) => s.loading);
   const selected = useStore((s) => s.selected);
   const [ready, setReady] = useState(false);
@@ -38,7 +38,7 @@ export function WelcomeCard() {
     return () => window.clearTimeout(id);
   }, [ready, loading]);
 
-  const visible = ready && !onboarded;
+  const visible = ready && !tutorialDone;
 
   useEffect(() => {
     if (!visible) return;
@@ -48,7 +48,7 @@ export function WelcomeCard() {
 
   const dismiss = useCallback(() => {
     setLeaving(true);
-    window.setTimeout(() => useStore.getState().setSettings({ onboarded: true }), LEAVE_MS);
+    window.setTimeout(() => useStore.getState().setSettings({ tutorialDone: true }), LEAVE_MS);
   }, []);
 
   const prevSelected = useRef(selected);

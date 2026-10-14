@@ -46,8 +46,8 @@ export interface Settings {
   alerts: AlertSettings;
   /** Callsign / name remembered for recovery reports. */
   callsign: string;
-  /** Set once the welcome card has been dismissed. */
-  onboarded: boolean;
+  /** Set once the tutorial has been completed or skipped. */
+  tutorialDone: boolean;
   techOpen: boolean;
 }
 
@@ -68,7 +68,7 @@ const DEFAULT_SETTINGS: Settings = {
   favourites: [],
   alerts: { enabled: false, radiusKm: 50, favourites: true },
   callsign: '',
-  onboarded: false,
+  tutorialDone: false,
   techOpen: false,
   duration: '3h',
   layers: {
