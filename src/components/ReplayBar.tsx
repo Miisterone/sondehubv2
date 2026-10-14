@@ -49,26 +49,7 @@ export function ReplayControls({ serial, d, units }: { serial: string; d: Flight
     toggleRef.current?.focus({ preventScroll: true });
   }, []);
 
-  useEffect(() => {
-    if (!playing) return;
-    let raf = 0;
-    let prev = performance.now();
-    const step = (now: number) => {
-      const r = useStore.getState().replay;
-      if (!r || r.serial !== serial || !r.playing) return;
-      const dt = Math.min(0.25, (now - prev) / 1000);
-      prev = now;
-      const t = r.t + dt * r.speed;
-      if (t >= end) {
-        useStore.getState().setReplay({ ...r, t: end, playing: false });
-        return;
-      }
-      useStore.getState().setReplay({ ...r, t });
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [playing, serial, end]);
+  useReplayDriver(serial, end);
 
   const point = useMemo(() => (replay ? replayAt(d, replay.t) : null), [d, replay]);
 
@@ -122,12 +103,36 @@ export function ReplayControls({ serial, d, units }: { serial: string; d: Flight
   );
 }
 
+export function useReplayDriver(serial: string, end: number) {
+  const playing = useStore((s) => s.replay?.serial === serial && s.replay.playing);
+  useEffect(() => {
+    if (!playing) return;
+    let raf = 0;
+    let prev = performance.now();
+    const step = (now: number) => {
+      const r = useStore.getState().replay;
+      if (!r || r.serial !== serial || !r.playing) return;
+      const dt = Math.min(0.25, (now - prev) / 1000);
+      prev = now;
+      const t = r.t + dt * r.speed;
+      if (t >= end) {
+        useStore.getState().setReplay({ ...r, t: end, playing: false });
+        return;
+      }
+      useStore.getState().setReplay({ ...r, t });
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, serial, end]);
+}
+
 export function canReplay(d: FlightData): boolean {
   return d.last > 2 && d.x[d.last] - d.x[0] >= 120;
 }
 
-export function startReplay(serial: string, d: FlightData) {
+export function startReplay(serial: string, d: FlightData, opts: { speed?: number; follow?: boolean } = {}) {
   const st = useStore.getState();
-  st.setReplay({ serial, t: d.x[0], playing: true, speed: 300 });
-  st.setFollow(true);
+  st.setReplay({ serial, t: d.x[0], playing: true, speed: opts.speed ?? 300 });
+  if (opts.follow ?? true) st.setFollow(true);
 }

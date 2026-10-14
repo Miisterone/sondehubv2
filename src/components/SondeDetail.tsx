@@ -44,6 +44,7 @@ import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
 import { ReplayControls, ReplayStats, canReplay, startReplay } from './ReplayBar';
 import { AtmoIndices } from './AtmoIndices';
+import { AtmospherePanel } from './AtmospherePanel';
 import { IconButton, MapIcon, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
@@ -612,7 +613,24 @@ export function SondeDetail({ serial }: { serial: string }) {
 
           {tab === 'atmosphere' && (
             <>
-              <Section title="Mesures" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>}>
+              {flight.last >= 1 && (
+                <Section
+                  title={
+                    <>
+                      Vue 3D
+                      <HelpHint title="Lire la vue 3D">
+                        La colonne représente l’air au-dessus de la zone survolée. Ses parois montrent les couches de l’atmosphère : la troposphère, où se forment les
+                        nuages et la météo, puis la stratosphère, plus sèche et plus calme. La tropopause qui les sépare est celle mesurée par cette sonde quand elle
+                        l’a franchie, sinon une valeur typique pour la latitude. Les bandes claires signalent les nuages traversés (humidité au-dessus de 90 %).
+                      </HelpHint>
+                    </>
+                  }
+                >
+                  <AtmospherePanel sonde={sonde} flight={flight} sounding={sounding} profile={profile} units={units} live={live} />
+                </Section>
+              )}
+
+              <Section title="Mesures" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>} className={cx(flight.last >= 1 && 'border-t pt-6')}>
                 <div className="grid grid-cols-3 gap-4">
                   <Stat icon={<Thermometer />} label="Température" value={fmtTemp(f.temp, units)} sub="de l’air" />
                   <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />

@@ -62,6 +62,25 @@ function findTropopause(t: Layer): number | null {
   return null;
 }
 
+export function cloudLayers(s: Sounding): [number, number][] | null {
+  const hum = binned(s.alt, s.hum, 100);
+  const low = hum.alt.map((a, i) => [a, hum.value[i]] as const).filter(([a]) => a < 12000);
+  if (low.length < 20 || low[low.length - 1][0] < 5000) return null;
+  const layers: [number, number][] = [];
+  let start: number | null = null;
+  low.forEach(([a, v], i) => {
+    const wet = v >= 90;
+    if (wet && start === null) start = a - 50;
+    const closing = start !== null && (!wet || i === low.length - 1);
+    if (closing) {
+      const top = wet ? a + 50 : low[i - 1][0] + 50;
+      if (top - start! >= 300) layers.push([start!, top]);
+      start = null;
+    }
+  });
+  return layers;
+}
+
 export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: Units): Insight[] {
   const out: Insight[] = [];
   const temps = binned(s.alt, s.temp, 200);
@@ -114,21 +133,8 @@ export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: 
     }
   }
 
-  const hum = binned(s.alt, s.hum, 100);
-  const low = hum.alt.map((a, i) => [a, hum.value[i]] as const).filter(([a]) => a < 12000);
-  if (low.length >= 20 && low[low.length - 1][0] >= 5000) {
-    const layers: [number, number][] = [];
-    let start: number | null = null;
-    low.forEach(([a, v], i) => {
-      const wet = v >= 90;
-      if (wet && start === null) start = a - 50;
-      const closing = start !== null && (!wet || i === low.length - 1);
-      if (closing) {
-        const top = wet ? a + 50 : low[i - 1][0] + 50;
-        if (top - start! >= 300) layers.push([start!, top]);
-        start = null;
-      }
-    });
+  const layers = cloudLayers(s);
+  if (layers) {
     if (layers.length) {
       const shown = layers.slice(0, 2).map(([a, b]) => `entre ${range(a, b, units)}`);
       out.push({
