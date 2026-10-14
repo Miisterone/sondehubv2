@@ -334,3 +334,12 @@ input[type='search']::-webkit-search-cancel-button {
     opacity: 0.8;
   }
 }
+
+.replay-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--primary);
+  border: 3px solid #ffffff;
+  pointer-events: none;
+}

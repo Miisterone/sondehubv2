@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, LocateFixed, MapPinned, Moon, RotateCcw, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
@@ -378,10 +377,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
             key={l.callsign}
             value={`station:${l.callsign}`}
             onSelect={() =>
-              run(() => {
-                useStore.getState().requestFly(l.lon, l.lat, 11);
-                toast(`Station ${l.callsign}`, { description: `${l.mobile ? 'Véhicule de poursuite' : 'Station fixe'} · vue ${ago(l.lastSeen, now)}` });
-              })
+              run(() => useStore.getState().selectListener(l.callsign, true))
             }
           >
             <MapIcon id={l.mobile ? 'chase' : 'listener'} size={20} />

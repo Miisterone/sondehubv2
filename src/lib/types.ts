@@ -33,14 +33,17 @@ export interface Frame {
 }
 
 /**
- * A compact track point: [lon, lat, alt, epochMs, temp, humidity, vel_v].
+ * A compact track point: [lon, lat, alt, epochMs, temp, humidity, vel_v, pressure].
  * Missing sensor values are NaN.
  */
-export type TrackPoint = [number, number, number, number, number, number, number];
+export type TrackPoint = [number, number, number, number, number, number, number, number];
 
 export interface ReceiverHit {
   callsign: string;
+  firstHeard?: number;
   lastHeard: number;
+  frames?: number;
+  heard?: [number, number, number, number, number][];
   snr?: number;
   rssi?: number;
   frequency?: number;
@@ -155,4 +158,12 @@ export interface Recovery {
   recoveredBy?: string;
   description?: string;
   datetime: number;
+}
+
+export interface PredictionSample {
+  at: number;
+  lat: number;
+  lon: number;
+  landingTime: number;
+  alt: number;
 }

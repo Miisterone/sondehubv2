@@ -61,7 +61,7 @@ export function selectedTrackFC(s: Sonde | undefined): FC<LineString> {
     const last = i === t.length - 1;
     if (Math.abs(t[i][2] - t[start][2]) >= 150 || i - start >= 20 || last) {
       const coords = t.slice(start, i + 1).map((p) => [p[0], p[1]]);
-      out.push(line(coords, { serial: s.serial, alt: (t[start][2] + t[i][2]) / 2 }));
+      out.push(line(coords, { serial: s.serial, alt: (t[start][2] + t[i][2]) / 2, t0: t[start][3] / 1000 }));
       start = i;
     }
   }
@@ -177,4 +177,22 @@ export function sitePointsFC(forecasts: SiteForecast[], past: PastFlight[]): FC<
     ...past.map((f) => pt(f.last.lon, f.last.lat, { kind: 'past', serial: f.serial, time: f.first.time, top: Math.round(f.top.alt), alt: Math.round(f.last.alt) })),
     ...forecasts.map((f, i) => pt(normLon(f.landing.lon), f.landing.lat, { kind: 'forecast', next: i === 0, label: shortWhen(f.launchTime) })),
   ]);
+}
+
+export function trackAt(track: Sonde['track'], tMs: number): [number, number] | null {
+  const n = track.length;
+  if (!n) return null;
+  if (tMs <= track[0][3]) return [track[0][0], track[0][1]];
+  if (tMs >= track[n - 1][3]) return [track[n - 1][0], track[n - 1][1]];
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (track[mid][3] <= tMs) lo = mid;
+    else hi = mid;
+  }
+  const a = track[lo];
+  const b = track[hi];
+  const k = b[3] > a[3] ? (tMs - a[3]) / (b[3] - a[3]) : 0;
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 }

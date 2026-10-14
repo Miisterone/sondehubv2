@@ -33,12 +33,15 @@ import type { Prediction, PredictionPoint, Sonde } from '@/lib/types';
 import { bearing, cardinal, compass, distance, elevation, towards } from '@/lib/geo';
 import { buildFlight, buildSounding } from '@/lib/flight';
 import { flightInsights } from '@/lib/insights';
+import { buildProfile } from '@/lib/atmo';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
 import { findLaunch, fmtHour, siteLabel, type Launch } from '@/lib/sonde';
 import { ALT_RAMP } from './MapView';
 import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
+import { ReplayBar } from './ReplayBar';
+import { AtmoIndices } from './AtmoIndices';
 import { IconButton, MapIcon, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
@@ -55,6 +58,9 @@ const SpeedChart = lazy(() => charts().then((m) => ({ default: m.SpeedChart })))
 const ProfileChart = lazy(() => charts().then((m) => ({ default: m.ProfileChart })));
 const SoundingCharts = lazy(() => charts().then((m) => ({ default: m.SoundingCharts })));
 const FlightTable = lazy(() => charts().then((m) => ({ default: m.FlightTable })));
+const SkewT = lazy(() => import('./SkewT').then((m) => ({ default: m.SkewT })));
+const WindProfile = lazy(() => import('./WindProfile').then((m) => ({ default: m.WindProfile })));
+const PredictionConvergence = lazy(() => import('./PredictionConvergence').then((m) => ({ default: m.PredictionConvergence })));
 
 const keepSelection = (e: KeyboardEvent) => e.stopPropagation();
 
@@ -84,7 +90,8 @@ export function SondeDetail({ serial }: { serial: string }) {
   const favourite = useStore((s) => s.settings.favourites.includes(serial));
   const recovery = useStore((s) => s.recoveries[serial]);
   const techOpen = useStore((s) => s.settings.techOpen);
-  const { select, selectSite, setFollow, requestFly, toggleFavourite, setSettings } = useStore.getState();
+  const predHistory = useStore((s) => s.predHistory[serial]);
+  const { select, selectSite, selectListener, setFollow, requestFly, toggleFavourite, setSettings } = useStore.getState();
   const [showReceivers, setShowReceivers] = useState(false);
   const [allReceivers, setAllReceivers] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -102,6 +109,10 @@ export function SondeDetail({ serial }: { serial: string }) {
   );
   const sounding = useMemo(
     () => (sonde ? buildSounding(sonde) : { alt: [], temp: [], hum: [] }),
+    [sonde?.track.length, sonde?.maxAltIdx, sonde?.detailed],
+  );
+  const profile = useMemo(
+    () => (sonde ? buildProfile(sonde) : null),
     [sonde?.track.length, sonde?.maxAltIdx, sonde?.detailed],
   );
   const insights = useMemo(
@@ -166,7 +177,12 @@ export function SondeDetail({ serial }: { serial: string }) {
         const d = pos ? distance(pos[0], pos[1], f.lat, f.lon) : undefined;
         const fresh = sonde.lastTime - r.lastHeard < 60_000;
         return (
-          <li key={r.callsign} className="flex items-center gap-3 px-3 py-2">
+          <li key={r.callsign}>
+            <button
+              type="button"
+              onClick={() => selectListener(r.callsign, true)}
+              className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+            >
             <MapIcon id={listeners[r.callsign]?.mobile ? 'chase' : 'listener'} size={20} className={fresh ? '' : 'opacity-40 grayscale'} />
             <div className="min-w-0 flex-1">
               <div className="text-foreground truncate text-[13px] font-semibold">{r.callsign}</div>
@@ -177,6 +193,7 @@ export function SondeDetail({ serial }: { serial: string }) {
               </div>
             </div>
             {withSignal && r.snr !== undefined && <SnrBar snr={r.snr} />}
+            </button>
           </li>
         );
       })}
@@ -350,6 +367,12 @@ export function SondeDetail({ serial }: { serial: string }) {
             <AltitudeLegend units={units} />
           </Section>
 
+          {flight.last > 2 && flight.x[flight.last] - flight.x[0] >= 120 && (
+            <Section title="Rejouer le vol" className="border-t pt-6">
+              <ReplayBar serial={sonde.serial} d={flight} units={units} />
+            </Section>
+          )}
+
           <Section
             title={
               <>
@@ -378,6 +401,25 @@ export function SondeDetail({ serial }: { serial: string }) {
               </Button>
             )}
           </Section>
+
+          {(flying || (predHistory?.length ?? 0) > 1) && (
+            <Section
+              title={
+                <>
+                  Fiabilité de la prévision
+                  <HelpHint title="Pourquoi la prévision bouge">
+                    Le point d’atterrissage est recalculé à chaque nouvelle mesure avec les vents prévus. Pendant la montée, une petite erreur sur l’altitude
+                    d’éclatement ou le vent déplace le point de plusieurs kilomètres ; pendant la descente, la prévision converge.
+                  </HelpHint>
+                </>
+              }
+              className="border-t pt-6"
+            >
+              <Suspense fallback={<div className="h-[260px]" />}>
+                <PredictionConvergence sonde={sonde} samples={predHistory ?? []} units={units} now={now} />
+              </Suspense>
+            </Section>
+          )}
 
           <Section title="Ce que mesure la sonde" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>} className="border-t pt-6">
             <div className="grid grid-cols-3 gap-4">
@@ -409,6 +451,47 @@ export function SondeDetail({ serial }: { serial: string }) {
               instant partout.
             </p>
           </Section>
+
+          {profile && (
+            <Section
+              title={
+                <>
+                  Émagramme
+                  <HelpHint title="Lire un Skew-T">
+                    Diagramme des météorologues : la pression (donc l’altitude) monte vers le haut, les isothermes sont inclinées à 45°. Quand la température (noir) et
+                    le point de rosée (bleu) se rapprochent, l’air est proche de la saturation : nuages probables. La particule de surface (pointillés) montre comment
+                    une bulle d’air soulevée se refroidit : à droite de la courbe de température, elle est plus chaude que son environnement et monte seule
+                    (instabilité, orages possibles).
+                  </HelpHint>
+                </>
+              }
+              className="border-t pt-6"
+            >
+              <Suspense fallback={<div className="h-[440px]" />}>
+                <SkewT profile={profile} units={units} />
+              </Suspense>
+              <AtmoIndices profile={profile} units={units} />
+            </Section>
+          )}
+
+          {profile && profile.winds.length >= 6 && (
+            <Section
+              title={
+                <>
+                  Vent en altitude
+                  <HelpHint title="Comment le vent est mesuré">
+                    La sonde n’a pas d’anémomètre : elle dérive avec l’air. Le vent de chaque couche de 250 m est déduit de son déplacement GPS pendant la montée, ce
+                    qui gomme le balancement sous le ballon.
+                  </HelpHint>
+                </>
+              }
+              className="border-t pt-6"
+            >
+              <Suspense fallback={<div className="h-[360px]" />}>
+                <WindProfile winds={profile.winds} units={units} syncKey={`vent-${sonde.serial}`} />
+              </Suspense>
+            </Section>
+          )}
 
           {showLanding && (
             <Section title={flying ? 'Où va-t-elle tomber ?' : 'Où se trouve-t-elle ?'} className="border-t pt-6">

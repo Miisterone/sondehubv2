@@ -20,6 +20,7 @@ import {
   sitePointsFC,
   sitesFC,
   sondeFeature,
+  trackAt,
   trackDeps,
   trackFeature,
 } from '../lib/mapData';
@@ -27,7 +28,6 @@ import { IncrementalSource, type Entry } from '../lib/incrementalSource';
 import { circleRing, viewForTimeZone } from '../lib/region';
 import { makeVisible } from '../lib/filter';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
-import { distance } from '../lib/geo';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
 setWorkerUrl(workerUrl);
@@ -590,9 +590,54 @@ export function MapView() {
       }
     });
 
+    const replayEl = document.createElement('div');
+    replayEl.className = 'replay-dot';
+    const replayMarker = new Marker({ element: replayEl });
+    let replayOn = false;
+    let replayPaintAt = 0;
+    const setTrackOpacity = (t: number | null) => {
+      for (const [id, full] of [
+        ['track-selected-line', 1],
+        ['track-selected-casing', 0.8],
+      ] as const) {
+        if (!map.getLayer(id)) continue;
+        map.setPaintProperty(id, 'line-opacity', t === null ? full : (['case', ['<=', ['get', 't0'], t], full, full * 0.2] as ExpressionSpecification));
+      }
+    };
+    const applyReplay = (s: ReturnType<typeof useStore.getState>, force = false) => {
+      const r = s.replay;
+      const sonde = r && s.selected === r.serial ? s.sondes[r.serial] : undefined;
+      const pos = r && sonde ? trackAt(sonde.track, r.t * 1000) : null;
+      if (!r || !pos) {
+        if (replayOn) {
+          replayMarker.remove();
+          replayOn = false;
+          setTrackOpacity(null);
+        }
+        return;
+      }
+      replayMarker.setLngLat(pos);
+      if (!replayOn) replayMarker.addTo(map);
+      replayOn = true;
+      const nowMs = performance.now();
+      if (force || !r.playing || nowMs - replayPaintAt > 150) {
+        replayPaintAt = nowMs;
+        setTrackOpacity(r.t);
+      }
+      if (s.follow) map.jumpTo({ center: pos });
+    };
+    const unsubReplay = useStore.subscribe((s, prev) => {
+      if (s.replay !== prev.replay || s.selected !== prev.selected || (s.replay && s.follow !== prev.follow)) applyReplay(s);
+    });
+    map.on('style.load', () => {
+      replayPaintAt = 0;
+      if (replayOn) applyReplay(useStore.getState(), true);
+    });
+
     // Follow mode: keep the selected sonde centred.
     const unsubFollow = useStore.subscribe((s, prev) => {
       if (!s.follow || !s.selected) return;
+      if (s.replay?.serial === s.selected) return;
       const cur = s.sondes[s.selected];
       if (!cur || (cur === prev.sondes[s.selected] && s.follow === prev.follow)) return;
       map.easeTo({ center: [cur.last.lon, cur.last.lat], duration: 900 });
@@ -618,21 +663,7 @@ export function MapView() {
 
     map.on('click', LISTENER_LAYERS, (e: MapLayerMouseEvent) => {
       const callsign = e.features?.[0]?.properties?.callsign as string;
-      const l = useStore.getState().listeners[callsign];
-      if (!l) return;
-      const me = useStore.getState().userLocation;
-      const rows = [
-        l.mobile ? 'Véhicule de poursuite' : 'Station de réception',
-        l.antenna && `Antenne : ${esc(l.antenna)}`,
-        l.software && `Logiciel : ${esc(l.software)}`,
-        l.alt !== undefined && `Altitude : ${Math.round(l.alt)} m`,
-        me && `Distance : ${(distance(me.lat, me.lon, l.lat, l.lon) / 1000).toFixed(1)} km`,
-        `Vu ${ago(l.lastSeen)}`,
-      ].filter(Boolean);
-      popup
-        .setLngLat([l.lon, l.lat])
-        .setHTML(`<div class="pp-title">${esc(l.callsign)}</div>${rows.map((r) => `<div class="pp-row">${r}</div>`).join('')}`)
-        .addTo(map);
+      if (callsign && useStore.getState().listeners[callsign]) useStore.getState().selectListener(callsign);
     });
 
     map.on('click', 'sites-icons', (e: MapLayerMouseEvent) => {
@@ -704,6 +735,8 @@ export function MapView() {
       unsubFly();
       unsubFollow();
       unsubHover();
+      unsubReplay();
+      replayMarker.remove();
       ring.remove();
       if (frame) cancelAnimationFrame(frame);
       map.remove();

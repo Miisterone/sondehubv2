@@ -30,6 +30,13 @@ Aucune clé d'API ni backend : l'application parle directement à l'API publique
 **Interface (shadcn/ui)**
 - Liste : recherche, filtres par phase, tri, favoris « Suivies » épinglés, mode **Près de moi** (sondes et atterrissages prévus dans un rayon de 25 à 200 km), navigation clavier.
 - Fiche sonde : résumé en langage clair, prédiction d'atterrissage avec compte à rebours et menu **Naviguer** (Google Maps, Waze, Plans, OSM), graphiques (altitude, sondage T°/HR, vitesse verticale), récepteurs avec SNR, bulles d'aide ⓘ sur le jargon.
+- **Prochains lâchers** : stations à moins de 400 km triées par heure de lâcher estimée (onglet Près de moi, et liste En vol vide).
+- **Rejouer le vol** : lecture accélérée (×60, ×300, ×1200) ou curseur, marqueur sur la carte, tracé parcouru mis en avant, suivi caméra.
+- **Émagramme Skew-T** : température, point de rosée, particule de surface, adiabatiques sèches et humides, rapport de mélange, barbules de vent ; pression mesurée ou recalculée (hypsométrie) quand la sonde n'a pas de capteur ; dépiquage des trames incohérentes entre stations.
+- **Indices** : CAPE, CIN, LI, K, Total Totals, LCL, isotherme 0 °C, eau précipitable, tropopause, cisaillement 0–1 et 0–6 km.
+- **Vent en altitude** : vent moyen par couche de 250 m déduit du déplacement GPS, profil vitesse/direction et hodographe.
+- **Fiabilité de la prévision** : historique des prédictions d'atterrissage pendant la session et écart dans le temps.
+- **Fiche station** : sondes captées, portée max, SNR, élévation minimale, diagramme polaire de couverture (depuis la carte, la fiche sonde ou ⌘K).
 - **Alertes d'atterrissage** près de vous et pour les sondes suivies (toasts + notifications système).
 - **Signaler une récupération** directement sur SondeHub (publication publique, après confirmation).
 - Palette de commandes **⌘K / Ctrl K** : sondes, stations, sites, actions.
@@ -47,6 +54,8 @@ src/
   store/useStore.ts état global (zustand) : sondes, prédictions, réglages
   lib/alerts.ts     alertes d'atterrissage (activation, permissions)
   lib/geolocation.ts position de l'utilisateur partagée
+  lib/atmo.ts       thermodynamique : profil, pression, adiabatiques, indices, vent par couche
+  lib/flight.ts     données de vol pour les graphiques, interpolation du replay
   components/       MapView, Sidebar, SondeDetail, CommandPalette, Notifiers, RecoveryDialog…
   components/ui/    composants shadcn/ui
 ```

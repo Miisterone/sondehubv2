@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { FlightPhase, Frame, LaunchSite, Listener, PastFlight, Prediction, Recovery, ReceiverHit, ReversePrediction, SiteForecast, Sonde, TrackPoint } from '../lib/types';
+import type { FlightPhase, Frame, LaunchSite, Listener, PastFlight, Prediction, PredictionSample, Recovery, ReceiverHit, ReversePrediction, SiteForecast, Sonde, TrackPoint } from '../lib/types';
 import type { TelemetryResponse } from '../lib/api';
 import { parseLatLon } from '../lib/geo';
 import type { Units } from '../lib/format';
@@ -188,13 +188,33 @@ function insertPoint(track: TrackPoint[], p: TrackPoint, minGap: number): boolea
   return true;
 }
 
+const HEARD_GAP_MS = 60_000;
+const HEARD_MAX = 120;
+
+function recordHeard(prev: ReceiverHit | undefined, f: Frame, t: number, snr: number | undefined): ReceiverHit['heard'] {
+  const list = prev?.heard ?? [];
+  const last = list[list.length - 1];
+  if (last && Math.abs(t - last[3]) < HEARD_GAP_MS) return list;
+  const next = [...list, [f.lon, f.lat, f.alt, t, snr ?? NaN] as [number, number, number, number, number]].sort((a, b) => a[3] - b[3]);
+  return next.length > HEARD_MAX ? next.filter((_, i) => i % 2 === 0 || i === next.length - 1) : next;
+}
+
 function recordReceiver(s: Sonde, f: Frame, t: number) {
   const add = (raw: string | undefined, extra: Partial<ReceiverHit>) => {
     if (!raw) return;
     const callsign = decodeEntities(raw);
     const prev = s.receivers[callsign];
-    if (prev && prev.lastHeard > t) return;
-    s.receivers[callsign] = { ...prev, callsign, lastHeard: t, ...extra };
+    const base = {
+      callsign,
+      firstHeard: Math.min(prev?.firstHeard ?? t, t),
+      frames: (prev?.frames ?? 0) + 1,
+      heard: recordHeard(prev, f, t, extra.snr),
+    };
+    if (prev && prev.lastHeard > t) {
+      s.receivers[callsign] = { ...prev, ...base };
+      return;
+    }
+    s.receivers[callsign] = { ...prev, ...base, lastHeard: t, ...extra };
   };
   add(f.uploader_callsign, {
     snr: f.snr,
@@ -215,7 +235,8 @@ function applyFrame(s: Sonde, f: Frame, minGap: number): Sonde {
   const num = (v: number | undefined) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
   // Some decoders report -273 °C or 0 % when the sensor is absent.
   const temp = num(f.temp) > -270 ? num(f.temp) : NaN;
-  const p: TrackPoint = [f.lon, f.lat, f.alt, t, temp, num(f.humidity), num(f.vel_v)];
+  const pressure = num(f.pressure) > 0 ? num(f.pressure) : NaN;
+  const p: TrackPoint = [f.lon, f.lat, f.alt, t, temp, num(f.humidity), num(f.vel_v), pressure];
   const inserted = insertPoint(s.track, p, minGap);
   if (inserted && f.alt > s.maxAlt) {
     s.maxAlt = f.alt;
@@ -255,6 +276,15 @@ export interface SiteOverlay {
   past: PastFlight[];
 }
 
+export interface Replay {
+  serial: string;
+  t: number;
+  playing: boolean;
+  speed: number;
+}
+
+const PRED_HISTORY_MAX = 240;
+
 export interface UserLocation {
   lat: number;
   lon: number;
@@ -266,6 +296,7 @@ interface State {
   settings: Settings;
   sondes: Record<string, Sonde>;
   predictions: Record<string, Prediction>;
+  predHistory: Record<string, PredictionSample[]>;
   listeners: Record<string, Listener>;
   sites: LaunchSite[];
   recoveries: Record<string, Recovery>;
@@ -273,6 +304,8 @@ interface State {
 
   selected: string | null;
   selectedSite: string | null;
+  selectedListener: string | null;
+  replay: Replay | null;
   siteOverlay: SiteOverlay | null;
   hovered: string | null;
   follow: boolean;
@@ -305,6 +338,8 @@ interface State {
   setReverse: (r: ReversePrediction[], replace: boolean) => void;
   select: (serial: string | null, fly?: boolean) => void;
   selectSite: (id: string | null, fly?: boolean) => void;
+  selectListener: (callsign: string | null, fly?: boolean) => void;
+  setReplay: (r: Replay | null) => void;
   setSiteOverlay: (o: SiteOverlay | null) => void;
   setHovered: (serial: string | null) => void;
   setFollow: (v: boolean) => void;
@@ -322,6 +357,7 @@ export const useStore = create<State>((set, get) => ({
   settings: loadSettings(),
   sondes: {},
   predictions: {},
+  predHistory: {},
   listeners: {},
   sites: [],
   recoveries: {},
@@ -329,6 +365,8 @@ export const useStore = create<State>((set, get) => ({
 
   selected: null,
   selectedSite: null,
+  selectedListener: null,
+  replay: null,
   siteOverlay: null,
   hovered: null,
   follow: false,
@@ -409,9 +447,34 @@ export const useStore = create<State>((set, get) => ({
   },
 
   setPredictions: (preds, replace) => {
-    const predictions = replace ? {} : { ...get().predictions };
-    for (const p of preds) predictions[p.serial] = p;
-    set({ predictions });
+    const prev = get().predictions;
+    const predictions = replace ? {} : { ...prev };
+    const sondes = get().sondes;
+    let predHistory = get().predHistory;
+    let historyChanged = false;
+    for (const p of preds) {
+      predictions[p.serial] = p;
+      const old = prev[p.serial];
+      if (!p.landing || !Number.isFinite(p.time) || p.landed) continue;
+      if (old && old.time === p.time && old.landing?.lat === p.landing.lat && old.landing?.lon === p.landing.lon) continue;
+      const list = predHistory[p.serial] ?? [];
+      const last = list[list.length - 1];
+      if (last && last.at >= p.time) continue;
+      if (!historyChanged) {
+        predHistory = { ...predHistory };
+        historyChanged = true;
+      }
+      const sample: PredictionSample = {
+        at: p.time,
+        lat: p.landing.lat,
+        lon: p.landing.lon > 180 ? p.landing.lon - 360 : p.landing.lon,
+        landingTime: p.landing.time * 1000,
+        alt: sondes[p.serial]?.last.alt ?? NaN,
+      };
+      const next = [...list, sample];
+      predHistory[p.serial] = next.length > PRED_HISTORY_MAX ? next.slice(next.length - PRED_HISTORY_MAX) : next;
+    }
+    set(historyChanged ? { predictions, predHistory } : { predictions });
   },
 
   setListeners: (ls) => {
@@ -437,8 +500,18 @@ export const useStore = create<State>((set, get) => ({
     set({ reverse });
   },
 
+  selectListener: (callsign, fly = false) => {
+    set(callsign ? { selectedListener: callsign, selected: null, selectedSite: null, follow: false, siteOverlay: null, replay: null } : { selectedListener: null });
+    if (callsign && fly) {
+      const l = get().listeners[callsign];
+      if (l) get().requestFly(l.lon, l.lat, 8);
+    }
+  },
+
+  setReplay: (replay) => set({ replay }),
+
   selectSite: (id, fly = false) => {
-    set(id ? { selectedSite: id, selected: null, follow: false, siteOverlay: null } : { selectedSite: null, siteOverlay: null });
+    set(id ? { selectedSite: id, selected: null, selectedListener: null, follow: false, siteOverlay: null, replay: null } : { selectedSite: null, siteOverlay: null });
     if (id && fly) {
       const site = get().sites.find((s) => s.id === id);
       if (site) get().requestFly(site.lon, site.lat, 8);
@@ -448,7 +521,13 @@ export const useStore = create<State>((set, get) => ({
   setSiteOverlay: (siteOverlay) => set({ siteOverlay }),
 
   select: (serial, fly = false) => {
-    set(serial ? { selected: serial, selectedSite: null, siteOverlay: null } : { selected: null, follow: false });
+    const replay = get().replay;
+    const keepReplay = replay && replay.serial === serial ? replay : null;
+    set(
+      serial
+        ? { selected: serial, selectedSite: null, selectedListener: null, siteOverlay: null, replay: keepReplay }
+        : { selected: null, follow: false, replay: null },
+    );
     if (serial && fly) {
       const s = get().sondes[serial];
       if (s) get().requestFly(s.last.lon, s.last.lat, 10);
@@ -482,6 +561,16 @@ export const useStore = create<State>((set, get) => ({
         changed = true;
       } else sondes[serial] = s;
     }
-    set(changed ? { sondes, now } : { now });
+    if (!changed) {
+      set({ now });
+      return;
+    }
+    const history = get().predHistory;
+    const stale = Object.keys(history).filter((serial) => !sondes[serial]);
+    if (stale.length) {
+      const predHistory = { ...history };
+      for (const serial of stale) delete predHistory[serial];
+      set({ sondes, now, predHistory });
+    } else set({ sondes, now });
   },
 }));

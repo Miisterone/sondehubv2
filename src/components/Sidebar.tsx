@@ -25,8 +25,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { IconButton, Logo, MapIcon, Segmented, cx } from './ui';
 import { SondeDetail } from './SondeDetail';
 import { SiteDetail } from './SiteDetail';
+import { ListenerDetail } from './ListenerDetail';
 import { StatusPill } from './StatusPill';
 import { FlightGuide } from './FlightGuide';
+import { UpcomingLaunches } from './UpcomingLaunches';
 import { getMap } from './MapView';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
@@ -104,6 +106,7 @@ async function geoGranted(): Promise<boolean> {
 export function Sidebar({ onAbout }: { onAbout: () => void }) {
   const selected = useStore((s) => s.selected);
   const selectedSite = useStore((s) => s.selectedSite);
+  const selectedListener = useStore((s) => s.selectedListener);
   const isMobile = useIsMobile();
   const [snap, setSnap] = useState(PEEK);
   const [tab, setTabState] = useState<Tab>(readTab);
@@ -116,8 +119,8 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (isMobile && (selected || selectedSite)) setSnap((s) => (s === PEEK ? HALF : s));
-  }, [selected, selectedSite, isMobile]);
+    if (isMobile && (selected || selectedSite || selectedListener)) setSnap((s) => (s === PEEK ? HALF : s));
+  }, [selected, selectedSite, selectedListener, isMobile]);
 
   const dismissHint = useCallback(() => {
     setHintSeen(true);
@@ -179,6 +182,8 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
     <SondeDetail serial={selected} />
   ) : selectedSite ? (
     <SiteDetail id={selectedSite} />
+  ) : selectedListener ? (
+    <ListenerDetail callsign={selectedListener} />
   ) : (
     <ListPanel
       onAbout={onAbout}
@@ -727,6 +732,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         ) : (
           groups.map(renderGroup)
         )}
+        <UpcomingLaunches className="mt-2 border-t" />
       </>
     );
   } else if (tab === 'following') {
@@ -790,6 +796,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         ) : (
           groups.filter((g) => g.id !== 'ground').map(renderGroup)
         )}
+        {!loading && flyingCount === 0 && !filtered && <UpcomingLaunches className="border-t" />}
         {flying.ground.length > 0 && (
           <>
             <button

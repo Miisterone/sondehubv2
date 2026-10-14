@@ -1,5 +1,6 @@
 import type { Prediction, Sonde } from './types';
 import { bearing, distance } from './geo';
+import { despikeValues } from './atmo';
 
 const WINDOW_S = 10;
 const SMOOTH_S = 20;
@@ -201,6 +202,8 @@ export function buildSounding(sonde: Sonde): Sounding {
     out.temp.push(fin(r[1]));
     out.hum.push(fin(r[2]));
   }
+  out.temp = despikeValues(out.temp, 2.5);
+  out.hum = despikeValues(out.hum, 15);
   return out;
 }
 
@@ -221,4 +224,46 @@ export function sampleTimes(d: FlightData, stepS: number): number[] {
   const end2 = d.x.length - 1;
   if (!out.includes(end2)) out.push(end2);
   return out.sort((a, b) => a - b);
+}
+
+export interface ReplayPoint {
+  t: number;
+  lat: number;
+  lon: number;
+  alt: number;
+  vv: number | null;
+  hs: number | null;
+  hdg: number | null;
+  temp: number | null;
+  index: number;
+}
+
+export function replayAt(d: FlightData, t: number): ReplayPoint | null {
+  const n = d.last + 1;
+  if (n <= 0) return null;
+  const xs = d.x;
+  const tt = Math.max(xs[0], Math.min(xs[n - 1], t));
+  let lo = 0;
+  let hi = n - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (xs[mid] <= tt) lo = mid;
+    else hi = mid - 1;
+  }
+  const i = lo;
+  const j = Math.min(n - 1, i + 1);
+  const span = xs[j] - xs[i];
+  const k = span > 0 ? (tt - xs[i]) / span : 0;
+  const lerp = (a: number | null, b: number | null) => (a === null ? b : b === null ? a : a + (b - a) * k);
+  return {
+    t: tt,
+    lat: d.lat[i] + (d.lat[j] - d.lat[i]) * k,
+    lon: d.lon[i] + (d.lon[j] - d.lon[i]) * k,
+    alt: lerp(d.alt[i], d.alt[j]) ?? 0,
+    vv: lerp(d.vv[i], d.vv[j]),
+    hs: lerp(d.hs[i], d.hs[j]),
+    hdg: d.hdg[k < 0.5 ? i : j] ?? d.hdg[i],
+    temp: lerp(d.temp[i], d.temp[j]),
+    index: k < 0.5 ? i : j,
+  };
 }

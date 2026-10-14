@@ -137,6 +137,7 @@ export default function App() {
       const st = useStore.getState();
       if (e.key === 'Escape' && st.selected) st.select(null);
       else if (e.key === 'Escape' && st.selectedSite) st.selectSite(null);
+      else if (e.key === 'Escape' && st.selectedListener) st.selectListener(null);
       if ((e.key === 'f' || e.key === 'F') && st.selected) st.setFollow(!st.follow);
     };
     window.addEventListener('keydown', onKey);
