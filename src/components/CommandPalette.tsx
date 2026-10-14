@@ -397,7 +397,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
     sections.push(
       <CommandGroup key="sites" heading="Sites de lâcher">
         {siteHits.map((site) => (
-          <CommandItem key={site.id} value={`site:${site.id}`} onSelect={() => run(() => useStore.getState().requestFly(site.lon, site.lat, 10))}>
+          <CommandItem key={site.id} value={`site:${site.id}`} onSelect={() => run(() => useStore.getState().selectSite(site.id, true))}>
             <MapIcon id="site" size={18} />
             <span className="truncate">{site.name}</span>
             {site.types.length > 0 && <span className="text-muted-foreground ml-auto max-w-[40%] shrink-0 truncate text-xs">{site.types.slice(0, 3).join(', ')}</span>}

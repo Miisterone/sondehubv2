@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { FlightData } from '@/lib/flight';
 import type { FlightPhase, Prediction } from '@/lib/types';
 import { ago, fmtAltShort, fmtDuration, fmtVSpeed, relative, type Units } from '@/lib/format';
+import { siteLabel, type Launch } from '@/lib/sonde';
 import { cx } from './ui';
 
 const clock = (s: number) => new Date(s * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -19,7 +20,7 @@ export function FlightTimeline({
   prediction: Prediction | null;
   units: Units;
   now: number;
-  launch: { site: string | null; fromGround: boolean } | null;
+  launch: Launch | null;
 }) {
   if (d.last < 1) return null;
   const t0 = d.x[0];
@@ -32,6 +33,7 @@ export function FlightTimeline({
   const tEnd = tl ?? tn;
   const span = Math.max(1, tEnd - t0);
   const ascEnd = tb ?? tEnd;
+  const start = launch?.estimated ? Math.min(t0, launch.t / 1000) : t0;
   const ascFrac = (ascEnd - t0) / span;
   const descFrac = tb !== null ? (tEnd - tb) / span : 0;
   const nowFrac = Math.min(1, (tn - t0) / span);
@@ -48,7 +50,7 @@ export function FlightTimeline({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3 text-[12.5px]">
           <span>
-            <span className="text-foreground font-semibold">Montée</span> {fmtDuration((ascEnd - t0) * 1000)}
+            <span className="text-foreground font-semibold">Montée</span> {fmtDuration((ascEnd - start) * 1000)}
             {tb === null && !ended ? ' et plus' : ''}
           </span>
           {tb !== null && (
@@ -85,9 +87,10 @@ export function FlightTimeline({
 
       <div className="grid grid-cols-3 gap-4">
         <Event
-          label={launch?.fromGround === false ? 'Premier signal' : 'Lâcher'}
-          value={clock(t0)}
-          sub={launch?.site ?? ago(t0 * 1000, now)}
+          label={launch?.estimated ? 'Lâcher estimé' : launch?.fromGround === false ? 'Premier signal' : 'Lâcher'}
+          value={clock(start)}
+          sub={launch?.site ? siteLabel(launch.site) : ago(start * 1000, now)}
+          muted={launch?.estimated}
         />
         <Event
           label="Éclatement"

@@ -1,11 +1,11 @@
 import type { MqttClient } from 'mqtt';
-import { normaliseListener, normalisePrediction, normaliseRecovery, type RawRecovery, type RawWsPrediction } from './api';
-import type { Frame, Listener, Prediction, Recovery } from './types';
+import { normaliseListener, normalisePrediction, normaliseRecovery, normaliseReverse, type RawRecovery, type RawReverse, type RawWsPrediction } from './api';
+import type { Frame, Listener, Prediction, Recovery, ReversePrediction } from './types';
 import { useStore } from '../store/useStore';
 
 const WS_URL = 'wss://ws-reader.v2.sondehub.org/';
 /** `batch` carries every telemetry frame, grouped — far fewer messages than `sondes/#`. */
-const TOPICS = ['batch', 'prediction/#', 'listener/#', 'recovery/#'];
+const TOPICS = ['batch', 'prediction/#', 'reverse-prediction/#', 'listener/#', 'recovery/#'];
 const FLUSH_MS = 1000;
 const RATE_WINDOW_S = 10;
 
@@ -19,6 +19,7 @@ export function startLiveFeed(): () => void {
   let preds: Prediction[] = [];
   let listeners: Listener[] = [];
   let recoveries: Recovery[] = [];
+  let reverse: ReversePrediction[] = [];
   const rateBuckets: number[] = new Array(RATE_WINDOW_S).fill(0);
   let bucket = 0;
   let paused = false;
@@ -51,6 +52,9 @@ export function startLiveFeed(): () => void {
           frames.push(...(data as Frame[]));
           rateBuckets[bucket] += data.length;
         }
+      } else if (topic.startsWith('reverse-prediction/')) {
+        const r = normaliseReverse(data as RawReverse);
+        if (r) reverse.push(r);
       } else if (topic.startsWith('prediction/')) {
         const p = normalisePrediction(data as RawWsPrediction);
         if (p) preds.push(p);
@@ -95,6 +99,10 @@ export function startLiveFeed(): () => void {
     if (recoveries.length) {
       s.setRecoveries(recoveries, false);
       recoveries = [];
+    }
+    if (reverse.length) {
+      s.setReverse(reverse, false);
+      reverse = [];
     }
   }, FLUSH_MS);
 

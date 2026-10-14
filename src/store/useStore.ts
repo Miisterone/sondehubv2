@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { FlightPhase, Frame, LaunchSite, Listener, Prediction, Recovery, ReceiverHit, Sonde, TrackPoint } from '../lib/types';
+import type { FlightPhase, Frame, LaunchSite, Listener, PastFlight, Prediction, Recovery, ReceiverHit, ReversePrediction, SiteForecast, Sonde, TrackPoint } from '../lib/types';
 import type { TelemetryResponse } from '../lib/api';
 import { parseLatLon } from '../lib/geo';
 import type { Units } from '../lib/format';
@@ -251,6 +251,12 @@ function recomputeMax(s: Sonde) {
   s.maxAltIdx = idx;
 }
 
+export interface SiteOverlay {
+  site: string;
+  forecasts: SiteForecast[];
+  past: PastFlight[];
+}
+
 export interface UserLocation {
   lat: number;
   lon: number;
@@ -265,8 +271,11 @@ interface State {
   listeners: Record<string, Listener>;
   sites: LaunchSite[];
   recoveries: Record<string, Recovery>;
+  reverse: Record<string, ReversePrediction>;
 
   selected: string | null;
+  selectedSite: string | null;
+  siteOverlay: SiteOverlay | null;
   hovered: string | null;
   follow: boolean;
   query: string;
@@ -295,7 +304,10 @@ interface State {
   setListeners: (ls: Listener[]) => void;
   setSites: (s: LaunchSite[]) => void;
   setRecoveries: (r: Recovery[], replace: boolean) => void;
+  setReverse: (r: ReversePrediction[], replace: boolean) => void;
   select: (serial: string | null, fly?: boolean) => void;
+  selectSite: (id: string | null, fly?: boolean) => void;
+  setSiteOverlay: (o: SiteOverlay | null) => void;
   setHovered: (serial: string | null) => void;
   setFollow: (v: boolean) => void;
   setQuery: (q: string) => void;
@@ -315,8 +327,11 @@ export const useStore = create<State>((set, get) => ({
   listeners: {},
   sites: [],
   recoveries: {},
+  reverse: {},
 
   selected: null,
+  selectedSite: null,
+  siteOverlay: null,
   hovered: null,
   follow: false,
   query: '',
@@ -418,8 +433,24 @@ export const useStore = create<State>((set, get) => ({
     set({ recoveries });
   },
 
+  setReverse: (r, replace) => {
+    const reverse = replace ? {} : { ...get().reverse };
+    for (const x of r) reverse[x.serial] = x;
+    set({ reverse });
+  },
+
+  selectSite: (id, fly = false) => {
+    set(id ? { selectedSite: id, selected: null, follow: false, siteOverlay: null } : { selectedSite: null, siteOverlay: null });
+    if (id && fly) {
+      const site = get().sites.find((s) => s.id === id);
+      if (site) get().requestFly(site.lon, site.lat, 8);
+    }
+  },
+
+  setSiteOverlay: (siteOverlay) => set({ siteOverlay }),
+
   select: (serial, fly = false) => {
-    set({ selected: serial, follow: serial ? get().follow : false });
+    set(serial ? { selected: serial, selectedSite: null, siteOverlay: null } : { selected: null, follow: false });
     if (serial && fly) {
       const s = get().sondes[serial];
       if (s) get().requestFly(s.last.lon, s.last.lat, 10);

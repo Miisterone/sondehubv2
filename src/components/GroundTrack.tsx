@@ -34,6 +34,7 @@ export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightDa
   const t = chartTheme(theme);
   const [hover, setHover] = useState<number | null>(null);
   const timer = useRef(0);
+  const airborne = (d.alt[0] ?? 0) >= 3000;
 
   const geo = useMemo(() => {
     if (width === 0 || d.x.length < 2) return null;
@@ -143,7 +144,7 @@ export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightDa
     for (const j of [0, d.last, d.burst, d.burstP, d.landingP]) {
       if (j !== null) placed.push({ x: geo.sx[j] - 7, y: geo.sy[j] - 7, w: 14, h: 14 });
     }
-    addLabel(0, 'Lâcher');
+    addLabel(0, airborne ? 'Premier signal' : 'Lâcher');
     if (d.landingP !== null) addLabel(d.landingP, 'Atterrissage prévu', 'end');
     if (d.burst !== null) addLabel(d.burst, 'Éclatement');
     if (d.burstP !== null) addLabel(d.burstP, 'Éclatement prévu');
@@ -233,7 +234,7 @@ export function GroundTrack({ d, units, now, live, height = 250 }: { d: FlightDa
           <svg width="12" height="12" aria-hidden>
             <circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" strokeWidth="2" className="text-foreground" />
           </svg>
-          Lâcher
+          {airborne ? 'Premier signal' : 'Lâcher'}
         </span>
         <span className="flex items-center gap-1.5">
           <svg width="12" height="12" aria-hidden>

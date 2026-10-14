@@ -9,7 +9,7 @@ import { WelcomeCard } from './components/WelcomeCard';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { useStore } from './store/useStore';
-import { fetchListeners, fetchPredictions, fetchRecoveries, fetchSites, fetchSondeHistory, fetchTelemetry } from './lib/api';
+import { fetchListeners, fetchPredictions, fetchRecoveries, fetchReverse, fetchSites, fetchSondeHistory, fetchTelemetry } from './lib/api';
 import { startLiveFeed } from './lib/live';
 
 const PREDICTIONS_REFRESH_MS = 60_000;
@@ -43,6 +43,9 @@ export default function App() {
           if (ctrl.signal.aborted) return;
           st.setLoading(false, `Impossible de charger les sondes : ${(e as Error).message}`);
         });
+      fetchReverse(duration, ctrl.signal)
+        .then((r) => useStore.getState().setReverse(r, true))
+        .catch(() => {});
     };
     load();
     let hiddenAt = 0;
@@ -133,6 +136,7 @@ export default function App() {
       if ((e.target as HTMLElement).closest?.('input, textarea, select, [contenteditable="true"]') || e.metaKey || e.ctrlKey) return;
       const st = useStore.getState();
       if (e.key === 'Escape' && st.selected) st.select(null);
+      else if (e.key === 'Escape' && st.selectedSite) st.selectSite(null);
       if ((e.key === 'f' || e.key === 'F') && st.selected) st.setFollow(!st.follow);
     };
     window.addEventListener('keydown', onKey);

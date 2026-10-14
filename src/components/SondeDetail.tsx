@@ -30,11 +30,12 @@ import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
 import { ago, fmtAlt, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtFreq, fmtHSpeed, fmtNum, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import type { Prediction, PredictionPoint, Sonde } from '@/lib/types';
-import { bearing, compass, distance, elevation, towards } from '@/lib/geo';
+import { bearing, cardinal, compass, distance, elevation, towards } from '@/lib/geo';
 import { buildFlight, buildSounding } from '@/lib/flight';
+import { flightInsights } from '@/lib/insights';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
-import { findLaunch } from '@/lib/sonde';
+import { findLaunch, fmtHour, siteLabel, type Launch } from '@/lib/sonde';
 import { ALT_RAMP } from './MapView';
 import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
@@ -79,19 +80,20 @@ export function SondeDetail({ serial }: { serial: string }) {
   const listeners = useStore((s) => s.listeners);
   const now = useStore((s) => s.now);
   const sites = useStore((s) => s.sites);
+  const reverse = useStore((s) => s.reverse[serial]);
   const favourite = useStore((s) => s.settings.favourites.includes(serial));
   const recovery = useStore((s) => s.recoveries[serial]);
   const techOpen = useStore((s) => s.settings.techOpen);
-  const { select, setFollow, requestFly, toggleFavourite, setSettings } = useStore.getState();
+  const { select, selectSite, setFollow, requestFly, toggleFavourite, setSettings } = useStore.getState();
   const [showReceivers, setShowReceivers] = useState(false);
   const [allReceivers, setAllReceivers] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [trackView, setTrackView] = useState<TrackView>('plan');
 
   const launch = useMemo(
-    () => (sonde ? findLaunch(sonde, sites) : null),
+    () => (sonde ? findLaunch(sonde, sites, reverse) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sonde?.track[0], sites],
+    [sonde?.track[0], sites, reverse],
   );
 
   const flight = useMemo(
@@ -101,6 +103,11 @@ export function SondeDetail({ serial }: { serial: string }) {
   const sounding = useMemo(
     () => (sonde ? buildSounding(sonde) : { alt: [], temp: [], hum: [] }),
     [sonde?.track.length, sonde?.maxAltIdx, sonde?.detailed],
+  );
+  const insights = useMemo(
+    () => (sonde && flight ? flightInsights(sonde, sounding, flight, units) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sonde?.phase, sonde?.maxAlt, sounding, flight, units],
   );
 
   if (!sonde || !flight) {
@@ -353,6 +360,23 @@ export function SondeDetail({ serial }: { serial: string }) {
             className="border-t pt-6"
           >
             <FlightTimeline d={flight} phase={sonde.phase} prediction={useful ? prediction : null} units={units} now={now} launch={launch} />
+            {launch?.estimated && (
+              <p className="text-[12.5px] leading-relaxed">
+                Cette sonde a été captée pour la première fois en vol, à {fmtAltShort(sonde.track[0][2], units)}. En remontant les vents jusqu’au sol, SondeHub estime
+                qu’elle a été lâchée vers {fmtHour(launch.t)}
+                {launch.site
+                  ? ` depuis ${siteLabel(launch.site)}`
+                  : launch.near
+                    ? `, à ${fmtDist(launch.near.d, units)} ${cardinal(launch.near.bearing)} de ${siteLabel(launch.near.site)}`
+                    : ''}
+                . Le trajet estimé est tracé en pointillés sur la carte.
+              </p>
+            )}
+            {launch?.siteId && launch.site && (
+              <Button variant="link" size="xs" className="-ml-2 h-auto text-[13px] font-normal" onClick={() => selectSite(launch.siteId, true)}>
+                Voir le site de lâcher : {siteLabel(launch.site)}
+              </Button>
+            )}
           </Section>
 
           <Section title="Ce que mesure la sonde" right={<HelpHint title={HELP.sensors.title} align="end">{HELP.sensors.text}</HelpHint>} className="border-t pt-6">
@@ -361,11 +385,29 @@ export function SondeDetail({ serial }: { serial: string }) {
               <Stat icon={<Droplets />} label="Humidité" value={fmtNum(f.humidity, ' %', 0)} sub="de l’air" />
               <Stat icon={<Gauge />} label="Pression" value={fmtNum(f.pressure, ' hPa', 0)} sub={pressureSub(f.pressure)} />
             </div>
+            {insights.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-[14px] font-semibold">Ce que ce vol nous apprend</h4>
+                <ul className="divide-y rounded-md border">
+                  {insights.map((x) => (
+                    <li key={x.id} className="px-4 py-3">
+                      <div className="text-foreground text-[13.5px] font-semibold">{x.title}</div>
+                      <p className="mt-0.5 text-[13px] leading-relaxed">{x.text}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {hasSounding && (
               <Suspense fallback={<div className="h-[340px]" />}>
                 <SoundingCharts s={sounding} units={units} syncKey={`sondage-${sonde.serial}`} />
               </Suspense>
             )}
+            <p className="text-[12.5px] leading-relaxed">
+              <span className="text-foreground font-semibold">À quoi ça sert ?</span> Ces profils de température, d’humidité et de vent alimentent les modèles de
+              prévision météo. Près de 900 stations dans le monde lâchent un ballon chaque jour, en général vers 0 h et 12 h UTC, pour mesurer l’atmosphère au même
+              instant partout.
+            </p>
           </Section>
 
           {showLanding && (
@@ -598,7 +640,7 @@ async function share(sonde: Sonde, landing: PredictionPoint | null, now: number,
 
 function summarise(
   sonde: Sonde,
-  launch: { t: number; site: string | null; fromGround: boolean } | null,
+  launch: Launch | null,
   landing: PredictionPoint | null,
   prediction: Prediction | undefined,
   now: number,
@@ -607,7 +649,15 @@ function summarise(
   const f = sonde.last;
   const alt = fmtAltShort(f.alt, units);
   const launched = (e: '' | 'e') => {
-    const where = launch?.site ? ` depuis ${launch.site}` : '';
+    if (launch?.estimated) {
+      const where = launch.site
+        ? ` depuis ${siteLabel(launch.site)}`
+        : launch.near
+          ? ` à ${fmtDist(launch.near.d, units)} ${cardinal(launch.near.bearing)} de ${siteLabel(launch.near.site)}`
+          : '';
+      return `probablement lâché${e}${where} ${ago(launch.t, now)}`;
+    }
+    const where = launch?.site ? ` depuis ${siteLabel(launch.site)}` : '';
     const when = launch?.fromGround ? ` ${ago(launch.t, now)}` : '';
     return where || when ? `lâché${e}${where}${when}` : '';
   };

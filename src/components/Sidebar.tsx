@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { IconButton, Logo, MapIcon, Segmented, cx } from './ui';
 import { SondeDetail } from './SondeDetail';
+import { SiteDetail } from './SiteDetail';
 import { StatusPill } from './StatusPill';
 import { FlightGuide } from './FlightGuide';
 import { getMap } from './MapView';
@@ -102,6 +103,7 @@ async function geoGranted(): Promise<boolean> {
 
 export function Sidebar({ onAbout }: { onAbout: () => void }) {
   const selected = useStore((s) => s.selected);
+  const selectedSite = useStore((s) => s.selectedSite);
   const isMobile = useIsMobile();
   const [snap, setSnap] = useState(PEEK);
   const [tab, setTabState] = useState<Tab>(readTab);
@@ -114,8 +116,8 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (isMobile && selected) setSnap((s) => (s === PEEK ? HALF : s));
-  }, [selected, isMobile]);
+    if (isMobile && (selected || selectedSite)) setSnap((s) => (s === PEEK ? HALF : s));
+  }, [selected, selectedSite, isMobile]);
 
   const dismissHint = useCallback(() => {
     setHintSeen(true);
@@ -175,6 +177,8 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
 
   const content = selected ? (
     <SondeDetail serial={selected} />
+  ) : selectedSite ? (
+    <SiteDetail id={selectedSite} />
   ) : (
     <ListPanel
       onAbout={onAbout}
@@ -306,14 +310,25 @@ function sentence(parts: (string | null | undefined | false)[]): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+function originText(launch: Launch | null, me: UserLocation | null, units: Units, now: number): string | null {
+  if (!launch) return null;
+  let text: string | null = null;
+  if (launch.fromGround) text = launch.site ? `lâchée de ${siteLabel(launch.site)}` : me ? null : 'lâchée';
+  else if (launch.estimated) {
+    if (launch.site) text = `probablement lâchée de ${siteLabel(launch.site)}`;
+    else if (launch.near) text = `probablement lâchée à ${fmtDist(launch.near.d, units)} ${cardinal(launch.near.bearing)} de ${siteLabel(launch.near.site)}`;
+  }
+  if (!text) return null;
+  return me ? text : `${text} ${ago(launch.t, now)}`;
+}
+
 function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: UserLocation | null, units: Units, now: number): Item {
   const base = { serial: s.serial, sonde: s };
   const landing = pred?.landing ?? null;
   const alt = fmtAltShort(s.last.alt, units);
   const away = (lat: number, lon: number) =>
     me ? `${fmtDist(distance(me.lat, me.lon, lat, lon), units)} ${cardinal(bearing(me.lat, me.lon, lat, lon))} de vous` : null;
-  const origin = launch?.fromGround ? { text: launch.site ? `lâchée de ${siteLabel(launch.site)}` : 'lâchée', t: launch.t, named: !!launch.site } : null;
-  const from = origin ? (!me ? `${origin.text} ${ago(origin.t, now)}` : origin.named ? origin.text : null) : null;
+  const from = originText(launch, me, units, now);
   const stale = now - s.lastTime > STALE_MS ? `dernier signal ${ago(s.lastTime, now)}` : null;
   const vv = verticalSpeed(s);
   const speed = vv === undefined ? '—' : fmtVSpeed(Math.abs(vv), units, false);
@@ -386,6 +401,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   const me = useStore((s) => s.userLocation);
   const now = useStore((s) => s.now);
   const sites = useStore((s) => s.sites);
+  const reverse = useStore((s) => s.reverse);
   const duration = useStore((s) => s.settings.duration);
   const { setQuery, setAlerts, select } = useStore.getState();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -415,17 +431,18 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     [predictions],
   );
   const landingOf = useCallback((s: Sonde) => predOf(s)?.landing ?? null, [predOf]);
-  const launches = useMemo(() => new Map<string, { t0: number; launch: Launch | null }>(), [sites]);
+  const launches = useMemo(() => new Map<string, { t0: number; rev: unknown; launch: Launch | null }>(), [sites]);
   const launchOf = useCallback(
     (s: Sonde) => {
       const t0 = s.track[0]?.[3] ?? -1;
+      const rev = reverse[s.serial];
       const hit = launches.get(s.serial);
-      if (hit && hit.t0 === t0) return hit.launch;
-      const launch = findLaunch(s, sites);
-      launches.set(s.serial, { t0, launch });
+      if (hit && hit.t0 === t0 && hit.rev === rev) return hit.launch;
+      const launch = findLaunch(s, sites, rev);
+      launches.set(s.serial, { t0, rev, launch });
       return launch;
     },
-    [launches, sites],
+    [launches, sites, reverse],
   );
   const item = useCallback((s: Sonde) => describe(s, predOf(s), launchOf(s), me, units, now), [predOf, launchOf, me, units, now]);
 

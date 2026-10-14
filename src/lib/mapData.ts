@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
-import type { Listener, LaunchSite, Prediction, Recovery, Sonde } from './types';
+import type { Listener, LaunchSite, PastFlight, Prediction, Recovery, ReversePrediction, SiteForecast, Sonde } from './types';
 import { usefulPrediction } from './filter';
 import { mapLabel } from './text';
 
@@ -148,4 +148,33 @@ export function recoveriesFC(recoveries: Record<string, Recovery>, sondes: Recor
       .filter((r) => !sondes[r.serial] || sondes[r.serial].phase === 'landed' || sondes[r.serial].phase === 'lost')
       .map((r) => pt(r.lon, r.lat, { serial: r.serial, icon: r.recovered ? 'recovery-ok' : 'recovery-ko' })),
   );
+}
+
+const normLon = (lon: number) => (lon > 180 ? lon - 360 : lon);
+
+export function reverseFC(rev: ReversePrediction | undefined, s: Sonde | undefined): FC {
+  if (!rev || !s || !s.track.length || s.track[0][2] < 3000) return fc([]);
+  const out: Feature<LineString | Point>[] = [];
+  const path = rev.path.filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lon)).map((q) => [normLon(q.lon), q.lat]);
+  if (path.length >= 2) out.push(line(path, { kind: 'path' }));
+  else out.push(line([[rev.lon, rev.lat], [s.track[0][0], s.track[0][1]]], { kind: 'path' }));
+  out.push(pt(rev.lon, rev.lat, { kind: 'launch', label: 'Lâcher estimé' }));
+  return fc(out);
+}
+
+const shortWhen = (ts: number) => {
+  const d = new Date(ts);
+  const day = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+  return `${day.charAt(0).toUpperCase()}${day.slice(1)} ${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+export function sitePathsFC(forecasts: SiteForecast[]): FC<LineString> {
+  return fc(forecasts.map((f, i) => line(f.path.map((q) => [normLon(q.lon), q.lat]), { next: i === 0 })));
+}
+
+export function sitePointsFC(forecasts: SiteForecast[], past: PastFlight[]): FC<Point> {
+  return fc([
+    ...past.map((f) => pt(f.last.lon, f.last.lat, { kind: 'past', serial: f.serial, time: f.first.time, top: Math.round(f.top.alt), alt: Math.round(f.last.alt) })),
+    ...forecasts.map((f, i) => pt(normLon(f.landing.lon), f.landing.lat, { kind: 'forecast', next: i === 0, label: shortWhen(f.launchTime) })),
+  ]);
 }

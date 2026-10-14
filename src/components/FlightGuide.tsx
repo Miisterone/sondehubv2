@@ -31,7 +31,7 @@ export function FlightGuide({ className }: { className?: string }) {
         <h2 className="text-[16px] font-semibold">Le vol d’une radiosonde</h2>
         <p className="mt-1.5 text-[13px] leading-relaxed">
           Chaque jour, des stations météo lâchent des ballons qui emportent une petite sonde. Elle mesure la température, l’humidité et le vent en montant, et
-          envoie ses données par radio.
+          envoie ses données par radio. Ces mesures alimentent les prévisions météo du monde entier.
         </p>
         <ol className="mt-4 space-y-3">
           {STEPS.map((s, i) => (

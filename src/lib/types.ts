@@ -107,6 +107,42 @@ export interface LaunchSite {
   alt?: number;
   types: string[];
   times: string[];
+  ascentRate?: number;
+  descentRate?: number;
+  burstAltitude?: number;
+  notes?: string;
+}
+
+export interface ReversePrediction {
+  serial: string;
+  launchTime: number;
+  lat: number;
+  lon: number;
+  site: string | null;
+  siteRange?: number;
+  path: PredictionPoint[];
+}
+
+export interface SiteForecast {
+  launchTime: number;
+  burst: PredictionPoint;
+  landing: PredictionPoint;
+  path: PredictionPoint[];
+}
+
+export interface FlightPoint {
+  time: number;
+  lat: number;
+  lon: number;
+  alt: number;
+}
+
+export interface PastFlight {
+  serial: string;
+  type?: string;
+  first: FlightPoint;
+  top: FlightPoint;
+  last: FlightPoint;
 }
 
 export interface Recovery {

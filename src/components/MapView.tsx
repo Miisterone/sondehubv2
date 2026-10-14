@@ -14,7 +14,10 @@ import {
   predictionPointsFC,
   receiverLinksFC,
   recoveriesFC,
+  reverseFC,
   selectedTrackFC,
+  sitePathsFC,
+  sitePointsFC,
   sitesFC,
   sondeFeature,
   trackDeps,
@@ -23,7 +26,7 @@ import {
 import { IncrementalSource, type Entry } from '../lib/incrementalSource';
 import { circleRing, viewForTimeZone } from '../lib/region';
 import { makeVisible } from '../lib/filter';
-import { ago, fmtAlt } from '../lib/format';
+import { ago, fmtAlt, fmtAltShort } from '../lib/format';
 import { distance } from '../lib/geo';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
@@ -50,6 +53,9 @@ const SOURCES = [
   'listeners',
   'sites',
   'recoveries',
+  'reverse',
+  'site-paths',
+  'site-points',
   'me',
   'alert-radius',
 ] as const;
@@ -60,7 +66,7 @@ const KEYED_SOURCES = new Set<string>(['sondes', 'tracks']);
 
 const LISTENER_LAYERS = ['listeners-icons', 'chase-icons', 'listeners-dots'];
 const SONDE_LAYERS = ['sondes-air', 'sondes-ground', 'sondes-ground-dots'];
-const INTERACTIVE = [...SONDE_LAYERS, 'tracks-line', 'track-selected-line', 'pred-points-icons', 'sites-icons', 'recoveries-icons', ...LISTENER_LAYERS];
+const INTERACTIVE = [...SONDE_LAYERS, 'tracks-line', 'track-selected-line', 'pred-points-icons', 'sites-icons', 'recoveries-icons', 'site-past-dots', ...LISTENER_LAYERS];
 
 /** Below this zoom, sondes on the ground are drawn as dots so flights in progress stand out. */
 const GROUND_ICON_ZOOM = 6;
@@ -115,6 +121,28 @@ function installOverlays(map: MlMap, darkBase: boolean) {
       'line-opacity': ['case', ['get', 'selected'], 0.95, 0.5],
       'line-dasharray': [2, 2],
     },
+  });
+
+  add({
+    id: 'site-paths-line',
+    type: 'line',
+    source: 'site-paths',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': ['case', ['get', 'next'], COLOURS.landing, darkBase ? '#cbd5e1' : '#475569'],
+      'line-width': ['case', ['get', 'next'], 2.5, 1.4],
+      'line-opacity': ['case', ['get', 'next'], 0.95, 0.55],
+      'line-dasharray': [2, 2],
+    },
+  });
+
+  add({
+    id: 'reverse-line',
+    type: 'line',
+    source: 'reverse',
+    filter: ['==', ['get', 'kind'], 'path'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': darkBase ? '#cbd5e1' : '#475569', 'line-width': 2, 'line-opacity': 0.8, 'line-dasharray': [1, 2] },
   });
 
   add({
@@ -244,6 +272,57 @@ function installOverlays(map: MlMap, darkBase: boolean) {
       'text-anchor': 'top',
     },
     paint: { 'text-color': textColour, 'text-halo-color': haloColour, 'text-halo-width': 1.5 },
+  });
+
+  add({
+    id: 'site-past-dots',
+    type: 'circle',
+    source: 'site-points',
+    filter: ['==', ['get', 'kind'], 'past'],
+    paint: {
+      'circle-color': darkBase ? '#94a3b8' : '#64748b',
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 3, 10, 5],
+      'circle-opacity': 0.75,
+      'circle-stroke-color': darkBase ? '#0b1220' : '#ffffff',
+      'circle-stroke-width': 1.2,
+    },
+  });
+  add({
+    id: 'site-forecast-icons',
+    type: 'symbol',
+    source: 'site-points',
+    filter: ['==', ['get', 'kind'], 'forecast'],
+    layout: {
+      'icon-image': ['case', ['get', 'next'], 'landing', 'landing-small'],
+      'icon-allow-overlap': true,
+      'text-field': ['step', ['zoom'], ['case', ['get', 'next'], ['get', 'label'], ''], 7, ['get', 'label']],
+      'text-font': FONT,
+      'text-size': 11,
+      'text-offset': [0, 1.2],
+      'text-anchor': 'top',
+      'text-optional': true,
+    },
+    paint: { 'text-color': textColour, 'text-halo-color': haloColour, 'text-halo-width': 1.4 },
+  });
+  add({
+    id: 'reverse-point',
+    type: 'circle',
+    source: 'reverse',
+    filter: ['==', ['get', 'kind'], 'launch'],
+    paint: {
+      'circle-color': darkBase ? '#cbd5e1' : '#475569',
+      'circle-radius': 5,
+      'circle-stroke-color': darkBase ? '#0b1220' : '#ffffff',
+      'circle-stroke-width': 2,
+    },
+  });
+  add({
+    id: 'reverse-label',
+    type: 'symbol',
+    source: 'reverse',
+    filter: ['==', ['get', 'kind'], 'launch'],
+    layout: { 'text-field': ['get', 'label'], 'text-font': FONT, 'text-size': 11, 'text-offset': [0, 1.1], 'text-anchor': 'top', 'text-optional': true },
+    paint: { 'text-color': textColour, 'text-halo-color': haloColour, 'text-halo-width': 1.4 },
   });
 
   // Alert radius around the user (only when landing alerts are on).
@@ -382,7 +461,7 @@ export function MapView() {
       frame = 0;
       if (!map.isStyleLoaded() && !map.getSource('sondes')) return;
       const s = useStore.getState();
-      const { sondes, selected, predictions, listeners, sites, recoveries, settings, query, phaseFilter, typeFilter, userLocation, now } = s;
+      const { sondes, selected, predictions, listeners, sites, recoveries, settings, query, phaseFilter, typeFilter, userLocation, now, reverse, siteOverlay } = s;
       const L = settings.layers;
       const sel = selected ? sondes[selected] : undefined;
       // Sondes and their tracks: diffed per sonde, only when the inputs changed at all.
@@ -408,6 +487,9 @@ export function MapView() {
       );
       setData('pred-points', [predictions, selected, L.landings, sondes], () => predictionPointsFC(predictions, sondes, selected, L.landings));
       setData('burst', [sel], () => burstFC(sel));
+      setData('reverse', [sel, selected ? reverse[selected] : undefined], () => reverseFC(selected ? reverse[selected] : undefined, sel));
+      setData('site-paths', [siteOverlay?.forecasts], () => sitePathsFC(siteOverlay?.forecasts ?? []));
+      setData('site-points', [siteOverlay?.forecasts, siteOverlay?.past], () => sitePointsFC(siteOverlay?.forecasts ?? [], siteOverlay?.past ?? []));
       setData('links', [sel, L.receiverLinks, listeners], () => (L.receiverLinks ? receiverLinksFC(sel, listeners, now) : EMPTY));
       setData('listeners', [listeners, L.listeners, L.chase, Math.floor(now / 60000)], () => listenersFC(listeners, L.listeners, L.chase, now));
       setData('sites', [sites, L.sites], () => (L.sites ? sitesFC(sites) : EMPTY));
@@ -540,7 +622,7 @@ export function MapView() {
       if (!l) return;
       const me = useStore.getState().userLocation;
       const rows = [
-        l.mobile ? '🚗 Véhicule de poursuite' : '📡 Station de réception',
+        l.mobile ? 'Véhicule de poursuite' : 'Station de réception',
         l.antenna && `Antenne : ${esc(l.antenna)}`,
         l.software && `Logiciel : ${esc(l.software)}`,
         l.alt !== undefined && `Altitude : ${Math.round(l.alt)} m`,
@@ -555,17 +637,20 @@ export function MapView() {
 
     map.on('click', 'sites-icons', (e: MapLayerMouseEvent) => {
       const id = e.features?.[0]?.properties?.id as string;
-      const site = useStore.getState().sites.find((s) => s.id === id);
-      if (!site) return;
-      const rows = [
-        `Station OMM ${esc(site.id)}`,
-        site.types.length > 0 && `Types : ${site.types.map((t) => esc(sondeTypeName(t))).join(', ')}`,
-        site.times.length > 0 && `Lâchers (UTC) : ${site.times.map((t) => esc(t.slice(2, 7))).join(', ')}`,
-        site.alt !== undefined && `Altitude : ${site.alt} m`,
-      ].filter(Boolean);
+      if (id) useStore.getState().selectSite(id);
+    });
+
+    map.on('click', 'site-past-dots', (e: MapLayerMouseEvent) => {
+      const f = e.features?.[0];
+      const p = f?.properties;
+      if (!f || !p || f.geometry.type !== 'Point') return;
+      const units = useStore.getState().settings.units;
+      const when = new Date(Number(p.time)).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
       popup
-        .setLngLat([site.lon, site.lat])
-        .setHTML(`<div class="pp-title">${esc(site.name)}</div>${rows.map((r) => `<div class="pp-row">${r}</div>`).join('')}`)
+        .setLngLat(f.geometry.coordinates as [number, number])
+        .setHTML(
+          `<div class="pp-title">${esc(String(p.serial))}</div><div class="pp-row">Lâchée ${esc(when)}</div><div class="pp-row">Éclatement à ${fmtAltShort(Number(p.top), units)}</div><div class="pp-row muted">Dernier signal à ${fmtAlt(Number(p.alt), units)}</div>`,
+        )
         .addTo(map);
     });
 
@@ -574,7 +659,7 @@ export function MapView() {
       const r = useStore.getState().recoveries[serial];
       if (!r) return;
       const rows = [
-        r.recovered ? '✅ Récupérée' : r.planned ? '🕒 Récupération prévue' : '❌ Non retrouvée',
+        r.recovered ? 'Récupérée' : r.planned ? 'Récupération prévue' : 'Non retrouvée',
         r.recoveredBy && `Par ${esc(r.recoveredBy)}`,
         `Signalé ${ago(r.datetime)}`,
         r.description && `<em>${esc(r.description)}</em>`,
@@ -641,24 +726,6 @@ function accuracyRadii(metres: number, lat: number) {
 
 function esc(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-}
-
-const RS_TYPES: Record<string, string> = {
-  '11': 'LMS6-403',
-  '17': 'DFM-09',
-  '19': 'MKII',
-  '23': 'Vaisala RS41',
-  '41': 'Vaisala RS41',
-  '52': 'Vaisala RS92-NGP',
-  '61': 'LMS6-1680',
-  '63': 'M20',
-  '77': 'M10',
-  '80': 'Vaisala RS92-SGP',
-  '82': 'LMS6-1680',
-  '96': 'MRZ',
-};
-function sondeTypeName(code: string) {
-  return RS_TYPES[code] ?? `type ${code}`;
 }
 
 /** Hash format: #s=SERIAL&map=lat,lon,zoom */

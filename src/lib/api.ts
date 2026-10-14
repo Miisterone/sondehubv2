@@ -1,4 +1,4 @@
-import type { Frame, LaunchSite, Listener, Prediction, PredictionPoint, Recovery } from './types';
+import type { FlightPoint, Frame, LaunchSite, Listener, PastFlight, Prediction, PredictionPoint, Recovery, ReversePrediction, SiteForecast } from './types';
 import { decodeEntities } from './text';
 
 const API = 'https://api.v2.sondehub.org';
@@ -123,9 +123,15 @@ interface RawSite {
   station: string;
   position: [number, number];
   alt?: number;
-  rs_types?: string[];
+  rs_types?: (string | string[])[];
   times?: string[];
+  ascent_rate?: number;
+  descent_rate?: number;
+  burst_altitude?: number;
+  notes?: string;
 }
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 
 export async function fetchSites(signal?: AbortSignal): Promise<LaunchSite[]> {
   const raw = await getJSON<Record<string, RawSite>>('/sites', signal);
@@ -137,9 +143,159 @@ export async function fetchSites(signal?: AbortSignal): Promise<LaunchSite[]> {
       lon: s.position[0],
       lat: s.position[1],
       alt: s.alt,
-      types: s.rs_types ?? [],
+      types: (s.rs_types ?? []).map((t) => String(Array.isArray(t) ? t[0] : t)),
       times: s.times ?? [],
+      ascentRate: num(s.ascent_rate),
+      descentRate: num(s.descent_rate),
+      burstAltitude: num(s.burst_altitude),
+      notes: typeof s.notes === 'string' && s.notes.trim() ? s.notes.trim() : undefined,
     }));
+}
+
+export interface RawReverse {
+  serial: string;
+  datetime: string;
+  position: [number, number];
+  launch_site?: string;
+  launch_site_range_estimate?: number;
+  data?: PredictionPoint[] | string;
+}
+
+export function normaliseReverse(r: RawReverse): ReversePrediction | null {
+  const t = Date.parse(r?.datetime);
+  if (!r?.serial || !Array.isArray(r.position) || !Number.isFinite(t)) return null;
+  const [lon, lat] = r.position.map(Number);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  let path: unknown = r.data ?? [];
+  if (typeof path === 'string') {
+    try {
+      path = JSON.parse(path);
+    } catch {
+      path = [];
+    }
+  }
+  return {
+    serial: r.serial,
+    launchTime: t,
+    lat,
+    lon: lon > 180 ? lon - 360 : lon,
+    site: r.launch_site ?? null,
+    siteRange: num(r.launch_site_range_estimate),
+    path: Array.isArray(path) ? (path as PredictionPoint[]) : [],
+  };
+}
+
+const REVERSE_WINDOW: Record<string, string> = { '1h': '3h', '3h': '6h', '6h': '12h', '12h': '1d', '1d': '1d' };
+
+export async function fetchReverse(duration: string, signal?: AbortSignal): Promise<ReversePrediction[]> {
+  const raw = await getJSON<Record<string, RawReverse>>(`/predictions/reverse?vehicles=&duration=${REVERSE_WINDOW[duration] ?? '6h'}`, signal);
+  return Object.values(raw)
+    .map(normaliseReverse)
+    .filter((r): r is ReversePrediction => r !== null);
+}
+
+export interface FlightProfile {
+  ascentRate: number;
+  descentRate: number;
+  burstAltitude: number;
+}
+
+export function siteProfile(site: LaunchSite): FlightProfile {
+  const lms6 = site.types.includes('11') || site.types.includes('82');
+  return {
+    ascentRate: site.ascentRate ?? 5,
+    descentRate: site.descentRate ?? (lms6 ? 2.5 : 6),
+    burstAltitude: site.burstAltitude ?? (lms6 ? 33500 : 26000),
+  };
+}
+
+interface RawTawhiriPoint {
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  datetime: string;
+}
+
+interface RawTawhiri {
+  prediction?: { stage: string; trajectory: RawTawhiriPoint[] }[];
+  error?: { description?: string };
+}
+
+export async function fetchSiteForecast(site: LaunchSite, launchTime: number, signal?: AbortSignal): Promise<SiteForecast> {
+  const profile = siteProfile(site);
+  const q = new URLSearchParams({
+    launch_latitude: String(site.lat),
+    launch_longitude: String(((site.lon % 360) + 360) % 360),
+    launch_datetime: new Date(launchTime).toISOString().replace(/\.\d{3}Z$/, 'Z'),
+    ascent_rate: String(profile.ascentRate),
+    burst_altitude: String(profile.burstAltitude),
+    descent_rate: String(profile.descentRate),
+  });
+  const res = await fetch(`${API}/tawhiri?${q}`, { signal });
+  const data = (await res.json().catch(() => ({}))) as RawTawhiri;
+  if (!res.ok || !data.prediction) throw new Error(data.error?.description ?? `Tawhiri ${res.status}`);
+  const toPoint = (p: RawTawhiriPoint): PredictionPoint => ({
+    time: Date.parse(p.datetime) / 1000,
+    lat: p.latitude,
+    lon: p.longitude > 180 ? p.longitude - 360 : p.longitude,
+    alt: p.altitude,
+  });
+  const ascent = data.prediction.find((s) => s.stage === 'ascent')?.trajectory ?? [];
+  const descent = data.prediction.find((s) => s.stage === 'descent')?.trajectory ?? [];
+  const path = [...ascent, ...descent].map(toPoint);
+  if (path.length < 2) throw new Error('Prévision vide');
+  return {
+    launchTime,
+    burst: toPoint(ascent[ascent.length - 1] ?? descent[0]),
+    landing: path[path.length - 1],
+    path,
+  };
+}
+
+const HISTORY = 'https://sondehub-history.s3.amazonaws.com';
+
+export interface ArchivedFlight {
+  key: string;
+  serial: string;
+  date: string;
+}
+
+export async function listSiteFlights(siteId: string, year: number, month: number, signal?: AbortSignal): Promise<ArchivedFlight[]> {
+  const mm = String(month).padStart(2, '0');
+  const prefix = `launchsites/${siteId}/${year}/${mm}/`;
+  const out = new Map<string, ArchivedFlight>();
+  let token: string | undefined;
+  do {
+    const q = new URLSearchParams({ 'list-type': '2', prefix });
+    if (token) q.set('continuation-token', token);
+    const res = await fetch(`${HISTORY}/?${q}`, { signal });
+    if (!res.ok) throw new Error(`Archives SondeHub ${res.status}`);
+    const xml = await res.text();
+    for (const m of xml.matchAll(/<Key>([^<]+)<\/Key>/g)) {
+      const key = decodeEntities(m[1]);
+      const rest = key.slice(prefix.length);
+      const slash = rest.indexOf('/');
+      if (slash < 0 || !rest.endsWith('.json')) continue;
+      const serial = rest.slice(slash + 1, -5);
+      if (!out.has(serial)) out.set(serial, { key, serial, date: `${year}-${mm}-${rest.slice(0, slash).padStart(2, '0')}` });
+    }
+    token = /<IsTruncated>true<\/IsTruncated>/.test(xml) ? xml.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/)?.[1] : undefined;
+  } while (token);
+  return [...out.values()];
+}
+
+export async function fetchPastFlight(f: ArchivedFlight, signal?: AbortSignal): Promise<PastFlight | null> {
+  const res = await fetch(`${HISTORY}/${f.key.split('/').map(encodeURIComponent).join('/')}`, { signal });
+  if (!res.ok) return null;
+  const raw = (await res.json()) as Frame[];
+  if (!Array.isArray(raw) || raw.length < 3) return null;
+  const point = (x: Frame): FlightPoint | null => {
+    const time = Date.parse(x?.datetime);
+    return Number.isFinite(time) && Number.isFinite(x.lat) && Number.isFinite(x.lon) && Number.isFinite(x.alt) ? { time, lat: x.lat, lon: x.lon, alt: x.alt } : null;
+  };
+  const [first, top, last] = raw.map(point);
+  if (!first || !top || !last) return null;
+  return { serial: f.serial, type: raw[0].subtype ?? raw[0].type, first, top, last };
 }
 
 export interface RawRecovery {
