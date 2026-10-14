@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Map as MlMap, Marker, Popup, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
+import { Map as MlMap, Marker, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { ExpressionSpecification, LayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -432,6 +432,9 @@ export function MapView() {
     mapRef.current = map;
     (window as unknown as { __map: MlMap }).__map = map;
 
+    const scale = new ScaleControl({ maxWidth: 120, unit: settings.units });
+    map.addControl(scale, 'bottom-right');
+
     // Keep camera targets clear of the side panel (desktop) or the bottom sheet (mobile).
     const applyPadding = () => {
       const mobile = window.innerWidth < 768;
@@ -581,6 +584,7 @@ export function MapView() {
         basemapDark = b.dark;
         map.setStyle(b.style, { diff: false });
       }
+      if (s.settings.units !== prev.settings.units) scale.setUnit(s.settings.units);
     });
 
     // Camera requests from the UI.

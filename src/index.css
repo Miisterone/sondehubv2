@@ -260,6 +260,22 @@ body,
 .maplibregl-ctrl-attrib {
   font-size: 11px;
 }
+.maplibregl-ctrl-scale {
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border: 1px solid var(--panel-border);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  color: var(--text-dim);
+  font: 500 11px/1.6 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  padding: 0 6px;
+  transition: width 120ms ease-out;
+}
+@media (max-width: 767px) {
+  .maplibregl-ctrl-scale {
+    display: none;
+  }
+}
 .dark .maplibregl-ctrl-attrib.maplibregl-compact {
   background: var(--panel);
   color: var(--text-dim);
