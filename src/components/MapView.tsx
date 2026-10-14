@@ -4,7 +4,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { ExpressionSpecification, LayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStore } from '../store/useStore';
-import { basemapById, FONT, TERRAIN_SOURCE } from '../lib/basemaps';
+import { basemapById, FONT } from '../lib/basemaps';
 import { addIcons, COLOURS, PHASE_COLOUR } from '../lib/icons';
 import {
   burstFC,
@@ -452,16 +452,6 @@ export function MapView() {
       if (!frame) frame = requestAnimationFrame(sync);
     };
 
-    const applyTerrain = () => {
-      const on = useStore.getState().settings.terrain3d;
-      if (on) {
-        if (!map.getSource('dem')) map.addSource('dem', TERRAIN_SOURCE);
-        map.setTerrain({ source: 'dem', exaggeration: 1.4 });
-      } else if (map.getTerrain()) {
-        map.setTerrain(null);
-      }
-    };
-
     // Some basemap styles reference sprite images they don't ship: register a blank one instead of logging warnings.
     map.setMissingStyleImageResolver((id) => {
       if (!map.hasImage(id)) map.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
@@ -469,7 +459,6 @@ export function MapView() {
 
     map.on('style.load', () => {
       installOverlays(map, basemapDark);
-      applyTerrain();
       synced = {};
       sondesSrc.reset();
       tracksSrc.reset();
@@ -503,16 +492,12 @@ export function MapView() {
 
     const unsub = useStore.subscribe(schedule);
 
-    // Basemap / terrain changes.
+    // Basemap changes.
     const unsubSettings = useStore.subscribe((s, prev) => {
       if (s.settings.basemap !== prev.settings.basemap) {
         const b = basemapById(s.settings.basemap);
         basemapDark = b.dark;
         map.setStyle(b.style, { diff: false });
-      }
-      if (s.settings.terrain3d !== prev.settings.terrain3d && map.isStyleLoaded()) {
-        applyTerrain();
-        map.easeTo({ pitch: s.settings.terrain3d ? 55 : 0, duration: 800 });
       }
     });
 

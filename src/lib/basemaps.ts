@@ -70,13 +70,3 @@ export const BASEMAPS: Basemap[] = [
 ];
 
 export const basemapById = (id: BasemapId) => BASEMAPS.find((b) => b.id === id) ?? BASEMAPS[0];
-
-/** Free global DEM (Terrarium encoding) for the optional 3D relief. */
-export const TERRAIN_SOURCE = {
-  type: 'raster-dem' as const,
-  tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-  encoding: 'terrarium' as const,
-  tileSize: 256,
-  maxzoom: 14,
-  attribution: 'Relief © Mapzen, AWS Terrain Tiles',
-};

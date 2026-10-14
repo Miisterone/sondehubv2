@@ -43,7 +43,6 @@ export interface Settings {
   units: Units;
   duration: Duration;
   layers: Layers;
-  terrain3d: boolean;
   /** Serials the user follows; shown first and eligible for alerts. */
   favourites: string[];
   alerts: AlertSettings;
@@ -74,7 +73,6 @@ const DEFAULT_SETTINGS: Settings = {
   onboarded: false,
   techOpen: false,
   duration: '3h',
-  terrain3d: false,
   layers: {
     listeners: true,
     chase: true,

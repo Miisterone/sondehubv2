@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Compass, LocateFixed, Minus, Moon, Mountain, Plus, Search, Sun } from 'lucide-react';
+import { Compass, LocateFixed, Minus, Moon, Plus, Search, Sun } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { getMap } from './MapView';
 import { locateUser } from '@/lib/geolocation';
@@ -11,9 +11,8 @@ const group = 'bg-background pointer-events-auto flex flex-col gap-0.5 rounded-l
 
 export function MapControls() {
   const theme = useStore((s) => s.settings.theme);
-  const terrain3d = useStore((s) => s.settings.terrain3d);
   const userLocation = useStore((s) => s.userLocation);
-  const { setSettings, requestFly } = useStore.getState();
+  const { requestFly } = useStore.getState();
   const [bearing, setBearing] = useState(0);
 
   useEffect(() => {
@@ -54,9 +53,6 @@ export function MapControls() {
           <LocateFixed size={18} />
         </IconButton>
         <LayerPanel />
-        <IconButton label="Relief 3D" active={terrain3d} onClick={() => setSettings({ terrain3d: !terrain3d })}>
-          <Mountain size={18} />
-        </IconButton>
         <IconButton label={theme === 'dark' ? 'Thème clair' : 'Thème sombre'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </IconButton>

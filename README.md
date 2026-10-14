@@ -18,7 +18,7 @@ Aucune clé d'API ni backend : l'application parle directement à l'API publique
 ## Fonctionnalités
 
 **Carte**
-- MapLibre GL, 6 fonds (Nuit, Plan, Clair, Satellite, Relief, OSM), relief 3D optionnel, vue de départ sur la région du visiteur (fuseau horaire).
+- MapLibre GL, 6 fonds (Nuit, Plan, Clair, Satellite, Relief, OSM), vue de départ sur la région du visiteur (fuseau horaire).
 - Icônes illustrées par phase de vol (ballon, parachute, au sol, signal perdu) avec flèche de cap ; sondes au sol réduites à des points en vue large.
 - Sonde sélectionnée : trajectoire colorée par altitude, trajectoire prédite, éclatement prévu/réel, liens vers les récepteurs.
 - Mises à jour incrémentales (seules les sondes modifiées sont renvoyées au moteur), animation de sélection en CSS.
