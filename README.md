@@ -4,9 +4,7 @@ Suivi en temps réel des radiosondes météo, construit sur les données ouverte
 Une réinterprétation moderne de [sondehub-tracker](https://github.com/projecthorus/sondehub-tracker) : carte vectorielle fluide,
 panneau de détail clair, graphiques, thème clair/sombre et interface mobile.
 
-> **Projet entièrement vibecodé.** L'intégralité du code de ce dépôt a été générée par IA (Claude, d'Anthropic),
-> à partir d'instructions en langage naturel, sans écriture de code à la main. Il n'a pas fait l'objet d'une revue
-> de code humaine ligne à ligne : à utiliser en connaissance de cause.
+> **Projet entièrement vibecodé** : tout le code a été généré par IA.
 
 ## Démarrer
 
