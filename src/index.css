@@ -260,16 +260,31 @@ body,
 .maplibregl-ctrl-attrib {
   font-size: 11px;
 }
-.maplibregl-ctrl-scale {
-  background: color-mix(in srgb, var(--panel) 85%, transparent);
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-scale {
+  position: relative;
+  box-sizing: content-box;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
   border: 1px solid var(--panel-border);
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  color: var(--text-dim);
-  font: 500 11px/1.6 var(--font-sans);
+  border-radius: 6px;
+  color: var(--foreground);
+  font: 600 11px/1 var(--font-sans);
   font-variant-numeric: tabular-nums;
-  padding: 0 6px;
-  transition: width 120ms ease-out;
+  letter-spacing: 0.01em;
+  text-align: center;
+  padding: 6px 10px 14px;
+  margin: 0 10px 8px 0;
+  transition: width 160ms ease-out;
+  backdrop-filter: blur(4px);
+}
+.maplibregl-ctrl-scale::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
+  height: 5px;
+  border: 1.5px solid var(--foreground);
+  border-top: none;
 }
 @media (max-width: 767px) {
   .maplibregl-ctrl-scale {
