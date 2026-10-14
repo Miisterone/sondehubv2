@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { LocateFixed, Search, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { cx } from '@/components/ui';
-import { Icon3D } from '@/components/Icon3D';
+import { Icon3D, type Icon3DId } from '@/components/Icon3D';
+import { LanguageSelect } from '@/components/LanguageSelect';
 import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
 import { Trans, useT } from '@/i18n';
 
-/** Window event asking the sidebar to switch to its "Près de moi" mode. */
 const NEARBY_EVENT = 'sondehubv2:nearby';
-/** Grace period after the first data load, so the card doesn't flash in while the map settles. */
 const SHOW_DELAY_MS = 1000;
 const LEAVE_MS = 160;
 
@@ -20,22 +19,10 @@ const isMac =
     (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform || navigator.platform || navigator.userAgent,
   );
 
-/** Touch-first devices have no keyboard shortcut to advertise. */
 const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
 
-function Tip({ icon, bare, children }: { icon: ReactNode; bare?: boolean; children: ReactNode }) {
-  return (
-    <li className="flex items-center gap-2.5 md:gap-3">
-      <span className={cx('grid size-8 shrink-0 place-items-center md:size-9', !bare && 'bg-chip rounded-xl')}>{icon}</span>
-      <span className="min-w-0 leading-snug">{children}</span>
-    </li>
-  );
-}
+type Step = { icon: Icon3DId; title: string; body: ReactNode };
 
-/**
- * First-visit introduction: a non-blocking floating card over the map.
- * Dismissed for good (settings.onboarded) by its buttons, Escape, or selecting a sonde.
- */
 export function WelcomeCard() {
   const t = useT();
   const onboarded = useStore((s) => s.settings.onboarded);
@@ -43,19 +30,20 @@ export function WelcomeCard() {
   const selected = useStore((s) => s.selected);
   const [ready, setReady] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [step, setStep] = useState(0);
 
-  // Wait for the first telemetry load (plus a beat) before showing anything.
   useEffect(() => {
     if (ready || loading) return;
-    const t = window.setTimeout(() => setReady(true), SHOW_DELAY_MS);
-    return () => window.clearTimeout(t);
+    const id = window.setTimeout(() => setReady(true), SHOW_DELAY_MS);
+    return () => window.clearTimeout(id);
   }, [ready, loading]);
 
   const visible = ready && !onboarded;
 
-  // Reset the exit animation when the card is shown again ("Revoir l'introduction").
   useEffect(() => {
-    if (visible) setLeaving(false);
+    if (!visible) return;
+    setLeaving(false);
+    setStep(0);
   }, [visible]);
 
   const dismiss = useCallback(() => {
@@ -63,7 +51,6 @@ export function WelcomeCard() {
     window.setTimeout(() => useStore.getState().setSettings({ onboarded: true }), LEAVE_MS);
   }, []);
 
-  // Picking a sonde means the user found their way: get out of the way.
   const prevSelected = useRef(selected);
   useEffect(() => {
     if (visible && selected && selected !== prevSelected.current) dismiss();
@@ -76,7 +63,6 @@ export function WelcomeCard() {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      // Escape closes the open sonde panel first (handled by App).
       if (useStore.getState().selected) return;
       dismiss();
     };
@@ -93,21 +79,75 @@ export function WelcomeCard() {
     });
   };
 
+  const steps: Step[] = [
+    {
+      icon: 'launch',
+      title: t('app.welcome.title'),
+      body: (
+        <>
+          <p>{t('app.welcome.text')}</p>
+          <div className="mt-3">
+            <span className="text-foreground mb-1.5 block text-[12px] font-semibold">{t('app.tour.languageLabel')}</span>
+            <LanguageSelect variant="field" />
+          </div>
+        </>
+      ),
+    },
+    {
+      icon: 'descending',
+      title: t('app.tour.mapTitle'),
+      body: <p>{t(isTouch ? 'app.welcome.tipSondeTouch' : 'app.welcome.tipSondeClick')}</p>,
+    },
+    {
+      icon: 'ascending',
+      title: t('app.tour.listsTitle'),
+      body: (
+        <>
+          <p>
+            {t('app.tour.listsText', {
+              nearby: t('sidebar.tabs.nearby'),
+              flying: t('sidebar.tabs.flying'),
+              following: t('sidebar.tabs.following'),
+            })}
+          </p>
+          <p className="mt-2">
+            {isTouch ? (
+              t('app.welcome.tipSearchTouch')
+            ) : (
+              <Trans
+                k="app.welcome.tipSearchKey"
+                params={{ shortcut: isMac ? '⌘K' : t('app.key.ctrlK') }}
+                tags={{ kbd: (c) => <Kbd className="bg-chip text-foreground tabular">{c}</Kbd> }}
+              />
+            )}
+          </p>
+        </>
+      ),
+    },
+    {
+      icon: 'locate',
+      title: t('app.tour.alertsTitle'),
+      body: <p>{t('app.welcome.tipLocate')}</p>,
+    },
+  ];
+
+  const current = steps[step];
+  const last = step === steps.length - 1;
+
   return (
     <div
       className={cx(
         'pointer-events-none fixed z-30 flex justify-center',
-        // Mobile: under the safe area, clear of the map controls column and the bottom sheet.
         'top-[calc(env(safe-area-inset-top,0px)+0.75rem)] right-16 left-3',
-        // Desktop: bottom-centre of the map area, right of the 380px sidebar.
         'md:top-auto md:right-6 md:bottom-6 md:left-[calc(380px+1.5rem)]',
       )}
     >
       <section
-        role="region"
-        aria-label={t('app.welcome.title')}
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tour-title"
         className={cx(
-          'glass animate-in pointer-events-auto relative w-full max-w-[440px] rounded-lg p-3.5 text-[12.5px] md:p-5 md:text-[13px] transition-[opacity,transform] duration-150',
+          'glass animate-in pointer-events-auto relative w-full max-w-[440px] rounded-lg p-4 text-[12.5px] md:p-5 md:text-[13px] transition-[opacity,transform] duration-150',
           leaving && 'translate-y-1 opacity-0',
         )}
       >
@@ -116,40 +156,57 @@ export function WelcomeCard() {
           size="icon"
           aria-label={t('app.welcome.close')}
           onClick={dismiss}
-          className="text-muted-foreground hover:text-foreground absolute top-2 right-2 size-8 rounded-lg"
+          className="text-muted-foreground hover:text-foreground absolute top-2 right-2 size-8 rounded-md"
         >
           <X className="size-4" />
         </Button>
 
-        <h2 className="pr-8 text-[14.5px] font-semibold tracking-tight md:text-[15px]">{t('app.welcome.title')}</h2>
-        <p className="text-muted-foreground mt-1 leading-snug md:mt-1.5 md:leading-relaxed">{t('app.welcome.text')}</p>
+        <div className="flex items-start gap-3 pr-8">
+          <Icon3D id={current.icon} size={40} className="shrink-0" />
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-[11.5px] tabular" aria-live="polite">
+              {t('app.tour.step', { current: step + 1, total: steps.length })}
+            </p>
+            <h2 id="tour-title" className="font-heading text-foreground text-[15px] font-semibold tracking-tight md:text-[16px]">
+              {current.title}
+            </h2>
+          </div>
+        </div>
 
-        <ul className="mt-3 space-y-2 md:mt-3.5 md:space-y-2.5">
-          <Tip bare icon={<Icon3D id="descending" size={40} />}>
-            {t(isTouch ? 'app.welcome.tipSondeTouch' : 'app.welcome.tipSondeClick')}
-          </Tip>
-          <Tip bare icon={<Icon3D id="landing" size={40} />}>{t('app.welcome.tipLocate')}</Tip>
-          {isTouch ? (
-            <Tip icon={<Search className="text-muted-foreground size-4" />}>{t('app.welcome.tipSearchTouch')}</Tip>
-          ) : (
-            <Tip icon={<Search className="text-muted-foreground size-4" />}>
-              <Trans
-                k="app.welcome.tipSearchKey"
-                params={{ shortcut: isMac ? '⌘K' : t('app.key.ctrlK') }}
-                tags={{ kbd: (c) => <Kbd className="bg-chip text-foreground tabular">{c}</Kbd> }}
-              />
-            </Tip>
+        <div key={step} className="animate-in text-muted-foreground mt-2.5 leading-relaxed">
+          {current.body}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mr-auto flex items-center gap-1.5" aria-hidden>
+            {steps.map((_, i) => (
+              <span key={i} className={cx('h-1.5 rounded-full transition-[width,background-color]', i === step ? 'bg-primary w-4' : 'bg-chip w-1.5')} />
+            ))}
+          </div>
+          {!last && (
+            <Button variant="ghost" size="sm" onClick={dismiss} className="text-muted-foreground rounded-md">
+              {t('app.tour.skip')}
+            </Button>
           )}
-        </ul>
-
-        <div className="mt-3 flex flex-wrap items-center justify-end gap-2 md:mt-4">
-          <Button variant="ghost" size="sm" onClick={dismiss} className="rounded-xl">
-            {t('app.welcome.discover')}
-          </Button>
-          <Button size="sm" onClick={locate} className="rounded-xl">
-            <LocateFixed className="size-4" />
-            {t('app.common.locateMe')}
-          </Button>
+          {step > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setStep(step - 1)} className="rounded-md shadow-none">
+              {t('app.tour.prev')}
+            </Button>
+          )}
+          {last ? (
+            <>
+              <Button variant="outline" size="sm" onClick={dismiss} className="rounded-md shadow-none">
+                {t('app.tour.done')}
+              </Button>
+              <Button size="sm" onClick={locate} className="rounded-md">
+                {t('app.common.locateMe')}
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={() => setStep(step + 1)} className="rounded-md">
+              {t('app.tour.next')}
+            </Button>
+          )}
         </div>
       </section>
     </div>

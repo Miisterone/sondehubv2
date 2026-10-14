@@ -107,7 +107,17 @@ export const app = {
   'app.welcome.tipLocate': 'Activez votre position pour voir ce qui atterrit près de chez vous et être alerté.',
   'app.welcome.tipSearchTouch': 'Touchez la loupe pour rechercher une sonde, une station ou un site.',
   'app.welcome.tipSearchKey': '<kbd>{shortcut}</kbd> pour tout rechercher : sondes, stations, sites, actions.',
-  'app.welcome.discover': 'Découvrir',
+
+  'app.tour.skip': 'Passer',
+  'app.tour.prev': 'Précédent',
+  'app.tour.next': 'Suivant',
+  'app.tour.done': 'Terminer',
+  'app.tour.step': 'Étape {current} sur {total}',
+  'app.tour.languageLabel': 'Langue de l’interface',
+  'app.tour.mapTitle': 'Suivre un vol',
+  'app.tour.listsTitle': 'Trouver une sonde',
+  'app.tour.listsText': 'La barre latérale classe les sondes en trois onglets : {nearby}, {flying} et {following}.',
+  'app.tour.alertsTitle': 'Être alerté près de chez vous',
 
   'app.command.title': 'Palette de commandes',
   'app.command.description': 'Rechercher une sonde, une station, un site de lâcher ou une action.',
