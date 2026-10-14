@@ -27,20 +27,11 @@ import {
 import { IncrementalSource, type Entry } from '../lib/incrementalSource';
 import { circleRing, viewForTimeZone } from '../lib/region';
 import { makeVisible } from '../lib/filter';
+import { altStepExpression } from '../lib/altRamp';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
 setWorkerUrl(workerUrl);
-
-/** Altitude colour ramp for the selected flight (metres → colour). Mirrored by the legend in the detail panel. */
-export const ALT_RAMP: [number, string][] = [
-  [0, '#34d399'],
-  [6000, '#38bdf8'],
-  [14000, '#818cf8'],
-  [22000, '#e879f9'],
-  [30000, '#fb7185'],
-  [38000, '#fbbf24'],
-];
 
 const SOURCES = [
   'tracks',
@@ -85,7 +76,6 @@ function installOverlays(map: MlMap, darkBase: boolean) {
   }
   const textColour = darkBase ? '#e5edf7' : '#0f172a';
   const haloColour = darkBase ? 'rgba(8,12,20,0.9)' : 'rgba(255,255,255,0.95)';
-  const ramp = ALT_RAMP.flat();
 
   const add = (layer: LayerSpecification) => {
     if (!map.getLayer(layer.id)) map.addLayer(layer);
@@ -184,7 +174,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     source: 'track-selected',
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': ['interpolate', ['linear'], ['get', 'alt'], ...ramp] as unknown as ExpressionSpecification,
+      'line-color': altStepExpression(darkBase) as unknown as ExpressionSpecification,
       'line-width': ['interpolate', ['linear'], ['zoom'], 3, 3, 12, 5.5],
     },
   });

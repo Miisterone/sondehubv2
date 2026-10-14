@@ -37,7 +37,8 @@ import { buildProfile } from '@/lib/atmo';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
 import { findLaunch, fmtHour, siteLabel, type Launch } from '@/lib/sonde';
-import { ALT_RAMP } from './MapView';
+import { TrackLegend } from './TrackLegend';
+import { basemapById } from '@/lib/basemaps';
 import { PHASE_LABEL } from '@/lib/icons';
 import { GroundTrack } from './GroundTrack';
 import { FlightTimeline } from './FlightTimeline';
@@ -111,6 +112,7 @@ export function SondeDetail({ serial }: { serial: string }) {
   const now = useStore((s) => s.now);
   const sites = useStore((s) => s.sites);
   const reverse = useStore((s) => s.reverse[serial]);
+  const darkBase = useStore((s) => basemapById(s.settings.basemap).dark);
   const favourite = useStore((s) => s.settings.favourites.includes(serial));
   const recovery = useStore((s) => s.recoveries[serial]);
   const predHistory = useStore((s) => s.predHistory[serial]);
@@ -480,7 +482,14 @@ export function SondeDetail({ serial }: { serial: string }) {
                     </Button>
                   )
                 )}
-                <AltitudeLegend units={units} />
+                <TrackLegend
+                  units={units}
+                  darkBase={darkBase}
+                  alt={f.alt}
+                  live={live && flying}
+                  showPrediction={useful && flying && !!prediction?.path && prediction.path.length > 1}
+                  showReverse={!!reverse && (sonde.track[0]?.[2] ?? 0) >= 3000}
+                />
               </Section>
 
               <Section
@@ -756,23 +765,6 @@ export function SondeDetail({ serial }: { serial: string }) {
         </div>
       </ScrollArea>
       <RecoveryDialog serial={sonde.serial} open={reporting} onOpenChange={setReporting} />
-    </div>
-  );
-}
-
-function AltitudeLegend({ units }: { units: Units }) {
-  const label = (m: number) => (units === 'metric' ? `${Math.round(m / 1000)} km` : `${Math.round((m * 3.28084) / 1000)} kft`);
-  return (
-    <div>
-      <div className="mb-1.5 text-[12.5px]">Couleur du tracé sur la carte</div>
-      <div className="flex gap-0.5">
-        {ALT_RAMP.slice(0, -1).map(([a, c]) => (
-          <div key={a} className="min-w-0 flex-1">
-            <div className="h-1.5 rounded-xs" style={{ background: c }} />
-            <div className="tabular text-faint mt-1 text-[11px]">{label(a)}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
