@@ -144,6 +144,7 @@ export interface FlightPoint {
 export interface PastFlight {
   serial: string;
   type?: string;
+  batt?: number;
   first: FlightPoint;
   top: FlightPoint;
   last: FlightPoint;

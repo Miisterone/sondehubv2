@@ -296,7 +296,8 @@ export async function fetchPastFlight(f: ArchivedFlight, signal?: AbortSignal): 
   };
   const [first, top, last] = raw.map(point);
   if (!first || !top || !last) return null;
-  return { serial: f.serial, type: raw[0].subtype ?? raw[0].type, first, top, last };
+  const batt = [raw[2].batt, raw[0].batt].find((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  return { serial: f.serial, type: raw[0].subtype ?? raw[0].type, batt, first, top, last };
 }
 
 export interface RawRecovery {

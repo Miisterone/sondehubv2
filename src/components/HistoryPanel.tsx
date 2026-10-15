@@ -5,7 +5,7 @@ import type { Centre } from '@/lib/watchPoint';
 import type { Frame, PastFlight } from '@/lib/types';
 import { fmtAltShort, fmtDist, fmtDuration, fmtRadius, type Units } from '@/lib/format';
 import { bearing, cardinal, compass, distance } from '@/lib/geo';
-import { fmtDay, fmtHour, siteLabel } from '@/lib/sonde';
+import { fmtDay, fmtHour, isGlider, siteLabel } from '@/lib/sonde';
 import {
   HISTORY_MAX_DAYS,
   HISTORY_OVERLAY,
@@ -428,6 +428,8 @@ function HistoryRow({ e, units, centre }: { e: HistoryEntry; units: Units; centr
   const burst = burstAltitude(e);
   const d = drift(e);
   const lost = e.last.alt > 3000;
+  const glider = isGlider({ type: e.type, last: { batt: e.batt } });
+  const icon = glider ? (lost ? 'glider-lost' : 'glider-descending') : lost ? 'lost' : 'ascending';
   const time = fmtHour(entryTime(e));
   const status = e.launch
     ? e.site
@@ -461,13 +463,10 @@ function HistoryRow({ e, units, centre }: { e: HistoryEntry; units: Units; centr
         className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-start gap-3 py-3 pr-5 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
       >
         <span className="-my-1 -ml-1.5 grid size-10 shrink-0 place-items-center">
-          <Icon3D id={lost ? 'lost' : 'landed'} size={40} />
+          <Icon3D id={icon} size={40} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-2">
-            <span className="tabular text-foreground min-w-0 flex-1 truncate text-[14.5px] leading-5 font-semibold">{e.serial}</span>
-            {e.type && <span className="text-faint shrink-0 text-[12px]">{e.type}</span>}
-          </span>
+          <span className="tabular text-foreground block truncate text-[14.5px] leading-5 font-semibold">{e.serial}</span>
           <span className="mt-0.5 block text-[13px] leading-snug">
             {where ? t('sidebar.history.rowJoin', { a: status, b: where }) : status}
           </span>

@@ -13,6 +13,7 @@ interface Point {
 interface Summary {
   serial: string;
   type?: string;
+  batt?: number;
   first: Point;
   top: Point;
   last: Point;
@@ -25,6 +26,7 @@ interface RawFrame {
   alt?: number;
   type?: string;
   subtype?: string;
+  batt?: number;
 }
 
 function decode(s: string): string {
@@ -63,7 +65,8 @@ async function summary(key: string, serial: string): Promise<Summary | null> {
     if (!Array.isArray(raw) || raw.length < 3) return null;
     const [first, top, last] = raw.slice(0, 3).map(point);
     if (!first || !top || !last) return null;
-    return { serial, type: raw[0].subtype ?? raw[0].type, first, top, last };
+    const batt = [raw[2].batt, raw[0].batt].find((v): v is number => typeof v === 'number' && Number.isFinite(v));
+    return { serial, type: raw[0].subtype ?? raw[0].type, batt, first, top, last };
   } catch {
     return null;
   }

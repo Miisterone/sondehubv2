@@ -15,6 +15,7 @@ export const HISTORY_MAX_DAYS = 30;
 export interface HistoryEntry {
   serial: string;
   type?: string;
+  batt?: number;
   launch?: FlightPoint;
   top?: FlightPoint;
   last: FlightPoint;
@@ -201,6 +202,7 @@ export function entryFromSonde(s: Sonde): HistoryEntry {
   return {
     serial: s.serial,
     type: s.subtype ?? s.type,
+    batt: s.last.batt,
     launch: fromGround ? { lon: first[0], lat: first[1], alt: first[2], time: first[3] } : undefined,
     top: top ? { lon: top[0], lat: top[1], alt: top[2], time: top[3] } : undefined,
     last: { lat: s.last.lat, lon: s.last.lon, alt: s.last.alt, time: s.lastTime },
@@ -212,17 +214,18 @@ export function entryFromFrame(f: Frame): HistoryEntry {
   return {
     serial: f.serial,
     type: f.subtype ?? f.type,
+    batt: f.batt,
     last: { lat: f.lat, lon: f.lon, alt: f.alt, time: Date.parse(f.datetime) },
     recent: true,
   };
 }
 
 export function entryFromPast(f: PastFlight, site: LaunchSite): HistoryEntry {
-  return { serial: f.serial, type: f.type, launch: f.first, top: f.top, last: f.last, site, recent: false };
+  return { serial: f.serial, type: f.type, batt: f.batt, launch: f.first, top: f.top, last: f.last, site, recent: false };
 }
 
 export function toPastFlight(e: HistoryEntry): PastFlight {
-  return { serial: e.serial, type: e.type, first: e.launch ?? e.last, top: e.top ?? e.last, last: e.last };
+  return { serial: e.serial, type: e.type, batt: e.batt, first: e.launch ?? e.last, top: e.top ?? e.last, last: e.last };
 }
 
 export function openHistoryEntry(e: Pick<HistoryEntry, 'serial' | 'launch' | 'last'>) {
