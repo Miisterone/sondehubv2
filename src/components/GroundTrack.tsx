@@ -3,6 +3,8 @@ import { nearestIndex, type FlightData } from '@/lib/flight';
 import { fmtAltShort, fmtClock, fmtDist, relative, type Units } from '@/lib/format';
 import { bearing, distance, towards } from '@/lib/geo';
 import { useStore } from '@/store/useStore';
+import { replayPhase } from '@/lib/sonde';
+import { Icon3D } from './Icon3D';
 import { chartTheme } from '@/lib/chartTheme';
 import { LineKey, Readout } from './ChartParts';
 import { intlTag, useT } from '@/i18n';
@@ -29,6 +31,8 @@ const clock = (s: number) => new Date(s * 1000).toLocaleTimeString(intlTag(), { 
 
 type Label = { x: number; y: number; text: string; anchor: 'start' | 'end' };
 
+const REPLAY_ICON = 36;
+
 export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: FlightData; units: Units; now: number; live: boolean; serial?: string; height?: number }) {
   const tr = useT();
   const [ref, width] = useWidth();
@@ -36,6 +40,8 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
   const replayT = useStore((s) => (serial && s.replay?.serial === serial ? s.replay.t : null));
   const playing = useStore((s) => !!serial && s.replay?.serial === serial && s.replay.playing);
   const at = replayT !== null && d.last >= 0 ? Math.min(d.last, nearestIndex(d.x, replayT)) : null;
+  const sondePhase = useStore((s) => (serial ? s.sondes[serial]?.phase : undefined));
+  const atPhase = at !== null ? replayPhase(d.x[at] * 1000, d.burst !== null ? d.x[d.burst] * 1000 : null, d.x[d.last] * 1000, sondePhase ?? 'ascending') : null;
   const t = chartTheme(theme);
   const [hover, setHover] = useState<number | null>(null);
   const timer = useRef(0);
@@ -247,7 +253,11 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
                 {l.text}
               </text>
             ))}
-            {at !== null && <circle cx={geo.sx[at]} cy={geo.sy[at]} r={6.5} fill={t.accent} stroke={t.surface} strokeWidth={3} />}
+            {at !== null && atPhase !== null && (
+              <g transform={`translate(${geo.sx[at] - REPLAY_ICON / 2} ${geo.sy[at] - (REPLAY_ICON * 44.5) / 48})`}>
+                <Icon3D id={d.glider ? `glider-${atPhase}` : atPhase} size={REPLAY_ICON} />
+              </g>
+            )}
             {probe !== null && (
               <circle cx={geo.sx[probe]} cy={geo.sy[probe]} r={6} fill="none" stroke={probe > d.last ? t.pred : t.accent} strokeWidth={2} />
             )}

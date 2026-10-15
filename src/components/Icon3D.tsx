@@ -490,8 +490,12 @@ export function Icon3D({ id, size = 40, className, title }: Icon3DProps) {
   );
 }
 
-export function SondeIcon3D({ sonde, ...props }: Omit<Icon3DProps, 'id'> & { sonde: Pick<Sonde, 'phase' | 'type' | 'subtype' | 'last'> }) {
-  return <Icon3D id={isGlider(sonde) ? `glider-${sonde.phase}` : sonde.phase} {...props} />;
+export function SondeIcon3D({
+  sonde,
+  phase = sonde.phase,
+  ...props
+}: Omit<Icon3DProps, 'id'> & { sonde: Pick<Sonde, 'phase' | 'type' | 'subtype' | 'last'>; phase?: FlightPhase }) {
+  return <Icon3D id={isGlider(sonde) ? `glider-${phase}` : phase} {...props} />;
 }
 
 export function AltitudeColumn({ alt, burst, label, className }: { alt: number; burst: number | null; label: string; className?: string }) {

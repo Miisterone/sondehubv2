@@ -1,4 +1,4 @@
-import type { LaunchSite, ReversePrediction, Sonde } from './types';
+import type { FlightPhase, LaunchSite, ReversePrediction, Sonde } from './types';
 import { bearing, distance } from './geo';
 import { getLocale, intlTag, t, type TKey } from '@/i18n';
 
@@ -126,6 +126,11 @@ export function isGlider(s: Pick<Sonde, 'type' | 'subtype' | 'last'>): boolean {
   const batt = s.last.batt;
   const m20 = [s.subtype, s.type].some((v) => v?.toUpperCase().startsWith('M20'));
   return m20 && typeof batt === 'number' && Math.abs(batt - GLIDER_BATT_V) <= GLIDER_BATT_TOLERANCE_V;
+}
+
+export function replayPhase(tMs: number, burstMs: number | null, endMs: number, phase: FlightPhase): FlightPhase {
+  if (tMs >= endMs && (phase === 'landed' || phase === 'lost')) return phase;
+  return burstMs !== null && tMs > burstMs ? 'descending' : 'ascending';
 }
 
 const RS_TYPES: Record<string, string> = {

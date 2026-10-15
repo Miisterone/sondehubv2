@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 import { AttributionControl, Map as MlMap, Marker, Popup, ScaleControl, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { ExpressionSpecification, LayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
@@ -32,10 +33,14 @@ import { altStepExpression } from '../lib/altRamp';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
 import { intlTag, t, useLocale } from '../i18n';
 import { centreOf, isPickClick, placeWatchPointFromClick } from '../lib/watchPoint';
+import { replayPhase } from '../lib/sonde';
+import { SondeIcon3D } from './Icon3D';
 import { HISTORY_OVERLAY, openHistoryEntry } from '../lib/history';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
 setWorkerUrl(workerUrl);
+
+const REPLAY_ICON = 44;
 
 const SOURCES = [
   'tracks',
@@ -650,8 +655,10 @@ export function MapView() {
     });
 
     const replayEl = document.createElement('div');
-    replayEl.className = 'replay-dot';
-    const replayMarker = new Marker({ element: replayEl });
+    replayEl.className = 'replay-icon';
+    const replayRoot = createRoot(replayEl);
+    const replayMarker = new Marker({ element: replayEl, anchor: 'bottom', offset: [0, (REPLAY_ICON * 3.5) / 48] });
+    let replayIcon = '';
     let replayOn = false;
     let replayPaintAt = 0;
     const setTrackOpacity = (t: number | null) => {
@@ -667,13 +674,22 @@ export function MapView() {
       const r = s.replay;
       const sonde = r && s.selected === r.serial ? s.sondes[r.serial] : undefined;
       const pos = r && sonde ? trackAt(sonde.track, r.t * 1000) : null;
-      if (!r || !pos) {
+      if (!r || !sonde || !pos) {
         if (replayOn) {
           replayMarker.remove();
           replayOn = false;
           setTrackOpacity(null);
         }
         return;
+      }
+      const tr = sonde.track;
+      const end = tr[tr.length - 1][3];
+      const burstMs = sonde.maxAltIdx >= 0 && sonde.maxAltIdx < tr.length - 1 && sonde.maxAlt - sonde.last.alt > 500 ? tr[sonde.maxAltIdx][3] : null;
+      const phase = replayPhase(r.t * 1000, burstMs, end, sonde.phase);
+      const key = `${r.serial}:${phase}`;
+      if (key !== replayIcon) {
+        replayIcon = key;
+        replayRoot.render(<SondeIcon3D sonde={sonde} phase={phase} size={REPLAY_ICON} />);
       }
       replayMarker.setLngLat(pos);
       if (!replayOn) replayMarker.addTo(map);
@@ -848,6 +864,7 @@ export function MapView() {
       unsubHover();
       unsubReplay();
       replayMarker.remove();
+      queueMicrotask(() => replayRoot.unmount());
       ring.remove();
       if (frame) cancelAnimationFrame(frame);
       map.remove();

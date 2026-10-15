@@ -415,12 +415,8 @@ input[type='search']::-webkit-search-cancel-button {
   }
 }
 
-.replay-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 9999px;
-  background: var(--primary);
-  border: 3px solid #ffffff;
+.replay-icon {
+  line-height: 0;
   pointer-events: none;
 }
 
