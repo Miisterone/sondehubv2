@@ -76,6 +76,7 @@ export function WhatsNew() {
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger
+            data-tour="whats-new"
             aria-label={label}
             className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 data-[state=open]:bg-accent data-[state=open]:text-foreground relative inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px]"
           >

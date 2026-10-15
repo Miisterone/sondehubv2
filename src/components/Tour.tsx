@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Layers, LocateFixed, Moon, Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Layers, LocateFixed, Megaphone, Moon, Mountain, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { cx, MapIcon } from '@/components/ui';
@@ -41,7 +41,7 @@ const DEMO_MAX_AGE_MS = 10 * 60_000;
 
 const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
 
-type StepId = 'welcome' | 'map' | 'lists' | 'search' | 'detail' | 'controls' | 'alerts';
+type StepId = 'welcome' | 'map' | 'lists' | 'search' | 'detail' | 'controls' | 'news' | 'alerts';
 
 interface Ctx {
   mobile: boolean;
@@ -118,6 +118,15 @@ const STEPS: StepDef[] = [
     sheet: 'half',
   },
   { id: 'controls', icon: 'landing', title: 'app.tour.controlsTitle', targets: () => anchors('controls'), sides: ['left', 'bottom'], sheet: 'peek' },
+  {
+    id: 'news',
+    icon: 'news',
+    title: 'app.tour.newsTitle',
+    targets: () => anchors('whats-new'),
+    sides: ['right', 'bottom', 'top'],
+    sheet: 'peek',
+    besidePanel: true,
+  },
   { id: 'alerts', icon: 'locate', title: 'app.tour.alertsTitle', targets: nearbyTab, sides: ['right', 'top', 'bottom'], sheet: 'peek', besidePanel: true },
 ];
 
@@ -427,6 +436,10 @@ export function Tour() {
             [t('sidebar.tabs.history'), t('app.tour.listsHistory')],
           ]}
         />
+        <p className="mt-3 flex items-start gap-3">
+          <Icon3D id="glider-descending" size={32} className="-my-1" />
+          <span className="min-w-0 pt-[3px] leading-snug">{t('app.tour.listsGlider')}</span>
+        </p>
       </>
     ),
     search: () => (
@@ -468,7 +481,14 @@ export function Tour() {
       <ul className="space-y-2.5">
         <Row lead={<LocateFixed />}>{t('app.tour.controlsLocate')}</Row>
         <Row lead={<Layers />}>{t('app.tour.controlsLayers')}</Row>
+        <Row lead={<Mountain />}>{t('app.tour.controlsTerrain')}</Row>
         <Row lead={<Moon />}>{t('app.tour.controlsTheme')}</Row>
+      </ul>
+    ),
+    news: () => (
+      <ul className="space-y-2.5">
+        <Row lead={<Megaphone />}>{t('app.tour.newsText')}</Row>
+        <Row lead={<span className="bg-primary size-2 rounded-full" />}>{t('app.tour.newsDot')}</Row>
       </ul>
     ),
     alerts: () => <p>{t('app.tour.alertsText', { nearby: t('sidebar.tabs.nearby') })}</p>,

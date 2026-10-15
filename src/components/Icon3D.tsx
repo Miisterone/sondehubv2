@@ -15,7 +15,8 @@ export type Icon3DId =
   | 'locate'
   | 'relief'
   | 'globe'
-  | 'guide';
+  | 'guide'
+  | 'news';
 
 const HI = '#ffffff';
 
@@ -350,6 +351,25 @@ function Guide() {
   );
 }
 
+function News() {
+  return (
+    <>
+      <polygon points="24,31.5 38,38.5 24,45.5 10,38.5" className="i3-shadow" />
+      <Cube cx={24} ty={20} w={12} h={10} />
+      <polygon points="16.3,28.15 18.7,29.35 18.7,39.35 16.3,38.15" fill={HI} />
+      <polygon points="29.3,29.35 31.7,28.15 31.7,38.15 29.3,39.35" fill={HI} />
+      <Cube cx={24} ty={16} w={13} h={4} />
+      <polygon points="16.3,25.15 18.7,26.35 18.7,30.35 16.3,29.15" fill={HI} />
+      <polygon points="29.3,26.35 31.7,25.15 31.7,29.15 29.3,30.35" fill={HI} />
+      <polygon points="18.7,18.65 31.7,25.15 29.3,26.35 16.3,19.85" fill={HI} />
+      <polygon points="31.7,19.85 18.7,26.35 16.3,25.15 29.3,18.65" fill={HI} />
+      <path d="M24 22.2C20.4 16.8 15.8 17.6 16.9 20.4C17.8 22.5 21.4 22.9 24 22.2Z" fill={HI} className="i3-stroke-a500" strokeWidth="0.8" strokeLinejoin="round" />
+      <path d="M24 22.2C27.6 16.8 32.2 17.6 31.1 20.4C30.2 22.5 26.6 22.9 24 22.2Z" fill={HI} className="i3-stroke-a500" strokeWidth="0.8" strokeLinejoin="round" />
+      <ellipse cx="24" cy="22.2" rx="1.7" ry="1.15" className="i3-a300" />
+    </>
+  );
+}
+
 const ART: Record<Icon3DId, (heading?: number) => ReactNode> = {
   ascending: () => <Balloon />,
   descending: () => <Parachute />,
@@ -368,6 +388,7 @@ const ART: Record<Icon3DId, (heading?: number) => ReactNode> = {
   'glider-lost': (heading) => glider('lost', heading),
   globe: () => <Globe />,
   guide: () => <Guide />,
+  news: () => <News />,
 };
 
 interface Icon3DProps {

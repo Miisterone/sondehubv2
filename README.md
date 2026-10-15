@@ -45,7 +45,8 @@ purement statique, l'historique par site lit S3 en direct et seuls les vols des 
 - **Alertes** dans l'app, réglées depuis l'onglet Près de moi : atterrissages, lâchers détectés et lâchers prévus dans le rayon, éclatement et atterrissage imminent des favoris.
 - **Signaler une récupération** directement sur SondeHub (publication publique, après confirmation).
 - Palette de commandes **⌘K / Ctrl K** : sondes, stations, sites, actions.
-- Carte de bienvenue à la première visite, FAQ, thème clair/sombre, unités métriques/impériales, partage natif, export KML/CSV.
+- **Visite guidée** en 8 étapes à la première visite : projecteur sur chaque zone (carte, listes, recherche, fiche, outils, Nouveautés, alertes), choix de la langue, bouton Passer ; relançable depuis « À propos et aide », ⌘K ou Nouveautés.
+- FAQ, thème clair/sombre, unités métriques/impériales, partage natif, export KML/CSV.
 - **Nouveautés** : menu dans l'en-tête (et ⌘K) listant les dernières fonctionnalités par date, avec pastille tant qu'il reste des entrées non lues et raccourcis pour les essayer.
 - Mobile : tiroir à 3 hauteurs (vaul).
 
@@ -81,6 +82,7 @@ Endpoints utilisés (`https://api.v2.sondehub.org`) : `/sondes/telemetry?duratio
 1. Ajouter l'entrée **en tête** de `WHATS_NEW` dans `src/lib/whatsNew.ts` : `id` unique et stable, `date` (AAAA-MM-JJ), icône 3D,
    clés de titre et de texte, action facultative (`terrain`, `history`, `nearby`, `tour`).
 2. Ajouter les textes dans `src/i18n/fr/whatsNew.ts` puis dans les 12 fichiers `src/i18n/locales/*.json`.
+3. Si la fonctionnalité change l'interface, mettre à jour la visite guidée (`src/components/Tour.tsx`, clés `app.tour.*`).
 
 La pastille réapparaît pour les visiteurs dont la dernière entrée vue n'est plus la première de la liste ; seules les entrées
 ajoutées depuis leur dernière ouverture portent le badge « Nouveau ». Un premier visiteur ne voit pas de pastille.
