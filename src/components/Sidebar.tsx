@@ -36,6 +36,7 @@ import { FlightGuide } from './FlightGuide';
 import { UpcomingLaunches } from './UpcomingLaunches';
 import { getMap } from './MapView';
 import { CentreBar, PointEditor } from './WatchPointPicker';
+import { RadiusPicker, nextRadius } from './RadiusPicker';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
 
@@ -58,7 +59,6 @@ const TAPPABLE_LAYERS = [
 ];
 
 const MAX_ROWS = 300;
-const RADII = [25, 50, 100, 200] as const;
 const ALL_TYPES = '__all';
 
 export const NEARBY_EVENT = 'sondehubv2:nearby';
@@ -777,6 +777,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         </>
       );
   } else if (tab === 'nearby') {
+    const widen = nextRadius(alerts.radiusKm);
     const editor = (
       <PointEditor
         onDone={() => setEditingPoint(false)}
@@ -848,17 +849,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
       <>
         <CentreBar centre={me} open={editingPoint} onToggle={() => setEditingPoint((v) => !v)} />
         {editingPoint && editor}
-        <div className="flex items-center justify-between gap-3 px-5 pt-4">
-          <span className="text-[13px]">{tr('sidebar.nearby.radius')}</span>
-          <div role="group" aria-label={tr('sidebar.nearby.radiusLabel')}>
-            <Segmented<string>
-              size="sm"
-              value={String(alerts.radiusKm)}
-              onChange={(v) => setAlerts({ radiusKm: Number(v) })}
-              options={RADII.map((r) => ({ value: String(r), label: fmtRadius(r, units), title: tr('sidebar.nearby.radiusTitle', { radius: fmtRadius(r, units) }) }))}
-            />
-          </div>
-        </div>
+        <RadiusPicker units={units} className="px-5 pt-4" />
         <AlertPanel radiusKm={alerts.radiusKm} units={units} />
         {groups.length === 0 ? (
           loading && total === 0 ? (
@@ -869,9 +860,9 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
               title={tr('sidebar.nearby.emptyTitle', { radius: fmtRadius(alerts.radiusKm, units) })}
               actions={
                 <>
-                  {alerts.radiusKm < RADII[RADII.length - 1] && (
-                    <Button variant="outline" size="sm" onClick={() => setAlerts({ radiusKm: RADII.find((r) => r > alerts.radiusKm) ?? 200 })}>
-                      {tr('sidebar.nearby.widen', { radius: fmtRadius(RADII.find((r) => r > alerts.radiusKm) ?? 200, units) })}
+                  {widen !== undefined && (
+                    <Button variant="outline" size="sm" onClick={() => setAlerts({ radiusKm: widen })}>
+                      {tr('sidebar.nearby.widen', { radius: fmtRadius(widen, units) })}
                     </Button>
                   )}
                   {filtered && (

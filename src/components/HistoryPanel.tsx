@@ -32,8 +32,8 @@ import { Segmented } from './ui';
 import { Icon3D } from './Icon3D';
 import { EmptyState, RowSkeleton } from './ListParts';
 import { getMap } from './MapView';
+import { RadiusPicker, nextRadius } from './RadiusPicker';
 
-const RADII = [25, 50, 100, 200] as const;
 const PERIODS = ['7', '30'] as const;
 type Period = (typeof PERIODS)[number];
 type ZoneMode = 'me' | 'map';
@@ -241,7 +241,7 @@ export function HistoryPanel({ units, me, locating, onLocate }: Props) {
     return out;
   }, [entries, Math.floor(now / 60_000)]);
 
-  const widen = RADII.find((r) => r > radiusKm);
+  const widen = nextRadius(radiusKm);
   const refFromMe = mode === 'me' && me ? me : null;
 
   const controls = (
@@ -257,14 +257,7 @@ export function HistoryPanel({ units, me, locating, onLocate }: Props) {
           ]}
         />
       </ControlRow>
-      <ControlRow label={t('sidebar.nearby.radius')}>
-        <Segmented<string>
-          size="sm"
-          value={String(radiusKm)}
-          onChange={(v) => setAlerts({ radiusKm: Number(v) })}
-          options={RADII.map((r) => ({ value: String(r), label: fmtRadius(r, units), title: t('sidebar.nearby.radiusTitle', { radius: fmtRadius(r, units) }) }))}
-        />
-      </ControlRow>
+      <RadiusPicker units={units} />
       <ControlRow label={t('sidebar.history.period')}>
         <Segmented<Period>
           size="sm"

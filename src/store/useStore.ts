@@ -76,7 +76,7 @@ const DEFAULT_SETTINGS: Settings = {
   basemap: 'positron',
   units: localeUnits(),
   favourites: [],
-  alerts: { enabled: false, radiusKm: 50, landings: true, launchDetected: true, launchPlanned: false, favourites: true },
+  alerts: { enabled: false, radiusKm: 25, landings: true, launchDetected: true, launchPlanned: false, favourites: true },
   watchPoint: null,
   callsign: '',
   tutorialDone: false,
