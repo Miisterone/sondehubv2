@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "sondetrack.vercel.app" }],
+      "destination": "https://sondehubv2.vercel.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:lang(fr|en|de|es|it|nl|pl|cs|pt|sv|ja|zh|ru)",
+      "destination": "/:lang/",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/sitemap.xml",
+      "headers": [{ "key": "Content-Type", "value": "application/xml; charset=utf-8" }]
+    }
+  ]
+}

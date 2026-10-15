@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { seo } from './seo/plugin';
 
 type ApiModule = { default: { fetch(request: Request): Promise<Response> } };
 
@@ -33,7 +34,7 @@ function vercelApi(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), vercelApi()],
+  plugins: [react(), tailwindcss(), vercelApi(), seo()],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },

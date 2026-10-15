@@ -77,6 +77,15 @@ Endpoints utilisés (`https://api.v2.sondehub.org`) : `/sondes/telemetry?duratio
 `/predictions`, `/listeners/telemetry?duration=1d`, `/sites`, `/sondes?lat=&lon=&distance=&last=`, `/recovered?last=`, `PUT /recovered` (signalements)
 — et `wss://ws-reader.v2.sondehub.org/`. Archives : `https://sondehub-history.s3.amazonaws.com` (`launchsites/`, `serial/`).
 
+## Référencement
+
+- Une URL par langue (`/fr/`, `/en/`, `/de/`…) générée au build par `seo/plugin.ts` : `lang`, titre, description, `canonical`,
+  `hreflang`, Open Graph, Twitter et JSON-LD traduits. La racine `/` reste en détection automatique (`x-default`).
+- Chaque page contient un écran d'accueil statique traduit (`seo/content.ts`), lisible sans JavaScript, remplacé au démarrage de l'app.
+- `sitemap.xml` est généré au build ; `robots.txt` et l'image de partage (`og-image.png`) sont dans `public/`.
+- L'URL de production est définie dans `SITE_URL` (`seo/plugin.ts`) et dans `public/robots.txt`.
+- Ajouter une langue : l'ajouter dans `src/i18n/locales.ts`, `seo/content.ts` et la liste des redirections de `vercel.json`.
+
 ## Annoncer une nouveauté
 
 1. Ajouter l'entrée **en tête** de `WHATS_NEW` dans `src/lib/whatsNew.ts` : `id` unique et stable, `date` (AAAA-MM-JJ), icône 3D,

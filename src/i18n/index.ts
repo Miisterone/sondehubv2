@@ -90,9 +90,22 @@ function apply(locale: Locale, d: Record<string, string>) {
   document.querySelector('meta[name="description"]')?.setAttribute('content', t('app.description'));
 }
 
+export function urlLocale(): Locale | null {
+  const segment = window.location.pathname.split('/')[1];
+  return isLocale(segment) ? segment : null;
+}
+
+function syncUrl(locale: Locale) {
+  const prefixed = urlLocale();
+  if (!prefixed || prefixed === locale) return;
+  const { search, hash } = window.location;
+  history.replaceState(history.state, '', `/${locale}/${search}${hash}`);
+}
+
 export async function setLocale(locale: Locale): Promise<void> {
   const d = await load(locale);
   apply(locale, d);
+  syncUrl(locale);
   try {
     localStorage.setItem(STORAGE_KEY, locale);
   } catch {
@@ -102,6 +115,8 @@ export async function setLocale(locale: Locale): Promise<void> {
 }
 
 function detect(): Locale {
+  const fromUrl = urlLocale();
+  if (fromUrl) return fromUrl;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isLocale(stored)) return stored;
