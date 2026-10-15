@@ -187,7 +187,7 @@ export function AtmospherePanel({
       {readout}
       <ViewSwitch value={view} onChange={setView} stretch />
       <div className="space-y-2">
-        <div className="relative h-[280px] w-full overflow-hidden rounded-lg border">
+        <div data-tour="view3d" className="relative h-[280px] w-full overflow-hidden rounded-lg border">
           {!full && view3d('preview')}
           <IconButton label={tr('atmo3d.panel.expand')} side="left" className="bg-background hover:bg-background absolute top-2 right-2 size-10 border" onClick={() => setFull(true)}>
             <Maximize2 className="size-4" />

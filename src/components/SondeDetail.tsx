@@ -50,6 +50,7 @@ import { AltitudeColumn, Icon3D, SondeIcon3D } from './Icon3D';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
 import { NavMenu } from './NavMenu';
+import { DETAIL_TAB_EVENT, type DetailTab, type DetailTabRequest } from '@/lib/tour';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,8 +68,9 @@ const WindProfile = lazy(() => import('./WindProfile').then((m) => ({ default: m
 const PredictionConvergence = lazy(() => import('./PredictionConvergence').then((m) => ({ default: m.PredictionConvergence })));
 
 const RECEIVERS_PREVIEW = 8;
+const REVEAL_MARGIN = 16;
+const REVEAL_SETTLE_MS = 560;
 
-type DetailTab = 'flight' | 'atmosphere' | 'technical';
 type ChartView = 'altitude' | 'speed' | 'distance';
 
 const DETAIL_TABS: { id: DetailTab; label: string }[] = [
@@ -146,6 +148,42 @@ export function SondeDetail({ serial }: { serial: string }) {
   const [hero, setHero] = useState<HTMLDivElement | null>(null);
   const [compact, setCompact] = useState(false);
   const tabAnchor = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [reveal, setReveal] = useState<{ name: string; n: number } | null>(null);
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const req = (e as CustomEvent<DetailTabRequest>).detail;
+      setTab(req.tab ?? readTab());
+      const name = req.reveal;
+      setReveal((r) => (name ? { name, n: (r?.n ?? 0) + 1 } : null));
+    };
+    window.addEventListener(DETAIL_TAB_EVENT, on);
+    return () => window.removeEventListener(DETAIL_TAB_EVENT, on);
+  }, []);
+
+  useEffect(() => {
+    if (!reveal) return;
+    const run = () => {
+      const el = rootRef.current?.querySelector<HTMLElement>(`[data-tour="${reveal.name}"]`);
+      const viewport = el?.closest('[data-slot=scroll-area-viewport]') as HTMLElement | null;
+      if (!el || !viewport) return;
+      const v = viewport.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const sticky = viewport.querySelector<HTMLElement>('[role=tablist]')?.offsetHeight ?? 0;
+      const top = v.top + sticky + REVEAL_MARGIN;
+      const bottom = v.bottom - REVEAL_MARGIN;
+      if (r.top >= top && r.bottom <= bottom) return;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      viewport.scrollTo({ top: viewport.scrollTop + r.top - Math.max(top, bottom - r.height), behavior: reduce ? 'auto' : 'smooth' });
+    };
+    const raf = requestAnimationFrame(run);
+    const late = window.setTimeout(run, REVEAL_SETTLE_MS);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(late);
+    };
+  }, [reveal]);
 
   useEffect(() => {
     if (!hero) return;
@@ -297,7 +335,7 @@ export function SondeDetail({ serial }: { serial: string }) {
   );
 
   return (
-    <div className="animate-in flex h-full min-h-0 flex-col">
+    <div ref={rootRef} className="animate-in flex h-full min-h-0 flex-col">
       <div className={cx('flex shrink-0 items-center border-b px-3', compact ? 'gap-1.5 py-2' : 'gap-2 py-3')}>
         <IconButton label={t('sonde.header.back')} side="bottom" onClick={() => select(null)}>
           <ArrowLeft />

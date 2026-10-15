@@ -1,9 +1,15 @@
 export const NEARBY_EVENT = 'sondehubv2:nearby';
 export const SHEET_EVENT = 'sondehubv2:sheet';
 export const TAB_EVENT = 'sondehubv2:tab';
+export const DETAIL_TAB_EVENT = 'sondehubv2:detail-tab';
 
 export type SheetSnap = 'peek' | 'half' | 'full';
 export type SidebarTab = 'nearby' | 'flying' | 'following' | 'history';
+export type DetailTab = 'flight' | 'atmosphere' | 'technical';
+export interface DetailTabRequest {
+  tab: DetailTab | null;
+  reveal?: string;
+}
 
 export interface Rect {
   x: number;

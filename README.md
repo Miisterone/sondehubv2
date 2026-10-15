@@ -45,7 +45,7 @@ purement statique, l'historique par site lit S3 en direct et seuls les vols des 
 - **Alertes** dans l'app, réglées depuis l'onglet Près de moi : atterrissages, lâchers détectés et lâchers prévus dans le rayon, éclatement et atterrissage imminent des favoris.
 - **Signaler une récupération** directement sur SondeHub (publication publique, après confirmation).
 - Palette de commandes **⌘K / Ctrl K** : sondes, stations, sites, actions.
-- **Visite guidée** en 8 étapes à la première visite : projecteur sur chaque zone (carte, listes, recherche, fiche, outils, Nouveautés, alertes), choix de la langue, bouton Passer ; relançable depuis « À propos et aide », ⌘K ou Nouveautés.
+- **Visite guidée** en 9 étapes à la première visite : projecteur sur chaque zone (carte, listes, recherche, fiche, vue 3D, outils, Nouveautés, alertes), choix de la langue, bouton Passer ; relançable depuis « À propos et aide », ⌘K ou Nouveautés.
 - FAQ, thème clair/sombre, unités métriques/impériales, partage natif, export KML/CSV.
 - **Nouveautés** : menu dans l'en-tête (et ⌘K) listant les dernières fonctionnalités par date, avec pastille tant qu'il reste des entrées non lues et raccourcis pour les essayer.
 - Mobile : tiroir à 3 hauteurs (vaul).

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Layers, LocateFixed, Megaphone, Moon, Mountain, Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Layers, LocateFixed, Maximize2, Megaphone, Moon, Mountain, Rotate3d, Ruler, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { cx, MapIcon } from '@/components/ui';
@@ -12,6 +12,7 @@ import { usefulPrediction } from '@/lib/filter';
 import { distance } from '@/lib/geo';
 import { IS_MAC } from '@/lib/platform';
 import {
+  DETAIL_TAB_EVENT,
   NEARBY_EVENT,
   SHEET_EVENT,
   clampRect,
@@ -24,6 +25,7 @@ import {
   mergeHoles,
   placeCard,
   shadePath,
+  type DetailTabRequest,
   type Rect,
   type SheetSnap,
   type Side,
@@ -40,7 +42,9 @@ const DEMO_MAX_AGE_MS = 10 * 60_000;
 
 const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(hover: none) and (pointer: coarse)').matches;
 
-type StepId = 'welcome' | 'map' | 'lists' | 'search' | 'detail' | 'controls' | 'news' | 'alerts';
+type StepId = 'welcome' | 'map' | 'lists' | 'search' | 'detail' | 'view3d' | 'controls' | 'news' | 'alerts';
+
+const DEMO_STEPS: ReadonlySet<StepId> = new Set<StepId>(['detail', 'view3d']);
 
 interface Ctx {
   mobile: boolean;
@@ -87,6 +91,15 @@ function sondeSpot(serial: string | null): Rect[] {
   return [{ x: box.left + p.x - 26, y: box.top + p.y - 26, w: 52, h: 52 }];
 }
 
+function view3dSpot(): Rect[] {
+  const view = anchors('view3d');
+  return view.length ? view : anchors('sidebar');
+}
+
+function askDetailTab(detail: DetailTabRequest) {
+  window.dispatchEvent(new CustomEvent<DetailTabRequest>(DETAIL_TAB_EVENT, { detail }));
+}
+
 function nearbyTab(): Rect[] {
   const el = document.querySelector('[data-tour="lists"] [data-tab="nearby"]');
   if (!el) return [];
@@ -116,6 +129,7 @@ const STEPS: StepDef[] = [
     sides: ['right', 'top'],
     sheet: 'half',
   },
+  { id: 'view3d', icon: 'relief', title: 'app.tour.view3dTitle', targets: view3dSpot, sides: ['right', 'top'], sheet: 'half', besidePanel: true },
   { id: 'controls', icon: 'landing', title: 'app.tour.controlsTitle', targets: () => anchors('controls'), sides: ['left', 'bottom'], sheet: 'peek' },
   {
     id: 'news',
@@ -229,10 +243,11 @@ export function Tour() {
   }, [ready, loading]);
 
   const visible = ready && !tutorialDone && (started || !selected);
-  const steps = withDemo ? STEPS : STEPS.filter((s) => s.id !== 'detail');
+  const steps = withDemo ? STEPS : STEPS.filter((s) => !DEMO_STEPS.has(s.id));
   const index = Math.min(step, steps.length - 1);
   const def = steps[index];
   const last = index === steps.length - 1;
+  const onDemo = DEMO_STEPS.has(def.id);
 
   const defRef = useRef(def);
   const mobileRef = useRef(mobile);
@@ -276,7 +291,7 @@ export function Tour() {
   }, [visible, mobile, def.id, def.sheet]);
 
   useEffect(() => {
-    if (!visible || def.id !== 'detail') return;
+    if (!visible || !onDemo) return;
     const serial = pickSonde();
     if (!serial) return;
     const map = getMap();
@@ -292,6 +307,14 @@ export function Tour() {
       if (keepDemo.current || st.selected !== serial) return;
       st.select(null);
       if (centre && zoom !== undefined) st.requestFly(centre.lng, centre.lat, zoom);
+    };
+  }, [visible, onDemo]);
+
+  useEffect(() => {
+    if (!visible || def.id !== 'view3d') return;
+    askDetailTab({ tab: 'atmosphere', reveal: 'view3d' });
+    return () => {
+      if (!keepDemo.current) askDetailTab({ tab: null });
     };
   }, [visible, def.id]);
 
@@ -473,6 +496,16 @@ export function Tour() {
         <ul className="mt-3 space-y-2">
           <Row lead={<Star />}>{t('app.tour.detailFavourite')}</Row>
           <Row lead={<LocateFixed />}>{t('app.tour.detailFollow')}</Row>
+        </ul>
+      </>
+    ),
+    view3d: () => (
+      <>
+        <p>{t('app.tour.view3dIntro', { tab: t('sonde.tabs.atmosphere') })}</p>
+        <ul className="mt-3 space-y-2.5">
+          <Row lead={<Rotate3d />}>{t('app.tour.view3dRotate')}</Row>
+          <Row lead={<Ruler />}>{t('app.tour.view3dViews', { profile: t('atmo3d.view.profile'), top: t('atmo3d.view.top') })}</Row>
+          <Row lead={<Maximize2 />}>{t('app.tour.view3dExpand')}</Row>
         </ul>
       </>
     ),
