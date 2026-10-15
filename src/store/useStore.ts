@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { FlightPhase, Frame, LaunchSite, Listener, PastFlight, Prediction, PredictionSample, Recovery, ReceiverHit, ReversePrediction, SiteForecast, Sonde, TrackPoint } from '../lib/types';
+import { pickFlight, sameFlight } from '../lib/sonde';
 import type { TelemetryResponse } from '../lib/api';
 import { parseLatLon } from '../lib/geo';
 import type { Units } from '../lib/format';
@@ -446,9 +447,14 @@ export const useStore = create<State>((set, get) => ({
       : { ...get().sondes };
     const now = Date.now();
     for (const [serial, byTime] of Object.entries(data)) {
-      const frames = Object.values(byTime).filter(isValidFrame).sort((a, b) => frameTime(a) - frameTime(b));
+      const frames = pickFlight(Object.values(byTime).filter(isValidFrame).sort((a, b) => frameTime(a) - frameTime(b)));
       if (frames.length === 0) continue;
-      let s = sondes[serial] ?? newSonde(frames[0]);
+      const known = sondes[serial];
+      const start = frameTime(frames[0]);
+      const end = frameTime(frames[frames.length - 1]);
+      const same = !known || sameFlight(known, start, end);
+      if (!same && known.lastTime > end) continue;
+      let s = known && same ? known : newSonde(frames[0]);
       for (const f of frames) s = applyFrame(s, f, 0);
       s.phase = computePhase(s, now);
       sondes[serial] = s;
@@ -459,9 +465,10 @@ export const useStore = create<State>((set, get) => ({
   mergeHistory: (serial, data, archived = false) => {
     const byTime = data[serial];
     if (!byTime) return;
-    const existing = get().sondes[serial];
-    const frames = Object.values(byTime).filter(isValidFrame).sort((a, b) => frameTime(a) - frameTime(b));
+    const frames = pickFlight(Object.values(byTime).filter(isValidFrame).sort((a, b) => frameTime(a) - frameTime(b)));
     if (frames.length === 0) return;
+    const known = get().sondes[serial];
+    const existing = known && sameFlight(known, frameTime(frames[0]), frameTime(frames[frames.length - 1])) ? known : undefined;
     let s = existing ?? newSonde(frames[0]);
     for (const f of frames) s = applyFrame(s, f, 0);
     recomputeMax(s);

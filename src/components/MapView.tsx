@@ -23,6 +23,7 @@ import {
   sitesFC,
   sondeFeature,
   trackAt,
+  trackHeading,
   trackDeps,
   trackFeature,
 } from '../lib/mapData';
@@ -33,7 +34,7 @@ import { altStepExpression } from '../lib/altRamp';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
 import { intlTag, t, useLocale } from '../i18n';
 import { centreOf, isPickClick, placeWatchPointFromClick } from '../lib/watchPoint';
-import { replayPhase } from '../lib/sonde';
+import { isGlider, replayPhase } from '../lib/sonde';
 import { SondeIcon3D } from './Icon3D';
 import { HISTORY_OVERLAY, openHistoryEntry } from '../lib/history';
 
@@ -686,10 +687,13 @@ export function MapView() {
       const end = tr[tr.length - 1][3];
       const burstMs = sonde.maxAltIdx >= 0 && sonde.maxAltIdx < tr.length - 1 && sonde.maxAlt - sonde.last.alt > 500 ? tr[sonde.maxAltIdx][3] : null;
       const phase = replayPhase(r.t * 1000, burstMs, end, sonde.phase);
-      const key = `${r.serial}:${phase}`;
+      const glider = isGlider(sonde);
+      const course = glider ? trackHeading(tr, r.t * 1000) : null;
+      const heading = course === null ? undefined : course - map.getBearing();
+      const key = `${r.serial}:${phase}:${glider}:${heading === undefined ? '' : Math.round(heading / 10)}`;
       if (key !== replayIcon) {
         replayIcon = key;
-        replayRoot.render(<SondeIcon3D sonde={sonde} phase={phase} size={REPLAY_ICON} />);
+        replayRoot.render(<SondeIcon3D sonde={sonde} phase={phase} heading={heading} size={REPLAY_ICON} />);
       }
       replayMarker.setLngLat(pos);
       if (!replayOn) replayMarker.addTo(map);
@@ -707,6 +711,9 @@ export function MapView() {
     map.on('style.load', () => {
       replayPaintAt = 0;
       if (replayOn) applyReplay(useStore.getState(), true);
+    });
+    map.on('rotate', () => {
+      if (replayOn) applyReplay(useStore.getState());
     });
 
     // Follow mode: keep the selected sonde centred.

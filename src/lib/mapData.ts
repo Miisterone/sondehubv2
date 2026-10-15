@@ -2,6 +2,7 @@ import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { Listener, LaunchSite, PastFlight, Prediction, Recovery, ReversePrediction, SiteForecast, Sonde } from './types';
 import { usefulPrediction } from './filter';
 import { isGlider } from './sonde';
+import { bearing, distance } from './geo';
 import { mapLabel } from './text';
 import { intlTag, t } from '@/i18n';
 
@@ -197,4 +198,19 @@ export function trackAt(track: Sonde['track'], tMs: number): [number, number] | 
   const b = track[hi];
   const k = b[3] > a[3] ? (tMs - a[3]) / (b[3] - a[3]) : 0;
   return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+}
+
+export function trackHeading(track: Sonde['track'], tMs: number): number | null {
+  const n = track.length;
+  if (n < 2) return null;
+  const t0 = track[0][3];
+  const t1 = track[n - 1][3];
+  const t = Math.max(t0, Math.min(t1, tMs));
+  for (const half of [45_000, 120_000, 300_000]) {
+    const a = trackAt(track, Math.max(t0, t - half));
+    const b = trackAt(track, Math.min(t1, t + half));
+    if (!a || !b) return null;
+    if (distance(a[1], a[0], b[1], b[0]) >= 30) return bearing(a[1], a[0], b[1], b[0]);
+  }
+  return null;
 }

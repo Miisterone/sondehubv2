@@ -33,6 +33,17 @@ type Label = { x: number; y: number; text: string; anchor: 'start' | 'end' };
 
 const REPLAY_ICON = 36;
 
+function screenHeading(d: FlightData, sx: number[], sy: number[], at: number): number | undefined {
+  for (const half of [45, 120, 300]) {
+    const i0 = Math.max(0, nearestIndex(d.x, d.x[at] - half));
+    const i1 = Math.min(d.last, nearestIndex(d.x, d.x[at] + half));
+    const dx = sx[i1] - sx[i0];
+    const dy = sy[i1] - sy[i0];
+    if (Math.hypot(dx, dy) >= 1.5) return (Math.atan2(dx, -dy) * 180) / Math.PI;
+  }
+  return undefined;
+}
+
 export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: FlightData; units: Units; now: number; live: boolean; serial?: string; height?: number }) {
   const tr = useT();
   const [ref, width] = useWidth();
@@ -255,7 +266,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
             ))}
             {at !== null && atPhase !== null && (
               <g transform={`translate(${geo.sx[at] - REPLAY_ICON / 2} ${geo.sy[at] - (REPLAY_ICON * 44.5) / 48})`}>
-                <Icon3D id={d.glider ? `glider-${atPhase}` : atPhase} size={REPLAY_ICON} />
+                <Icon3D id={d.glider ? `glider-${atPhase}` : atPhase} heading={d.glider ? screenHeading(d, geo.sx, geo.sy, at) : undefined} size={REPLAY_ICON} />
               </g>
             )}
             {probe !== null && (

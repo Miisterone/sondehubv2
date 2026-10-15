@@ -1,6 +1,7 @@
 import type { FlightPoint, Frame, LaunchSite, PastFlight, Sonde } from './types';
 import { fetchPastFlight, fetchSondeHistory, listSiteFlights, type TelemetryResponse } from './api';
 import { bearing, distance } from './geo';
+import { pickFlight } from './sonde';
 import { useStore } from '@/store/useStore';
 
 export const HISTORY_OVERLAY = '__history';
@@ -112,7 +113,20 @@ export interface LoadedHistory {
   archived: boolean;
 }
 
+function narrow(loaded: LoadedHistory, serial: string, near: number | undefined): LoadedHistory {
+  const frames = pickFlight(
+    Object.values(loaded.data[serial]).sort((a, b) => Date.parse(a.datetime) - Date.parse(b.datetime)),
+    near,
+  );
+  return { ...loaded, data: { ...loaded.data, [serial]: Object.fromEntries(frames.map((f) => [f.datetime, f])) } };
+}
+
 export async function loadSondeHistory(serial: string, live: Sonde | undefined, signal?: AbortSignal): Promise<LoadedHistory | null> {
+  const loaded = await loadAnyHistory(serial, live, signal);
+  return loaded ? narrow(loaded, serial, hints.get(serial)) : null;
+}
+
+async function loadAnyHistory(serial: string, live: Sonde | undefined, signal?: AbortSignal): Promise<LoadedHistory | null> {
   const hint = hints.get(serial);
   const old = hint !== undefined && Date.now() - hint > LIVE_RETENTION_MS;
   if ((live && !live.archived) || hint === undefined) {

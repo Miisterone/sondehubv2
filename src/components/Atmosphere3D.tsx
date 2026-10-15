@@ -36,7 +36,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import type { FlightData } from '@/lib/flight';
+import { nearestIndex, type FlightData } from '@/lib/flight';
+import { GLIDER } from '@/lib/gliderModel';
 import { HEIGHT, SIDE, positionAt, type AtmoOptions, type AtmoScene, type AtmoView, type Vec3 } from '@/lib/atmo3d';
 import { elevationAt, type TerrainGrid } from '@/lib/terrainGrid';
 import { FLOOR_ATTRIBUTION, TERRAIN_ATTRIBUTION, type FloorMap } from '@/lib/floorMap';
@@ -214,8 +215,35 @@ interface Content {
   terrain: TerrainGrid | null;
 }
 
+const GLIDER_HUNG = 0.12;
+const GLIDER_FREE = 0.2;
+
+function gliderMesh(body: string, glass: string): Group {
+  const pos: Record<'body' | 'glass', number[]> = { body: [], glass: [] };
+  for (const f of GLIDER) {
+    if (f.tone === 'shine') continue;
+    const v = f.p.map(([x, y, z]) => [x, z, -y]);
+    for (let k = 1; k < v.length - 1; k++) pos[f.tone].push(...v[0], ...v[k], ...v[k + 1]);
+  }
+  const group = new Group();
+  for (const [tone, color] of [
+    ['body', body],
+    ['glass', glass],
+  ] as const) {
+    const g = new BufferGeometry();
+    g.setAttribute('position', new Float32BufferAttribute(pos[tone], 3));
+    g.computeVertexNormals();
+    group.add(new Mesh(g, new MeshLambertMaterial({ color, side: DoubleSide, flatShading: true })));
+  }
+  group.scale.setScalar(GLIDER_HUNG);
+  return group;
+}
+
 interface Dynamic {
   balloon: Group;
+  sphere: Mesh;
+  string: Mesh | null;
+  glider: Group | null;
   balloonTag: Tag;
   drop: Line2 | null;
   groundRing: Line2 | null;
@@ -922,13 +950,15 @@ class Engine {
     const sphere = new Mesh(new SphereGeometry(1, 40, 24), new MeshLambertMaterial({ color: pal.accent, emissive: pal.accent, emissiveIntensity: 0.18 }));
     sphere.position.y = 0.9;
     balloon.add(sphere);
+    const glider = s.glider ? gliderMesh(pal.accent, pal.ink) : null;
+    let string: Mesh | null = null;
     if (view !== 'top') {
-      const string = new Mesh(new BoxGeometry(0.06, 1.7, 0.06), new MeshBasicMaterial({ color: pal.ink }));
+      string = new Mesh(new BoxGeometry(0.06, 1.7, 0.06), new MeshBasicMaterial({ color: pal.ink }));
       string.position.y = -0.85;
-      const box = new Mesh(new BoxGeometry(0.5, 0.5, 0.5), new MeshLambertMaterial({ color: pal.payload }));
-      box.position.y = -2;
-      balloon.add(string, box);
-    }
+      const payload = glider ?? new Mesh(new BoxGeometry(0.5, 0.5, 0.5), new MeshLambertMaterial({ color: pal.payload }));
+      payload.position.y = -2;
+      balloon.add(string, payload);
+    } else if (glider) balloon.add(glider);
     this.root.add(balloon);
 
     let drop: Line2 | null = null;
@@ -1174,7 +1204,7 @@ class Engine {
     });
 
     this.tags.sort((a, b) => Number(b.marker) - Number(a.marker) || b.prio - a.prio);
-    this.dyn = { balloon, balloonTag, drop, groundRing, played, faint, curtain, drops, current: new Vector3() };
+    this.dyn = { balloon, sphere, string, glider, balloonTag, drop, groundRing, played, faint, curtain, drops, current: new Vector3() };
 
     const credits = [options.map && c.floor ? FLOOR_ATTRIBUTION : null, this.terrainActive ? TERRAIN_ATTRIBUTION : null].filter(Boolean);
     this.credit.textContent = view === 'profile' ? '' : credits.join(', ');
@@ -1222,6 +1252,21 @@ class Engine {
     const w = new Vector3(((p[0] - s.center[0]) / s.span) * SIDE, y(p[2]), -((p[1] - s.center[1]) / s.span) * SIDE);
     d.current.copy(w);
     d.balloon.position.copy(w);
+    if (d.glider) {
+      const f = c.flight;
+      const released = f.burst !== null && i > f.burst;
+      d.sphere.visible = !released;
+      if (d.string) d.string.visible = !released;
+      d.glider.position.y = released || !d.string ? 0 : -2;
+      d.glider.scale.setScalar(released ? GLIDER_FREE : GLIDER_HUNG);
+      for (const half of [60, 180, 600]) {
+        const a = positionAt(f, s, Math.max(0, nearestIndex(f.x, f.x[i] - half)));
+        const b = positionAt(f, s, Math.min(f.last, nearestIndex(f.x, f.x[i] + half)));
+        if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 30) continue;
+        d.glider.rotation.y = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        break;
+      }
+    }
     const [title, sub] = d.balloonTag.texts;
     title.get = () => fmtAltShort(p[2], c.units);
     sub.get = () => clock(c.flight.x[i]);

@@ -128,6 +128,38 @@ export function isGlider(s: Pick<Sonde, 'type' | 'subtype' | 'last'>): boolean {
   return m20 && typeof batt === 'number' && Math.abs(batt - GLIDER_BATT_V) <= GLIDER_BATT_TOLERANCE_V;
 }
 
+const FLIGHT_GAP_MS = 12 * 3_600_000;
+const FLIGHT_MIN_ALT = 5000;
+
+export function pickFlight<T extends { datetime: string; alt: number }>(frames: T[], near?: number): T[] {
+  const time = (f: T) => Date.parse(f.datetime);
+  const groups: T[][] = [];
+  let current: T[] = [];
+  for (const f of frames) {
+    if (current.length && time(f) - time(current[current.length - 1]) > FLIGHT_GAP_MS) {
+      groups.push(current);
+      current = [];
+    }
+    current.push(f);
+  }
+  if (current.length) groups.push(current);
+  const flights: T[][] = [];
+  for (const g of groups) {
+    const flew = g.some((f) => f.alt >= FLIGHT_MIN_ALT);
+    if (!flew && flights.length) flights[flights.length - 1].push(...g);
+    else flights.push(g);
+  }
+  if (flights.length < 2) return frames;
+  if (near === undefined) return flights[flights.length - 1];
+  const off = (g: T[]) => Math.max(0, time(g[0]) - near, near - time(g[g.length - 1]));
+  return flights.reduce((best, g) => (off(g) < off(best) ? g : best));
+}
+
+export function sameFlight(s: Pick<Sonde, 'track' | 'lastTime'>, start: number, end: number): boolean {
+  if (!s.track.length) return true;
+  return start - s.lastTime <= FLIGHT_GAP_MS && s.track[0][3] - end <= FLIGHT_GAP_MS;
+}
+
 export function replayPhase(tMs: number, burstMs: number | null, endMs: number, phase: FlightPhase): FlightPhase {
   if (tMs >= endMs && (phase === 'landed' || phase === 'lost')) return phase;
   return burstMs !== null && tMs > burstMs ? 'descending' : 'ascending';
