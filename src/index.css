@@ -222,6 +222,11 @@ body,
   }
 }
 
+.st-picking,
+.st-picking .maplibregl-canvas {
+  cursor: crosshair !important;
+}
+
 .maplibregl-popup.st-popup .maplibregl-popup-content {
   background: var(--popover);
   color: var(--text);

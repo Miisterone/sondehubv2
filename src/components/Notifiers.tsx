@@ -7,6 +7,7 @@ import { usefulPrediction } from '@/lib/filter';
 import { bearing, compass, distance } from '@/lib/geo';
 import { fmtAlt, fmtDist, relative } from '@/lib/format';
 import { intlTag, t } from '@/i18n';
+import { currentCentre } from '@/lib/watchPoint';
 
 /* ───────────────────────────── Landing alerts ───────────────────────────── */
 
@@ -70,7 +71,7 @@ function collectAlerts(): PendingAlert[] {
   const { alerts, favourites, units } = st.settings;
   const now = Date.now();
   const log = sent();
-  const loc = st.userLocation;
+  const loc = currentCentre();
   const radius = alerts.radiusKm * 1000;
   const out: PendingAlert[] = [];
 
@@ -182,6 +183,7 @@ function useLandingAlerts() {
         s.sondes === prev.sondes &&
         s.predictions === prev.predictions &&
         s.userLocation === prev.userLocation &&
+        s.settings.watchPoint === prev.settings.watchPoint &&
         s.settings.alerts === prev.settings.alerts &&
         s.settings.favourites === prev.settings.favourites
       )
@@ -193,7 +195,7 @@ function useLandingAlerts() {
     // silently if the permission is already granted; otherwise offer a button (a prompt out of
     // the blue would be rude and is often blocked without a user gesture).
     const st = useStore.getState();
-    if (st.settings.alerts.enabled && !st.userLocation) {
+    if (st.settings.alerts.enabled && !st.userLocation && !st.settings.watchPoint) {
       const locateQuietly = () => locateUser({ fly: false, silent: true });
       const offer = () =>
         toast(t('map.alert.pausedTitle'), {
@@ -208,7 +210,7 @@ function useLandingAlerts() {
       else
         perms.then(
           (p) => {
-            if (useStore.getState().userLocation) return;
+            if (useStore.getState().userLocation || useStore.getState().settings.watchPoint) return;
             if (p.state === 'granted') {
               void locateQuietly();
             } else offer();

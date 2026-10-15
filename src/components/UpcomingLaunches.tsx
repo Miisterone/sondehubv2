@@ -6,6 +6,7 @@ import { bearing, cardinal, distance } from '@/lib/geo';
 import { fmtDay, fmtHour, siteCountry, siteLabel, upcomingLaunches } from '@/lib/sonde';
 import { Icon3D } from './Icon3D';
 import { useT } from '@/i18n';
+import { useNearbyCentre } from '@/lib/watchPoint';
 
 const HORIZON_MS = 36 * 3_600_000;
 const NEAR_RADIUS_M = 400_000;
@@ -31,7 +32,8 @@ export function nextLaunches(sites: LaunchSite[], me: { lat: number; lon: number
 
 export function UpcomingLaunches({ limit = 5, className }: { limit?: number; className?: string }) {
   const sites = useStore((s) => s.sites);
-  const me = useStore((s) => s.userLocation);
+  const me = useNearbyCentre();
+  const pt = me?.kind === 'point';
   const units = useStore((s) => s.settings.units);
   const now = useStore((s) => s.now);
   const minute = Math.floor(now / 60_000);
@@ -43,7 +45,7 @@ export function UpcomingLaunches({ limit = 5, className }: { limit?: number; cla
 
   return (
     <section aria-label={tr('sidebar.launches.title')} className={className}>
-      <h2 className="flex items-baseline gap-2 px-5 pt-5 pb-1 text-[14px] font-semibold">{me ? tr('sidebar.launches.titleNear') : tr('sidebar.launches.title')}</h2>
+      <h2 className="flex items-baseline gap-2 px-5 pt-5 pb-1 text-[14px] font-semibold">{me ? tr(pt ? 'sidebar.launches.titleNearPoint' : 'sidebar.launches.titleNear') : tr('sidebar.launches.title')}</h2>
       <p className="px-5 pb-2 text-[12.5px] leading-relaxed">
         {me
           ? tr('sidebar.launches.hintNear', { distance: fmtDist(NEAR_RADIUS_M, units) })
@@ -62,7 +64,7 @@ export function UpcomingLaunches({ limit = 5, className }: { limit?: number; cla
                 <span className="text-foreground block truncate text-[14px] font-semibold">{siteLabel(r.site.name)}</span>
                 <span className="block truncate text-[12.5px]">
                   {r.d !== null && r.b !== null
-                    ? tr('sidebar.launches.away', { distance: fmtDist(r.d, units), direction: cardinal(r.b) })
+                    ? tr(pt ? 'sidebar.launches.awayPoint' : 'sidebar.launches.away', { distance: fmtDist(r.d, units), direction: cardinal(r.b) })
                     : (siteCountry(r.site.name) ?? tr('sidebar.launches.site'))}
                 </span>
               </span>

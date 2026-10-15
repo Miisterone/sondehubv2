@@ -6,8 +6,10 @@ import { locateUser } from '@/lib/geolocation';
 import { t } from '@/i18n';
 
 export async function enableAlerts(): Promise<boolean> {
-  const ok = await locateUser({ fly: false });
-  if (!ok) return false;
+  if (!useStore.getState().settings.watchPoint) {
+    const ok = await locateUser({ fly: false });
+    if (!ok) return false;
+  }
   const st = useStore.getState();
   st.setAlerts({ enabled: true });
   const a = useStore.getState().settings.alerts;

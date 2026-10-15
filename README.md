@@ -30,7 +30,7 @@ Aucune clé d'API ni backend : l'application parle directement à l'API publique
 - Avis de perte / retour de connexion.
 
 **Interface (shadcn/ui)**
-- Liste : recherche, filtres par phase, tri, favoris « Suivies » épinglés, mode **Près de moi** (sondes et atterrissages prévus dans un rayon de 25 à 200 km), navigation clavier.
+- Liste : recherche, filtres par phase, tri, favoris « Suivies » épinglés, mode **Près de moi** (sondes et atterrissages prévus dans un rayon de 25 à 200 km, autour de la position GPS ou d'un lieu choisi : recherche Photon, coordonnées GPS ou point sur la carte), navigation clavier.
 - Fiche sonde : résumé en langage clair, prédiction d'atterrissage avec compte à rebours et menu **Naviguer** (Google Maps, Waze, Plans, OSM), graphiques (altitude, sondage T°/HR, vitesse verticale), récepteurs avec SNR, bulles d'aide ⓘ sur le jargon.
 - **Prochains lâchers** : stations à moins de 400 km triées par heure de lâcher estimée (onglet Près de moi, et liste En vol vide).
 - **Rejouer le vol** : lecture accélérée (×60, ×300, ×1200) ou curseur, marqueur sur la carte, tracé parcouru mis en avant, suivi caméra.
@@ -56,6 +56,7 @@ src/
   store/useStore.ts état global (zustand) : sondes, prédictions, réglages
   lib/alerts.ts     alertes d'atterrissage (activation, permissions)
   lib/geolocation.ts position de l'utilisateur partagée
+  lib/watchPoint.ts lieu choisi à la place du GPS (recherche, coordonnées, centre de référence)
   lib/atmo.ts       thermodynamique : profil, pression, adiabatiques, indices, vent par couche
   lib/flight.ts     données de vol pour les graphiques, interpolation du replay
   components/       MapView, Sidebar, SondeDetail, CommandPalette, Notifiers, RecoveryDialog…

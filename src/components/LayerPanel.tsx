@@ -52,6 +52,7 @@ function AlertsSection() {
   const alerts = useStore((s) => s.settings.alerts);
   const nFavs = useStore((s) => s.settings.favourites.length);
   const loc = useStore((s) => s.userLocation);
+  const point = useStore((s) => s.settings.watchPoint);
   const { setAlerts } = useStore.getState();
   const t = useT();
   const [busy, setBusy] = useState(false);
@@ -96,7 +97,9 @@ function AlertsSection() {
         <div className="mt-1 space-y-1">
           <div className="text-muted-foreground flex min-h-7 items-center gap-1.5 px-0.5 text-[12px]">
             <MapPin className="size-3.5 shrink-0" aria-hidden />
-            {loc ? (
+            {point ? (
+              <span className="truncate">{t('map.alerts.aroundPoint', { place: point.label || `${point.lat.toFixed(2)}, ${point.lon.toFixed(2)}` })}</span>
+            ) : loc ? (
               <span className="tabular truncate">
                 {t('map.alerts.position', { lat: loc.lat.toFixed(2), lon: loc.lon.toFixed(2) })}
               </span>

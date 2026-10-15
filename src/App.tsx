@@ -6,6 +6,7 @@ import { AboutModal } from './components/AboutModal';
 import { CommandPalette } from './components/CommandPalette';
 import { Notifiers } from './components/Notifiers';
 import { WelcomeCard } from './components/WelcomeCard';
+import { PickBanner } from './components/WatchPointPicker';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { useStore } from './store/useStore';
@@ -153,6 +154,7 @@ export default function App() {
         <div className="pointer-events-none absolute inset-0">
           <Sidebar onAbout={() => setAbout(true)} />
           <MapControls />
+          <PickBanner />
         </div>
         {about && <AboutModal onClose={() => setAbout(false)} />}
         <CommandPalette onAbout={() => setAbout(true)} />

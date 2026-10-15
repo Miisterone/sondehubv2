@@ -30,6 +30,7 @@ import { makeVisible } from '../lib/filter';
 import { altStepExpression } from '../lib/altRamp';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
 import { intlTag, t, useLocale } from '../i18n';
+import { centreOf, isPickClick, placeWatchPointFromClick } from '../lib/watchPoint';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
 setWorkerUrl(workerUrl);
@@ -50,6 +51,7 @@ const SOURCES = [
   'site-points',
   'me',
   'alert-radius',
+  'watch-point',
 ] as const;
 type SourceId = (typeof SOURCES)[number];
 
@@ -344,6 +346,18 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     paint: { 'line-color': COLOURS.me, 'line-width': 1.5, 'line-opacity': 0.6, 'line-dasharray': [3, 2] },
   });
   add({
+    id: 'watch-point-halo',
+    type: 'circle',
+    source: 'watch-point',
+    paint: { 'circle-color': COLOURS.me, 'circle-opacity': 0.15, 'circle-radius': 14 },
+  });
+  add({
+    id: 'watch-point-dot',
+    type: 'circle',
+    source: 'watch-point',
+    paint: { 'circle-color': '#ffffff', 'circle-radius': 6, 'circle-stroke-color': COLOURS.me, 'circle-stroke-width': 3 },
+  });
+  add({
     id: 'me-accuracy',
     type: 'circle',
     source: 'me',
@@ -506,19 +520,24 @@ export function MapView() {
       setData('sites', [sites, L.sites], () => (L.sites ? sitesFC(sites) : EMPTY));
       setData('recoveries', [recoveries, L.recoveries], () => (L.recoveries ? recoveriesFC(recoveries, sondes) : EMPTY));
       const alerts = settings.alerts;
-      setData('alert-radius', [userLocation?.lat, userLocation?.lon, alerts.enabled, alerts.radiusKm], () =>
-        userLocation && alerts.enabled
+      const point = settings.watchPoint;
+      const centre = centreOf(point, userLocation);
+      setData('alert-radius', [centre?.lat, centre?.lon, centre?.kind, alerts.enabled, alerts.radiusKm], () =>
+        centre && (alerts.enabled || centre.kind === 'point')
           ? {
               type: 'FeatureCollection',
               features: [
                 {
                   type: 'Feature',
-                  geometry: { type: 'Polygon', coordinates: [circleRing(userLocation.lon, userLocation.lat, alerts.radiusKm * 1000)] },
+                  geometry: { type: 'Polygon', coordinates: [circleRing(centre.lon, centre.lat, alerts.radiusKm * 1000)] },
                   properties: {},
                 },
               ],
             }
           : EMPTY,
+      );
+      setData('watch-point', [point], () =>
+        point ? { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [point.lon, point.lat] }, properties: {} }] } : EMPTY,
       );
       setData('me', [userLocation], () =>
         userLocation
@@ -661,7 +680,11 @@ export function MapView() {
     });
 
     // Interactions -----------------------------------------------------------
+    map.on('click', (e) => {
+      if (useStore.getState().pickingPoint) placeWatchPointFromClick(e.lngLat.lat, e.lngLat.lng, e.originalEvent);
+    });
     const selectFromEvent = (e: MapLayerMouseEvent) => {
+      if (isPickClick(e)) return;
       const f = e.features?.[0];
       const serial = f?.properties?.serial as string | undefined;
       if (serial) useStore.getState().select(serial);
@@ -672,20 +695,31 @@ export function MapView() {
 
     const popup = new Popup({ closeButton: true, maxWidth: '280px', className: 'st-popup', offset: 14 });
     const hoverPopup = new Popup({ closeButton: false, closeOnClick: false, className: 'st-popup st-hover', offset: 18 });
+    const unsubPicking = useStore.subscribe((s, prev) => {
+      if (s.pickingPoint === prev.pickingPoint) return;
+      map.getCanvasContainer().classList.toggle('st-picking', s.pickingPoint);
+      if (s.pickingPoint) {
+        hoverPopup.remove();
+        popup.remove();
+      }
+    });
     let popupHtml: (() => string) | null = null;
     let hoverHtml: (() => string) | null = null;
 
     map.on('click', LISTENER_LAYERS, (e: MapLayerMouseEvent) => {
+      if (isPickClick(e)) return;
       const callsign = e.features?.[0]?.properties?.callsign as string;
       if (callsign && useStore.getState().listeners[callsign]) useStore.getState().selectListener(callsign);
     });
 
     map.on('click', 'sites-icons', (e: MapLayerMouseEvent) => {
+      if (isPickClick(e)) return;
       const id = e.features?.[0]?.properties?.id as string;
       if (id) useStore.getState().selectSite(id);
     });
 
     map.on('click', 'site-past-dots', (e: MapLayerMouseEvent) => {
+      if (isPickClick(e)) return;
       const f = e.features?.[0];
       const p = f?.properties;
       if (!f || !p || f.geometry.type !== 'Point') return;
@@ -701,6 +735,7 @@ export function MapView() {
     });
 
     map.on('click', 'recoveries-icons', (e: MapLayerMouseEvent) => {
+      if (isPickClick(e)) return;
       const serial = e.features?.[0]?.properties?.serial as string;
       const r = useStore.getState().recoveries[serial];
       if (!r) return;
@@ -720,6 +755,7 @@ export function MapView() {
     });
 
     map.on('mousemove', SONDE_LAYERS, (e: MapLayerMouseEvent) => {
+      if (useStore.getState().pickingPoint) return;
       const p = e.features?.[0]?.properties;
       if (!p) return;
       const s = useStore.getState().sondes[p.serial as string];
@@ -775,6 +811,7 @@ export function MapView() {
       unsubSettings();
       unsubFly();
       unsubFollow();
+      unsubPicking();
       unsubHover();
       unsubReplay();
       replayMarker.remove();

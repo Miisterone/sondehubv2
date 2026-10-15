@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Bell, BellRing, ChevronDown, Info, LoaderCircle, MapPin, RotateCw, Search, SearchX, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Bell, BellRing, ChevronDown, Info, LoaderCircle, LocateFixed, MapPin, RotateCw, Search, SearchX, SlidersHorizontal, Star, X } from 'lucide-react';
 import { Drawer as DrawerPrimitive } from 'vaul';
 import { toast } from 'sonner';
 import type { MapMouseEvent } from 'maplibre-gl';
-import { DURATION_MS, useStore, type Duration, type UserLocation } from '@/store/useStore';
+import { DURATION_MS, useStore, type Duration } from '@/store/useStore';
 import type { FlightPhase, Prediction, Sonde } from '@/lib/types';
 import { makeVisible, typeKey, usefulPrediction } from '@/lib/filter';
 import { ago, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtFreq, fmtHSpeed, fmtRadius, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import { bearing, cardinal, compass, distance } from '@/lib/geo';
 import { findLaunch, siteLabel, verticalSpeed, type Launch } from '@/lib/sonde';
 import { locateUser } from '@/lib/geolocation';
+import { isPickClick, useNearbyCentre, type Centre } from '@/lib/watchPoint';
 import { enableAlerts } from '@/lib/alerts';
 import { PHASE_LABEL } from '@/lib/icons';
 import { t as translate, useT, type TKey } from '@/i18n';
@@ -33,6 +34,7 @@ import { LanguageSelect } from './LanguageSelect';
 import { FlightGuide } from './FlightGuide';
 import { UpcomingLaunches } from './UpcomingLaunches';
 import { getMap } from './MapView';
+import { CentreBar, PointEditor } from './WatchPointPicker';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
 
@@ -164,9 +166,22 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
   }, []);
 
   const locateIfAllowed = useCallback(() => {
-    if (useStore.getState().userLocation) return;
+    const st = useStore.getState();
+    if (st.userLocation || st.settings.watchPoint) return;
     void geoGranted().then((ok) => ok && locate());
   }, [locate]);
+
+  const switchToGps = useCallback(() => {
+    if (useStore.getState().userLocation) {
+      useStore.getState().setWatchPoint(null);
+      return;
+    }
+    setGeo('locating');
+    void locateUser({ fly: false }).then((ok) => {
+      setGeo(ok ? 'idle' : 'failed');
+      if (ok) useStore.getState().setWatchPoint(null);
+    });
+  }, []);
 
   useEffect(() => {
     if (readTab() === 'nearby') locateIfAllowed();
@@ -176,17 +191,40 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
     const on = () => {
       useStore.getState().select(null);
       setTab('nearby');
-      locate();
+      if (!useStore.getState().settings.watchPoint) locate();
       setSnap((s) => (s === PEEK ? HALF : s));
     };
     window.addEventListener(NEARBY_EVENT, on);
     return () => window.removeEventListener(NEARBY_EVENT, on);
   }, [locate, setTab]);
 
+  const snapBeforePick = useRef<number | null>(null);
+  useEffect(
+    () =>
+      useStore.subscribe((s, prev) => {
+        if (s.pickingPoint === prev.pickingPoint) return;
+        if (s.pickingPoint) {
+          setSnap((cur) => {
+            snapBeforePick.current = cur;
+            return PEEK;
+          });
+          return;
+        }
+        const back = snapBeforePick.current;
+        snapBeforePick.current = null;
+        if (s.settings.watchPoint !== prev.settings.watchPoint) {
+          setTab('nearby');
+          setSnap(HALF);
+        } else if (back !== null) setSnap(back);
+      }),
+    [setTab],
+  );
+
   useEffect(() => {
     if (!isMobile) return;
     let attached: ReturnType<typeof getMap>;
     const onClick = (e: MapMouseEvent) => {
+      if (isPickClick(e) || useStore.getState().pickingPoint) return;
       const map = e.target;
       const layers = TAPPABLE_LAYERS.filter((id) => map.getLayer(id));
       const hit = layers.length > 0 && map.queryRenderedFeatures(e.point, { layers }).length > 0;
@@ -222,6 +260,7 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
       }}
       geo={geo}
       onLocate={locate}
+      onUseGps={switchToGps}
       showHint={!hintSeen}
       onDismissHint={dismissHint}
     />
@@ -342,7 +381,7 @@ function sentence(parts: (string | null | undefined | false)[]): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function originText(launch: Launch | null, me: UserLocation | null, units: Units, now: number): string | null {
+function originText(launch: Launch | null, me: Centre | null, units: Units, now: number): string | null {
   if (!launch) return null;
   const at = me ? null : ago(launch.t, now);
   if (launch.fromGround) {
@@ -365,8 +404,9 @@ function originText(launch: Launch | null, me: UserLocation | null, units: Units
   return null;
 }
 
-function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: UserLocation | null, units: Units, now: number): Item {
+function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: Centre | null, units: Units, now: number): Item {
   const base = { serial: s.serial, sonde: s };
+  const pt = me?.kind === 'point';
   const landing = pred?.landing ?? null;
   const alt = fmtAltShort(s.last.alt, units);
   const away = (lat: number, lon: number) =>
@@ -381,7 +421,7 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
       const where = away(s.last.lat, s.last.lon);
       return {
         ...base,
-        status: sentence([where && translate('sidebar.status.near', where), from, stale]) || translate('sidebar.status.ascending'),
+        status: sentence([where && translate(pt ? 'sidebar.status.nearPoint' : 'sidebar.status.near', where), from, stale]) || translate('sidebar.status.ascending'),
         metrics: [
           { label: translate('sidebar.metric.altitude'), value: alt },
           { label: translate('sidebar.metric.ascent'), value: speed },
@@ -398,7 +438,14 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
       return {
         ...base,
         status:
-          sentence([where && (landing ? translate('sidebar.status.landingNear', where) : translate('sidebar.status.near', where)), from, stale]) ||
+          sentence([
+            where &&
+              (landing
+                ? translate(pt ? 'sidebar.status.landingNearPoint' : 'sidebar.status.landingNear', where)
+                : translate(pt ? 'sidebar.status.nearPoint' : 'sidebar.status.near', where)),
+            from,
+            stale,
+          ]) ||
           translate('sidebar.status.descending'),
         strong: !!(landing && where),
         metrics: [
@@ -414,7 +461,7 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
         return {
           ...base,
           status: sentence([
-            where ? translate('sidebar.status.probablyLandedNear', where) : translate('sidebar.status.probablyLanded'),
+            where ? translate(pt ? 'sidebar.status.probablyLandedNearPoint' : 'sidebar.status.probablyLandedNear', where) : translate('sidebar.status.probablyLanded'),
             translate('sidebar.status.signalLost', { ago: ago(s.lastTime, now) }),
           ]),
         };
@@ -423,7 +470,7 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
       return {
         ...base,
         status: sentence([
-          where ? translate('sidebar.status.landedNear', where) : translate('sidebar.status.landed'),
+          where ? translate(pt ? 'sidebar.status.landedNearPoint' : 'sidebar.status.landedNear', where) : translate('sidebar.status.landed'),
           translate('sidebar.status.lastSignal', { ago: ago(s.lastTime, now) }),
         ]),
       };
@@ -446,11 +493,12 @@ interface ListProps {
   onTab: (t: Tab) => void;
   geo: GeoState;
   onLocate: () => void;
+  onUseGps: () => void;
   showHint: boolean;
   onDismissHint: () => void;
 }
 
-function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLocate, showHint, onDismissHint }: ListProps) {
+function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLocate, onUseGps, showHint, onDismissHint }: ListProps) {
   const sondes = useStore((s) => s.sondes);
   const predictions = useStore((s) => s.predictions);
   const query = useStore((s) => s.query);
@@ -461,7 +509,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   const alerts = useStore((s) => s.settings.alerts);
   const loading = useStore((s) => s.loading);
   const error = useStore((s) => s.error);
-  const me = useStore((s) => s.userLocation);
+  const me = useNearbyCentre();
   const now = useStore((s) => s.now);
   const sites = useStore((s) => s.sites);
   const reverse = useStore((s) => s.reverse);
@@ -472,6 +520,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   const [active, setActive] = useState<string | null>(null);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [showGround, setShowGround] = useState(false);
+  const [editingPoint, setEditingPoint] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -576,10 +625,11 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     landing.sort((a, b) => a.t - b.t);
     overhead.sort((a, b) => a.d - b.d);
     ground.sort((a, b) => a.d - b.d);
+    const pt = me.kind === 'point';
     const out: Group[] = [
-      { id: 'landing', title: tr('sidebar.groups.landingNearby'), items: landing.map((x) => item(x.s)) },
-      { id: 'overhead', title: tr('sidebar.groups.flyingNearby'), items: overhead.map((x) => item(x.s)) },
-      { id: 'ground', title: tr('sidebar.groups.groundNearby'), items: ground.map((x) => item(x.s)) },
+      { id: 'landing', title: tr(pt ? 'sidebar.groups.landingNearPoint' : 'sidebar.groups.landingNearby'), items: landing.map((x) => item(x.s)) },
+      { id: 'overhead', title: tr(pt ? 'sidebar.groups.flyingNearPoint' : 'sidebar.groups.flyingNearby'), items: overhead.map((x) => item(x.s)) },
+      { id: 'ground', title: tr(pt ? 'sidebar.groups.groundNearPoint' : 'sidebar.groups.groundNearby'), items: ground.map((x) => item(x.s)) },
     ];
     return out.filter((g) => g.items.length > 0);
   }, [me, all, visible, landingOf, item, alerts.radiusKm, tr]);
@@ -724,13 +774,42 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         </>
       );
   } else if (tab === 'nearby') {
+    const editor = (
+      <PointEditor
+        onDone={() => setEditingPoint(false)}
+        onCancel={() => setEditingPoint(false)}
+        onUseGps={
+          me?.kind === 'point'
+            ? () => {
+                setEditingPoint(false);
+                onUseGps();
+              }
+            : undefined
+        }
+        onFocusInput={onFocusSearch}
+        showCancel={!me}
+      />
+    );
+    const choosePoint = (variant: 'default' | 'outline' | 'ghost') => (
+      <Button variant={variant} size="sm" onClick={() => setEditingPoint(true)}>
+        <MapPin />
+        {tr('sidebar.nearby.choosePoint')}
+      </Button>
+    );
     body = !me ? (
-      geo === 'locating' ? (
+      editingPoint ? (
+        <div className="pt-2">
+          <h2 className="px-5 pt-3 text-[16px] font-semibold">{tr('sidebar.nearby.choosePoint')}</h2>
+          <p className="max-w-80 px-5 pt-1 text-[13.5px] leading-relaxed">{tr('sidebar.point.intro')}</p>
+          {editor}
+        </div>
+      ) : geo === 'locating' ? (
         <div role="status" aria-live="polite">
           <p className="flex items-center gap-2 px-5 pt-5 text-[13px]">
             <LoaderCircle className="text-primary size-4 animate-spin" />
             {tr('sidebar.nearby.locating')}
           </p>
+          <div className="px-5 pt-3">{choosePoint('outline')}</div>
           {skeleton(4)}
         </div>
       ) : (
@@ -738,10 +817,23 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           art="locate"
           title={geo === 'failed' ? tr('sidebar.nearby.unavailableTitle') : tr('sidebar.nearby.whereTitle')}
           actions={
-            <Button size="sm" onClick={onLocate}>
-              {geo === 'failed' ? <RotateCw /> : <MapPin />}
-              {geo === 'failed' ? tr('sidebar.nearby.retry') : tr('sidebar.nearby.locate')}
-            </Button>
+            geo === 'failed' ? (
+              <>
+                {choosePoint('default')}
+                <Button variant="outline" size="sm" onClick={onLocate}>
+                  <RotateCw />
+                  {tr('sidebar.nearby.retry')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" onClick={onLocate}>
+                  <LocateFixed />
+                  {tr('sidebar.nearby.locate')}
+                </Button>
+                {choosePoint('outline')}
+              </>
+            )
           }
         >
           {geo === 'failed'
@@ -751,6 +843,8 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
       )
     ) : (
       <>
+        <CentreBar centre={me} open={editingPoint} onToggle={() => setEditingPoint((v) => !v)} />
+        {editingPoint && editor}
         <div className="flex items-center justify-between gap-3 px-5 pt-4">
           <span className="text-[13px]">{tr('sidebar.nearby.radius')}</span>
           <div role="group" aria-label={tr('sidebar.nearby.radiusLabel')}>

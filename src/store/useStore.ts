@@ -35,6 +35,12 @@ export interface AlertSettings {
   favourites: boolean;
 }
 
+export interface WatchPoint {
+  lat: number;
+  lon: number;
+  label: string;
+}
+
 export interface Settings {
   theme: 'dark' | 'light';
   basemap: BasemapId;
@@ -44,6 +50,7 @@ export interface Settings {
   /** Serials the user follows; shown first and eligible for alerts. */
   favourites: string[];
   alerts: AlertSettings;
+  watchPoint: WatchPoint | null;
   /** Callsign / name remembered for recovery reports. */
   callsign: string;
   /** Set once the tutorial has been completed or skipped. */
@@ -67,6 +74,7 @@ const DEFAULT_SETTINGS: Settings = {
   units: localeUnits(),
   favourites: [],
   alerts: { enabled: false, radiusKm: 50, favourites: true },
+  watchPoint: null,
   callsign: '',
   tutorialDone: false,
   techOpen: false,
@@ -95,10 +103,18 @@ function loadSettings(): Settings {
       layers: { ...DEFAULT_SETTINGS.layers, ...parsed.layers },
       alerts: { ...DEFAULT_SETTINGS.alerts, ...parsed.alerts },
       favourites: Array.isArray(parsed.favourites) ? parsed.favourites : [],
+      watchPoint: validWatchPoint(parsed.watchPoint),
     };
   } catch {
     return DEFAULT_SETTINGS;
   }
+}
+
+function validWatchPoint(p: unknown): WatchPoint | null {
+  if (!p || typeof p !== 'object') return null;
+  const { lat, lon, label } = p as Partial<WatchPoint>;
+  if (typeof lat !== 'number' || typeof lon !== 'number' || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { lat, lon, label: typeof label === 'string' ? label : '' };
 }
 
 function saveSettings(s: Settings) {
@@ -313,6 +329,7 @@ interface State {
   phaseFilter: Record<FlightPhase, boolean>;
   typeFilter: string | null;
   userLocation: UserLocation | null;
+  pickingPoint: boolean;
 
   loading: boolean;
   error: string | null;
@@ -347,6 +364,8 @@ interface State {
   togglePhase: (p: FlightPhase) => void;
   setTypeFilter: (t: string | null) => void;
   setUserLocation: (l: UserLocation | null) => void;
+  setWatchPoint: (p: WatchPoint | null) => void;
+  setPickingPoint: (v: boolean) => void;
   setConn: (c: ConnState, rate?: number) => void;
   setLoading: (v: boolean, error?: string | null) => void;
   requestFly: (lon: number, lat: number, zoom?: number) => void;
@@ -374,6 +393,7 @@ export const useStore = create<State>((set, get) => ({
   phaseFilter: { ascending: true, descending: true, landed: true, lost: true },
   typeFilter: null,
   userLocation: null,
+  pickingPoint: false,
 
   loading: true,
   error: null,
@@ -540,6 +560,8 @@ export const useStore = create<State>((set, get) => ({
   togglePhase: (p) => set({ phaseFilter: { ...get().phaseFilter, [p]: !get().phaseFilter[p] } }),
   setTypeFilter: (typeFilter) => set({ typeFilter }),
   setUserLocation: (userLocation) => set({ userLocation }),
+  setWatchPoint: (watchPoint) => get().setSettings({ watchPoint }),
+  setPickingPoint: (pickingPoint) => set({ pickingPoint }),
   setConn: (conn, rate) => set({ conn, msgRate: rate ?? get().msgRate }),
   setLoading: (loading, error = null) => set({ loading, error }),
   requestFly: (lon, lat, zoom) => set({ flyTo: { lon, lat, zoom, id: Math.random() } }),
