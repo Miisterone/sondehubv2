@@ -15,11 +15,32 @@ export const HEIGHT = 9;
 
 export type Vec3 = [number, number, number];
 
+export type AtmoView = 'persp' | 'profile' | 'top';
+
+export interface AtmoOptions {
+  terrain: boolean;
+  map: boolean;
+  wallShadow: boolean;
+  dropLines: boolean;
+}
+
 export interface Band {
   id: 'troposphere' | 'stratosphere' | 'ozone' | 'cloud';
   from: number;
   to: number;
   label: string;
+}
+
+export interface GeoBounds {
+  north: number;
+  south: number;
+  west: number;
+  east: number;
+}
+
+export interface Crossing {
+  t: number;
+  p: Vec3;
 }
 
 export interface AtmoScene {
@@ -42,6 +63,10 @@ export interface AtmoScene {
   bands: Band[];
   ticks: number[];
   origin: [number, number];
+  bounds: GeoBounds;
+  crossing: Crossing | null;
+  times: { launch: number; now: number; burst: number | null; burstPredicted: number | null; landing: number | null };
+  landingAlt: number | null;
 }
 
 function typicalTropopause(lat: number): number {
@@ -81,7 +106,10 @@ export function buildAtmoScene(d: FlightData, sounding: Sounding, profile: Profi
     maxY = Math.max(maxY, p[1]);
     maxZ = Math.max(maxZ, p[2]);
   }
-  const span = Math.max(MIN_SPAN, maxX - minX, maxY - minY) * 1.25;
+  const rawSpan = Math.max(MIN_SPAN, maxX - minX, maxY - minY) * 1.25;
+  const baseSpan = MIN_SPAN * 1.25;
+  const span = baseSpan * Math.pow(1.2, Math.max(0, Math.ceil(Math.log(rawSpan / baseSpan) / Math.log(1.2) - 1e-9)));
+  const snap = span / 8;
 
   const measuredTropo = profile?.indices.tropopause?.z ?? null;
   const tropopause = measuredTropo !== null ? { z: measuredTropo, measured: true } : { z: typicalTropopause(lat0), measured: false };
@@ -129,6 +157,27 @@ export function buildAtmoScene(d: FlightData, sounding: Sounding, profile: Profi
   const ticks: number[] = [];
   for (let z = 0; z <= top; z += tickStep) ticks.push(z);
 
+  const center: [number, number] = [Math.round((minX + maxX) / 2 / snap) * snap, Math.round((minY + maxY) / 2 / snap) * snap];
+  const bounds: GeoBounds = {
+    north: lat0 + (center[1] + span / 2) / M_PER_DEG,
+    south: lat0 + (center[1] - span / 2) / M_PER_DEG,
+    west: lon0 + (center[0] - span / 2) / kx,
+    east: lon0 + (center[0] + span / 2) / kx,
+  };
+
+  let crossing: Crossing | null = null;
+  const ascentEnd = d.burst ?? d.last;
+  for (let i = 1; i <= ascentEnd; i++) {
+    const a = d.alt[i - 1];
+    const b = d.alt[i];
+    if (a === null || b === null || a >= tropopause.z || b < tropopause.z) continue;
+    const k = (tropopause.z - a) / (b - a || 1);
+    const pa = at(i - 1, a);
+    const pb = at(i, b);
+    crossing = { t: d.x[i - 1] + (d.x[i] - d.x[i - 1]) * k, p: [pa[0] + (pb[0] - pa[0]) * k, pa[1] + (pb[1] - pa[1]) * k, tropopause.z] };
+    break;
+  }
+
   return {
     measured,
     measuredIdx,
@@ -138,9 +187,9 @@ export function buildAtmoScene(d: FlightData, sounding: Sounding, profile: Profi
     currentIndex: d.last,
     burst: d.burst !== null ? at(d.burst, d.alt[d.burst]) : null,
     burstP: d.burstP !== null ? at(d.burstP, d.altP[d.burstP]) : null,
-    landingP: d.landingP !== null ? at(d.landingP, 0) : null,
+    landingP: d.landingP !== null ? at(d.landingP, d.altP[d.landingP]) : null,
     airborneStart: (d.alt[0] ?? 0) >= 3_000,
-    center: [(minX + maxX) / 2, (minY + maxY) / 2],
+    center,
     span,
     top,
     tropopause,
@@ -149,6 +198,16 @@ export function buildAtmoScene(d: FlightData, sounding: Sounding, profile: Profi
     bands,
     ticks,
     origin: [lat0, lon0],
+    bounds,
+    crossing,
+    times: {
+      launch: d.x[0],
+      now: d.x[d.last],
+      burst: d.burst !== null ? d.x[d.burst] : null,
+      burstPredicted: d.burstP !== null ? d.x[d.burstP] : null,
+      landing: d.landingP !== null ? d.x[d.landingP] : null,
+    },
+    landingAlt: d.landingP !== null ? (d.altP[d.landingP] ?? null) : null,
   };
 }
 

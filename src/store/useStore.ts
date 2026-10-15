@@ -4,6 +4,7 @@ import type { TelemetryResponse } from '../lib/api';
 import { parseLatLon } from '../lib/geo';
 import type { Units } from '../lib/format';
 import { decodeEntities } from '../lib/text';
+import type { AtmoOptions, AtmoView } from '../lib/atmo3d';
 
 export type Duration = '1h' | '3h' | '6h' | '12h' | '1d';
 export const DURATION_MS: Record<Duration, number> = {
@@ -44,6 +45,10 @@ export interface WatchPoint {
   label: string;
 }
 
+export interface Atmo3dSettings extends AtmoOptions {
+  view: AtmoView;
+}
+
 export interface Settings {
   theme: 'dark' | 'light';
   basemap: BasemapId;
@@ -60,6 +65,7 @@ export interface Settings {
   /** Set once the tutorial has been completed or skipped. */
   tutorialDone: boolean;
   techOpen: boolean;
+  atmo3d: Atmo3dSettings;
 }
 
 /** Imperial units for locales that use them (US, Liberia, Myanmar); metric elsewhere. */
@@ -83,6 +89,7 @@ const DEFAULT_SETTINGS: Settings = {
   callsign: '',
   tutorialDone: false,
   techOpen: false,
+  atmo3d: { view: 'persp', terrain: false, map: true, wallShadow: true, dropLines: true },
   duration: '3h',
   layers: {
     listeners: true,
@@ -107,6 +114,7 @@ function loadSettings(): Settings {
       ...parsed,
       layers: { ...DEFAULT_SETTINGS.layers, ...parsed.layers },
       alerts: { ...DEFAULT_SETTINGS.alerts, ...parsed.alerts },
+      atmo3d: { ...DEFAULT_SETTINGS.atmo3d, ...parsed.atmo3d },
       favourites: Array.isArray(parsed.favourites) ? parsed.favourites : [],
       watchPoint: validWatchPoint(parsed.watchPoint),
     };
