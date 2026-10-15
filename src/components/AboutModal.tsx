@@ -48,7 +48,7 @@ const sondehubLink = (c: ReactNode) => (
 );
 
 const githubLink = (c: ReactNode) => (
-  <a className={linkCls} href="https://github.com/Miisterone/sondetrack" target="_blank" rel="noreferrer">
+  <a className={linkCls} href="https://github.com/Miisterone/sondehubv2" target="_blank" rel="noreferrer">
     {c}
   </a>
 );
