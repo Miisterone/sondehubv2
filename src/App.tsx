@@ -5,7 +5,7 @@ import { MapControls } from './components/MapControls';
 import { AboutModal } from './components/AboutModal';
 import { CommandPalette } from './components/CommandPalette';
 import { Notifiers } from './components/Notifiers';
-import { WelcomeCard } from './components/WelcomeCard';
+import { Tour } from './components/Tour';
 import { PickBanner } from './components/WatchPointPicker';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
@@ -170,7 +170,7 @@ export default function App() {
         {about && <AboutModal onClose={() => setAbout(false)} />}
         <CommandPalette onAbout={() => setAbout(true)} />
         <Notifiers />
-        <WelcomeCard />
+        <Tour />
         <Toaster position="bottom-center" closeButton />
       </div>
     </TooltipProvider>

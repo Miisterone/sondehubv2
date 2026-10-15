@@ -214,10 +214,54 @@ body,
   animation: flash 1.2s ease-out;
 }
 
+.tour {
+  animation: tour-in 0.2s ease-out backwards;
+  transition: opacity 0.18s ease-out;
+}
+.tour-leaving {
+  opacity: 0;
+}
+.tour-leaving .tour-shade,
+.tour-leaving .tour-card {
+  pointer-events: none;
+}
+.tour-shade {
+  fill: rgb(10 10 10 / 0.55);
+  pointer-events: auto;
+}
+.dark .tour-shade {
+  fill: rgb(0 0 0 / 0.66);
+}
+.tour-ring {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.tour-card {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.16s ease-out;
+}
+.tour-card[data-placed] {
+  visibility: visible;
+  opacity: 1;
+}
+.tour-card[data-animate] {
+  transition:
+    opacity 0.16s ease-out,
+    transform 0.36s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+@keyframes tour-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live-dot::after,
   .animate-in,
-  .flash {
+  .flash,
+  .tour {
     animation: none;
   }
 }

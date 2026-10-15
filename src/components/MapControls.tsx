@@ -33,8 +33,8 @@ export function MapControls() {
   };
 
   return (
-    <div className="pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
-      <div className={group}>
+    <div data-tour="controls" className="pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
+      <div data-tour="map-search" className={group}>
         <IconButton label={t('map.controls.search', { shortcut: PALETTE_SHORTCUT })} onClick={() => window.dispatchEvent(new Event('sondehubv2:command'))}>
           <Search size={18} />
         </IconButton>

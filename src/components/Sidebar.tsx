@@ -37,6 +37,7 @@ import { UpcomingLaunches } from './UpcomingLaunches';
 import { getMap } from './MapView';
 import { CentreBar, PointEditor } from './WatchPointPicker';
 import { RadiusPicker, nextRadius } from './RadiusPicker';
+import { NEARBY_EVENT, SHEET_EVENT, type SheetSnap } from '@/lib/tour';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
 
@@ -60,8 +61,6 @@ const TAPPABLE_LAYERS = [
 
 const MAX_ROWS = 300;
 const ALL_TYPES = '__all';
-
-export const NEARBY_EVENT = 'sondehubv2:nearby';
 
 type Tab = 'nearby' | 'flying' | 'following' | 'history';
 type GeoState = 'idle' | 'locating' | 'failed';
@@ -201,6 +200,15 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
     return () => window.removeEventListener(NEARBY_EVENT, on);
   }, [locate, setTab]);
 
+  useEffect(() => {
+    const on = (e: Event) => {
+      const want = (e as CustomEvent<SheetSnap>).detail;
+      setSnap(want === 'full' ? FULL : want === 'half' ? HALF : PEEK);
+    };
+    window.addEventListener(SHEET_EVENT, on);
+    return () => window.removeEventListener(SHEET_EVENT, on);
+  }, []);
+
   const snapBeforePick = useRef<number | null>(null);
   useEffect(
     () =>
@@ -270,7 +278,11 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
   );
 
   if (!isMobile) {
-    return <aside className="bg-background pointer-events-auto absolute inset-y-0 left-0 z-20 flex w-[380px] flex-col overflow-hidden border-r">{content}</aside>;
+    return (
+      <aside data-tour="sidebar" className="bg-background pointer-events-auto absolute inset-y-0 left-0 z-20 flex w-[380px] flex-col overflow-hidden border-r">
+        {content}
+      </aside>
+    );
   }
   return (
     <BottomSheet snap={snap} onSnapChange={setSnap}>
@@ -302,6 +314,7 @@ function BottomSheet({ snap, onSnapChange, children }: { snap: number; onSnapCha
       <DrawerPortal>
         <DrawerPrimitive.Content
           role="region"
+          data-tour="sidebar"
           className="bg-background pointer-events-auto fixed inset-x-0 bottom-0 z-20 flex h-full flex-col rounded-t-lg border-t outline-none"
         >
           <DrawerTitle className="sr-only">{tr('sidebar.sheet.title')}</DrawerTitle>
@@ -990,7 +1003,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           </IconButton>
         </div>
 
-        <div className="mt-3 flex items-center gap-2 md:mt-4">
+        <div data-tour="search" className="mt-3 flex items-center gap-2 md:mt-4">
           <div className="relative min-w-0 flex-1">
             <Search className="text-faint pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
@@ -1088,6 +1101,7 @@ function TabBar({ tab, onTab, counts }: { tab: Tab; onTab: (t: Tab) => void; cou
   return (
     <div
       role="tablist"
+      data-tour="lists"
       aria-label={tr('sidebar.tabs.label')}
       className="mt-3 -mx-5 -mb-px flex gap-5 overflow-x-auto px-5 [scrollbar-width:none] md:mt-4 [&::-webkit-scrollbar]:hidden"
       onKeyDown={(e) => {
