@@ -217,6 +217,9 @@ interface Content {
 
 const GLIDER_HUNG = 0.12;
 const GLIDER_FREE = 0.2;
+const STRING_LEN = 1.7;
+const GLIDER_NOSE = Math.max(...GLIDER.flatMap((f) => f.p.map((p) => p[0])));
+const GLIDER_HANG_Y = -STRING_LEN - GLIDER_NOSE * GLIDER_HUNG;
 
 function gliderMesh(body: string, glass: string): Group {
   const pos: Record<'body' | 'glass', number[]> = { body: [], glass: [] };
@@ -953,10 +956,11 @@ class Engine {
     const glider = s.glider ? gliderMesh(pal.accent, pal.ink) : null;
     let string: Mesh | null = null;
     if (view !== 'top') {
-      string = new Mesh(new BoxGeometry(0.06, 1.7, 0.06), new MeshBasicMaterial({ color: pal.ink }));
-      string.position.y = -0.85;
+      string = new Mesh(new BoxGeometry(0.06, STRING_LEN, 0.06), new MeshBasicMaterial({ color: pal.ink }));
+      string.position.y = -STRING_LEN / 2;
       const payload = glider ?? new Mesh(new BoxGeometry(0.5, 0.5, 0.5), new MeshLambertMaterial({ color: pal.payload }));
-      payload.position.y = -2;
+      payload.position.y = glider ? GLIDER_HANG_Y : -2;
+      if (glider) glider.rotation.z = Math.PI / 2;
       balloon.add(string, payload);
     } else if (glider) balloon.add(glider);
     this.root.add(balloon);
@@ -1257,7 +1261,9 @@ class Engine {
       const released = f.burst !== null && i > f.burst;
       d.sphere.visible = !released;
       if (d.string) d.string.visible = !released;
-      d.glider.position.y = released || !d.string ? 0 : -2;
+      const hung = !released && d.string !== null;
+      d.glider.position.y = hung ? GLIDER_HANG_Y : 0;
+      d.glider.rotation.z = hung ? Math.PI / 2 : 0;
       d.glider.scale.setScalar(released ? GLIDER_FREE : GLIDER_HUNG);
       for (const half of [60, 180, 600]) {
         const a = positionAt(f, s, Math.max(0, nearestIndex(f.x, f.x[i] - half)));
