@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "ゾンデを追尾",
   "app.about.shortcuts.openFirst": "最初の結果を開く",
   "app.about.credits": "データ：SondeHub（Project Horus）— 公開API api.v2.sondehub.org。予測：Tawhiri（CUSF）。背景地図：OpenFreeMap、OpenStreetMap、Esri、OpenTopoMap。SondeHubとは提携していない独立したプロジェクトです。ゾンデを回収した場合は、sondehub.orgで報告してください。",
+  "app.about.source": "ソースコードは<a>GitHub</a>で公開しています。",
   "app.helpHint.ariaLabel": "「{title}」とは？",
   "app.help.burst.title": "破裂",
   "app.help.burst.text": "気球は上昇とともに気圧が下がるにつれて膨らみ、やがて破裂します。破裂高度は通常20〜35 kmです。その後、ゾンデは小さなパラシュートで降下します。",

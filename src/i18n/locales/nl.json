@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Sonde volgen",
   "app.about.shortcuts.openFirst": "Eerste resultaat openen",
   "app.about.credits": "Gegevens: SondeHub (Project Horus) — openbare API api.v2.sondehub.org. Voorspellingen: Tawhiri (CUSF). Achtergrondkaarten: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Onafhankelijk project, niet gelieerd aan SondeHub. Hebt u een sonde geborgen, meld dat dan op sondehub.org.",
+  "app.about.source": "Broncode beschikbaar op <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "Wat is “{title}”?",
   "app.help.burst.title": "Knappen",
   "app.help.burst.text": "Tijdens de stijging zet de ballon uit naarmate de luchtdruk daalt, tot hij knapt, meestal tussen 20 en 35 km hoogte. De sonde daalt daarna aan een kleine parachute weer af.",

@@ -47,6 +47,12 @@ const sondehubLink = (c: ReactNode) => (
   </a>
 );
 
+const githubLink = (c: ReactNode) => (
+  <a className={linkCls} href="https://github.com/Miisterone/sondetrack" target="_blank" rel="noreferrer">
+    {c}
+  </a>
+);
+
 const FAQ: [TKey, TKey][] = [
   ['app.about.faq.whatQ', 'app.about.faq.whatA'],
   ['app.about.faq.dataQ', 'app.about.faq.dataA'],
@@ -141,6 +147,9 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
         <Separator className="my-4" />
 
         <p className="text-muted-foreground text-xs leading-relaxed">{t('app.about.credits')}</p>
+        <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+          <Trans k="app.about.source" tags={{ a: githubLink }} />
+        </p>
       </DialogContent>
     </Dialog>
   );

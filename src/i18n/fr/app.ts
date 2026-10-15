@@ -54,6 +54,7 @@ export const app = {
   'app.about.shortcuts.openFirst': 'Ouvrir le 1er résultat',
   'app.about.credits':
     'Données : SondeHub (Project Horus) — API publique api.v2.sondehub.org. Prédictions : Tawhiri (CUSF). Fonds de carte : OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Projet indépendant, non affilié à SondeHub. En cas de récupération d’une sonde, pensez à la signaler sur sondehub.org.',
+  'app.about.source': 'Code source disponible sur <a>GitHub</a>.',
 
   'app.helpHint.ariaLabel': 'Qu’est-ce que « {title} » ?',
   'app.help.burst.title': 'Éclatement',

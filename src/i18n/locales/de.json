@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Sonde folgen",
   "app.about.shortcuts.openFirst": "1. Ergebnis öffnen",
   "app.about.credits": "Daten: SondeHub (Project Horus) — öffentliche API api.v2.sondehub.org. Vorhersagen: Tawhiri (CUSF). Kartenhintergründe: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Unabhängiges Projekt, nicht mit SondeHub verbunden. Wenn Sie eine Sonde bergen, melden Sie dies bitte auf sondehub.org.",
+  "app.about.source": "Quellcode auf <a>GitHub</a> verfügbar.",
   "app.helpHint.ariaLabel": "Was bedeutet „{title}“?",
   "app.help.burst.title": "Platzen",
   "app.help.burst.text": "Beim Aufstieg dehnt sich der Ballon mit sinkendem Luftdruck aus, bis er platzt – meist in 20 bis 35 km Höhe. Danach sinkt die Sonde an einem kleinen Fallschirm zu Boden.",

@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Следовать за зондом",
   "app.about.shortcuts.openFirst": "Открыть 1-й результат",
   "app.about.credits": "Данные: SondeHub (Project Horus) — открытый API api.v2.sondehub.org. Прогнозы: Tawhiri (CUSF). Подложки карты: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Независимый проект, не связанный с SondeHub. Если вы нашли зонд, пожалуйста, сообщите об этом на sondehub.org.",
+  "app.about.source": "Исходный код доступен на <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "Что означает «{title}»?",
   "app.help.burst.title": "Разрыв",
   "app.help.burst.text": "По мере подъёма давление падает и шар раздувается, пока не лопнет — обычно на высоте от 20 до 35 km. Затем зонд спускается на небольшом парашюте.",

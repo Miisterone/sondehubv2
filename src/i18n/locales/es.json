@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Seguir la sonda",
   "app.about.shortcuts.openFirst": "Abrir el 1.er resultado",
   "app.about.credits": "Datos: SondeHub (Project Horus) — API pública api.v2.sondehub.org. Predicciones: Tawhiri (CUSF). Mapas base: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Proyecto independiente, no afiliado a SondeHub. Si recupera una sonda, no olvide notificarlo en sondehub.org.",
+  "app.about.source": "Código fuente disponible en <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "¿Qué es «{title}»?",
   "app.help.burst.title": "Estallido",
   "app.help.burst.text": "Al ascender, el globo se hincha a medida que baja la presión hasta estallar, por lo general entre 20 y 35 km de altitud. Después, la sonda desciende bajo un pequeño paracaídas.",

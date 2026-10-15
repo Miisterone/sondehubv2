@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "跟随探空仪",
   "app.about.shortcuts.openFirst": "打开第一个结果",
   "app.about.credits": "数据：SondeHub（Project Horus）— 公共 API api.v2.sondehub.org。预测：Tawhiri（CUSF）。底图：OpenFreeMap、OpenStreetMap、Esri、OpenTopoMap。独立项目，与 SondeHub 无隶属关系。如回收到探空仪，请记得在 sondehub.org 上报告。",
+  "app.about.source": "源代码已在 <a>GitHub</a> 上公开。",
   "app.helpHint.ariaLabel": "什么是“{title}”？",
   "app.help.burst.title": "爆破",
   "app.help.burst.text": "随着高度上升、气压降低，气球不断膨胀，直至爆破，通常发生在 20 至 35 km 高度。之后探空仪随小型降落伞下降。",

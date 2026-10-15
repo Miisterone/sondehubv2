@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Följ sonden",
   "app.about.shortcuts.openFirst": "Öppna första träffen",
   "app.about.credits": "Data: SondeHub (Project Horus) — öppet API api.v2.sondehub.org. Prognoser: Tawhiri (CUSF). Bakgrundskartor: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Fristående projekt, ej knutet till SondeHub. Om du hittar en sond, rapportera gärna fyndet på sondehub.org.",
+  "app.about.source": "Källkoden finns på <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "Vad är ”{title}”?",
   "app.help.burst.title": "Sprickning",
   "app.help.burst.text": "Under uppstigningen expanderar ballongen i takt med att lufttrycket sjunker, tills den spricker, oftast mellan 20 och 35 km höjd. Sonden faller sedan ner under en liten fallskärm.",

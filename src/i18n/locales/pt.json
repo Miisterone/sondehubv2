@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Seguir a sonda",
   "app.about.shortcuts.openFirst": "Abrir o 1.º resultado",
   "app.about.credits": "Dados: SondeHub (Project Horus) — API pública api.v2.sondehub.org. Previsões: Tawhiri (CUSF). Mapas base: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Projeto independente, não afiliado ao SondeHub. Se recuperar uma sonda, lembre-se de a assinalar em sondehub.org.",
+  "app.about.source": "Código-fonte disponível no <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "O que é «{title}»?",
   "app.help.burst.title": "Rebentamento",
   "app.help.burst.text": "Ao subir, o balão dilata à medida que a pressão diminui, até rebentar, em geral entre 20 e 35 km de altitude. A sonda desce depois sob um pequeno paraquedas.",

@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Follow sonde",
   "app.about.shortcuts.openFirst": "Open first result",
   "app.about.credits": "Data: SondeHub (Project Horus) — public API api.v2.sondehub.org. Predictions: Tawhiri (CUSF). Basemaps: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Independent project, not affiliated with SondeHub. If you recover a sonde, please report it on sondehub.org.",
+  "app.about.source": "Source code available on <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "What is ‘{title}’?",
   "app.help.burst.title": "Burst",
   "app.help.burst.text": "As it rises, the balloon expands as the pressure drops until it bursts, usually between 20 and 35 km altitude. The sonde then descends under a small parachute.",

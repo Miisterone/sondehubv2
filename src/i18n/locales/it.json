@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Segui la sonda",
   "app.about.shortcuts.openFirst": "Apri il 1° risultato",
   "app.about.credits": "Dati: SondeHub (Project Horus) — API pubblica api.v2.sondehub.org. Previsioni: Tawhiri (CUSF). Mappe di base: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Progetto indipendente, non affiliato a SondeHub. Se recuperate una sonda, ricordatevi di segnalarla su sondehub.org.",
+  "app.about.source": "Codice sorgente disponibile su <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "Che cos’è «{title}»?",
   "app.help.burst.title": "Scoppio",
   "app.help.burst.text": "Salendo, il pallone si gonfia man mano che la pressione diminuisce, fino a scoppiare, in genere tra 20 e 35 km di quota. La sonda ridiscende poi appesa a un piccolo paracadute.",

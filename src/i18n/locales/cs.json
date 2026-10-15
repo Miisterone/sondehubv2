@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Sledovat sondu",
   "app.about.shortcuts.openFirst": "Otevřít 1. výsledek",
   "app.about.credits": "Data: SondeHub (Project Horus) — veřejné API api.v2.sondehub.org. Předpovědi: Tawhiri (CUSF). Podkladové mapy: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Nezávislý projekt, nepřidružený k SondeHub. Pokud sondu najdete, nezapomeňte nález nahlásit na sondehub.org.",
+  "app.about.source": "Zdrojový kód je k dispozici na <a>GitHubu</a>.",
   "app.helpHint.ariaLabel": "Co znamená „{title}“?",
   "app.help.burst.title": "Prasknutí",
   "app.help.burst.text": "Při stoupání se balon s klesajícím tlakem rozpíná, až praskne, obvykle ve výšce 20 až 35 km. Sonda se pak snáší zpět na malém padáku.",

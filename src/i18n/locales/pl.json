@@ -43,6 +43,7 @@
   "app.about.shortcuts.follow": "Śledź sondę",
   "app.about.shortcuts.openFirst": "Otwórz 1. wynik",
   "app.about.credits": "Dane: SondeHub (Project Horus) – publiczne API api.v2.sondehub.org. Prognozy: Tawhiri (CUSF). Podkłady mapy: OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Niezależny projekt, niepowiązany z SondeHub. Jeśli odzyskasz sondę, zgłoś to na sondehub.org.",
+  "app.about.source": "Kod źródłowy dostępny na <a>GitHub</a>.",
   "app.helpHint.ariaLabel": "Co to jest „{title}”?",
   "app.help.burst.title": "Pęknięcie",
   "app.help.burst.text": "Podczas wznoszenia balon rozszerza się wraz ze spadkiem ciśnienia, aż pęka, zwykle na wysokości od 20 do 35 km. Sonda opada następnie na małym spadochronie.",
