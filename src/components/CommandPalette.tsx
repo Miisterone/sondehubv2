@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Megaphone, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { cx } from '@/components/ui';
 import { Icon3D, SondeIcon3D } from '@/components/Icon3D';
+import { openWhatsNew } from '@/components/WhatsNew';
 import { useStore, type Duration, type Layers } from '@/store/useStore';
 import { BASEMAPS } from '@/lib/basemaps';
 import { ago, fmtAltShort } from '@/lib/format';
@@ -113,6 +114,12 @@ interface Action {
 export function CommandPalette({ onAbout }: { onAbout: () => void }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const afterClose = useRef<(() => void) | null>(null);
+
+  const defer = useCallback((fn: () => void) => {
+    afterClose.current = fn;
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -135,17 +142,24 @@ export function CommandPalette({ onAbout }: { onAbout: () => void }) {
       <DialogContent
         showCloseButton={false}
         className="top-[12dvh] translate-y-0 gap-0 overflow-hidden rounded-lg border p-0 shadow-2xl sm:max-w-xl"
+        onCloseAutoFocus={(e) => {
+          const fn = afterClose.current;
+          if (!fn) return;
+          afterClose.current = null;
+          e.preventDefault();
+          fn();
+        }}
       >
         <DialogTitle className="sr-only">{t('app.command.title')}</DialogTitle>
         <DialogDescription className="sr-only">{t('app.command.description')}</DialogDescription>
         {/* Mounted only while open, so the store subscriptions below cost nothing when closed. */}
-        <PaletteBody close={() => setOpen(false)} onAbout={onAbout} />
+        <PaletteBody close={() => setOpen(false)} defer={defer} onAbout={onAbout} />
       </DialogContent>
     </Dialog>
   );
 }
 
-function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => void }) {
+function PaletteBody({ close, defer, onAbout }: { close: () => void; defer: (fn: () => void) => void; onAbout: () => void }) {
   const t = useT();
   const locale = useLocale();
   const sondesMap = useStore((s) => s.sondes);
@@ -337,6 +351,14 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       run: onAbout,
     });
     list.push({
+      id: 'whatsNew',
+      group: 'help',
+      label: t('app.whatsNew.title'),
+      keywords: `${t('app.command.whatsNew.keywords')} changelog news nouveautes`,
+      icon: <Megaphone />,
+      run: () => defer(openWhatsNew),
+    });
+    list.push({
       id: 'intro',
       group: 'help',
       label: t('app.common.replayIntro'),
@@ -345,7 +367,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       run: () => setSettings({ tutorialDone: false }),
     });
     return list;
-  }, [settings, selected, follow, userLocation, onAbout, t, locale]);
+  }, [settings, selected, follow, userLocation, onAbout, defer, t, locale]);
 
   const groupLabel = useCallback((g: GroupId) => (g === 'language' ? t('app.language') : t(GROUP_LABEL[g])), [t]);
 

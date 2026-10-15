@@ -46,6 +46,7 @@ purement statique, l'historique par site lit S3 en direct et seuls les vols des 
 - **Signaler une récupération** directement sur SondeHub (publication publique, après confirmation).
 - Palette de commandes **⌘K / Ctrl K** : sondes, stations, sites, actions.
 - Carte de bienvenue à la première visite, FAQ, thème clair/sombre, unités métriques/impériales, partage natif, export KML/CSV.
+- **Nouveautés** : menu dans l'en-tête (et ⌘K) listant les dernières fonctionnalités par date, avec pastille tant qu'il reste des entrées non lues et raccourcis pour les essayer.
 - Mobile : tiroir à 3 hauteurs (vaul).
 
 ## Architecture
@@ -63,6 +64,7 @@ src/
   lib/atmo.ts       thermodynamique : profil, pression, adiabatiques, indices, vent par couche
   lib/flight.ts     données de vol pour les graphiques, interpolation du replay
   lib/history.ts    historique : vols par site, derniers signaux récents, chargement d'un vol passé
+  lib/whatsNew.ts   entrées du menu Nouveautés et suivi des entrées lues (localStorage)
 api/
   site-flights.ts   vols d'un site de lâcher sur 31 jours (résumés S3, cache CDN 30 min)
   flight.ts         vol archivé complet, dédoublonné et allégé (cache CDN long)
@@ -73,6 +75,15 @@ api/
 Endpoints utilisés (`https://api.v2.sondehub.org`) : `/sondes/telemetry?duration=` , `/sondes/telemetry?serial=`,
 `/predictions`, `/listeners/telemetry?duration=1d`, `/sites`, `/sondes?lat=&lon=&distance=&last=`, `/recovered?last=`, `PUT /recovered` (signalements)
 — et `wss://ws-reader.v2.sondehub.org/`. Archives : `https://sondehub-history.s3.amazonaws.com` (`launchsites/`, `serial/`).
+
+## Annoncer une nouveauté
+
+1. Ajouter l'entrée **en tête** de `WHATS_NEW` dans `src/lib/whatsNew.ts` : `id` unique et stable, `date` (AAAA-MM-JJ), icône 3D,
+   clés de titre et de texte, action facultative (`terrain`, `history`, `nearby`, `tour`).
+2. Ajouter les textes dans `src/i18n/fr/whatsNew.ts` puis dans les 12 fichiers `src/i18n/locales/*.json`.
+
+La pastille réapparaît pour les visiteurs dont la dernière entrée vue n'est plus la première de la liste ; seules les entrées
+ajoutées depuis leur dernière ouverture portent le badge « Nouveau ». Un premier visiteur ne voit pas de pastille.
 
 ## Crédits
 

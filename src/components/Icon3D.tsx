@@ -12,7 +12,9 @@ export type Icon3DId =
   | 'chase'
   | 'launch'
   | 'locate'
-  | 'relief';
+  | 'relief'
+  | 'globe'
+  | 'guide';
 
 const HI = '#ffffff';
 
@@ -49,7 +51,7 @@ function Cube({ cx, ty, w, h, tone = 'accent' }: { cx: number; ty: number; w: nu
   );
 }
 
-function Sphere({ cx, cy, r, grey }: { cx: number; cy: number; r: number; grey?: boolean }) {
+function Sphere({ cx, cy, r, grey, children }: { cx: number; cy: number; r: number; grey?: boolean; children?: ReactNode }) {
   const rad = (d: number) => (d * Math.PI) / 180;
   const p1 = [cx + r * Math.cos(rad(-62)), cy + r * Math.sin(rad(-62))].map((v) => v.toFixed(2));
   const p2 = [cx + r * Math.cos(rad(152)), cy + r * Math.sin(rad(152))].map((v) => v.toFixed(2));
@@ -60,6 +62,7 @@ function Sphere({ cx, cy, r, grey }: { cx: number; cy: number; r: number; grey?:
     <>
       <circle cx={cx} cy={cy} r={r} className={grey ? 'i3-grey-lit' : 'i3-a100'} />
       <path d={`M${p1[0]} ${p1[1]}A${r} ${r} 0 0 1 ${p2[0]} ${p2[1]}A${ri} ${ri} 0 0 0 ${p1[0]} ${p1[1]}Z`} className={grey ? 'i3-grey-shade' : 'i3-a300'} />
+      {children}
       <ellipse cx={hx} cy={hy} rx={r * 0.24} ry={r * 0.15} transform={`rotate(-38 ${hx} ${hy})`} fill={HI} />
     </>
   );
@@ -411,6 +414,38 @@ function Relief() {
   );
 }
 
+function Globe() {
+  return (
+    <>
+      <Shadow rx={7} ry={2} />
+      <Sphere cx={24} cy={19} r={13}>
+        <ellipse cx="24" cy="19" rx="13" ry="4.4" fill="none" className="i3-stroke-a500" strokeWidth="0.9" />
+        <path d="M13.2 11.8h21.6M13.2 26.2h21.6" fill="none" className="i3-stroke-a300" strokeWidth="0.9" />
+        <ellipse cx="24" cy="19" rx="5.4" ry="13" fill="none" className="i3-stroke-a500" strokeWidth="0.9" />
+        <path d="M24 6v26" className="i3-stroke-a300" strokeWidth="0.9" />
+      </Sphere>
+      <path d="M24 32v4" className="i3-line" strokeWidth="1.2" strokeLinecap="round" />
+      <Cube cx={24} ty={35.6} w={6.4} h={2.6} />
+    </>
+  );
+}
+
+function Guide() {
+  return (
+    <>
+      <Tile cy={35} w={18} />
+      <polygon points="21.4,9.6 26.6,9.6 34.5,35 13.5,35" className="i3-a100" opacity={0.75} />
+      <ellipse cx="24" cy="35" rx="10.5" ry="5.25" className="i3-paper" />
+      <ellipse cx="24" cy="35" rx="10.5" ry="5.25" fill="none" className="i3-stroke-a300" strokeWidth="0.8" />
+      <Cube cx={24} ty={27.6} w={4.6} h={4.2} />
+      <path d="M24 2.5v3" className="i3-line" strokeWidth="1.1" strokeLinecap="round" />
+      <polygon points="19.6,5.4 28.4,5.4 26.8,10.4 21.2,10.4" className="i3-a500" />
+      <polygon points="24,5.4 28.4,5.4 26.8,10.4 24,10.4" className="i3-a700" />
+      <ellipse cx="24" cy="10.4" rx="2.8" ry="0.9" fill={HI} />
+    </>
+  );
+}
+
 const ART: Record<Icon3DId, () => ReactNode> = {
   ascending: () => <Balloon />,
   descending: () => <Parachute />,
@@ -427,6 +462,8 @@ const ART: Record<Icon3DId, () => ReactNode> = {
   'glider-descending': () => glider('descending'),
   'glider-landed': () => glider('landed'),
   'glider-lost': () => glider('lost'),
+  globe: () => <Globe />,
+  guide: () => <Guide />,
 };
 
 interface Icon3DProps {

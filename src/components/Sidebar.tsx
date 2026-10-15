@@ -37,7 +37,8 @@ import { UpcomingLaunches } from './UpcomingLaunches';
 import { getMap } from './MapView';
 import { CentreBar, PointEditor } from './WatchPointPicker';
 import { RadiusPicker, nextRadius } from './RadiusPicker';
-import { NEARBY_EVENT, SHEET_EVENT, type SheetSnap } from '@/lib/tour';
+import { WhatsNew } from './WhatsNew';
+import { NEARBY_EVENT, SHEET_EVENT, TAB_EVENT, type SheetSnap, type SidebarTab } from '@/lib/tour';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
 
@@ -62,7 +63,7 @@ const TAPPABLE_LAYERS = [
 const MAX_ROWS = 300;
 const ALL_TYPES = '__all';
 
-type Tab = 'nearby' | 'flying' | 'following' | 'history';
+type Tab = SidebarTab;
 type GeoState = 'idle' | 'locating' | 'failed';
 
 const TAB_KEY = 'sondetrack.tab.v1';
@@ -199,6 +200,21 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
     window.addEventListener(NEARBY_EVENT, on);
     return () => window.removeEventListener(NEARBY_EVENT, on);
   }, [locate, setTab]);
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const want = (e as CustomEvent<Tab>).detail;
+      const st = useStore.getState();
+      st.select(null);
+      st.selectSite(null);
+      st.selectListener(null);
+      setTab(want);
+      if (want === 'nearby' || want === 'history') locateIfAllowed();
+      setSnap((s) => (s === PEEK ? HALF : s));
+    };
+    window.addEventListener(TAB_EVENT, on);
+    return () => window.removeEventListener(TAB_EVENT, on);
+  }, [locateIfAllowed, setTab]);
 
   useEffect(() => {
     const on = (e: Event) => {
@@ -1006,10 +1022,16 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           <Logo className="mr-1 size-8 shrink-0 md:size-9" />
           <div className="min-w-0 flex-1">
             <h1 className="text-[19px] leading-tight font-semibold whitespace-nowrap">SondeHub V2</h1>
-            <p className="truncate text-[13px] leading-snug">{tr('sidebar.header.subtitle')}</p>
+            <p className="flex min-w-0 items-center gap-1.5 text-[13px] leading-snug">
+              <StatusPill />
+              <span aria-hidden className="text-faint">
+                ·
+              </span>
+              <span className="truncate">{tr('sidebar.header.subtitle')}</span>
+            </p>
           </div>
-          <StatusPill />
           <LanguageSelect />
+          <WhatsNew />
           <IconButton label={tr('sidebar.header.about')} side="bottom" className="-mr-2" onClick={onAbout}>
             <Info className="size-[18px]" />
           </IconButton>

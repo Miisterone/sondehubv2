@@ -1,5 +1,4 @@
 import { useStore } from '@/store/useStore';
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { t, useT } from '@/i18n';
 import { cx } from './ui';
@@ -32,16 +31,15 @@ export function StatusPill() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Badge
-          variant="outline"
+        <span
           tabIndex={0}
           role="status"
           aria-label={t('sidebar.connection.ariaLabel', { status: LABEL[conn], hint })}
-          className="bg-background text-muted-foreground border-border h-7 cursor-default gap-1.5 rounded-md px-2 text-[12px] font-medium"
+          className="text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 cursor-default items-center gap-1.5 rounded-sm whitespace-nowrap outline-none focus-visible:ring-2"
         >
           <span className={cx('relative size-2 shrink-0 rounded-full', DOT[conn], conn === 'live' && 'live-dot')} />
           {LABEL[conn]}
-        </Badge>
+        </span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-64">
         {hint}

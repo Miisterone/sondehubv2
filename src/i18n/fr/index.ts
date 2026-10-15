@@ -5,5 +5,6 @@ import { charts } from './charts';
 import { map } from './map';
 import { lib } from './lib';
 import { atmo3d } from './atmo3d';
+import { whatsNew } from './whatsNew';
 
-export const fr = { ...app, ...sidebar, ...sonde, ...charts, ...map, ...lib, ...atmo3d };
+export const fr = { ...app, ...sidebar, ...sonde, ...charts, ...map, ...lib, ...atmo3d, ...whatsNew };
