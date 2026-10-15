@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { cx } from '@/components/ui';
-import { Icon3D } from '@/components/Icon3D';
+import { Icon3D, SondeIcon3D } from '@/components/Icon3D';
 import { useStore, type Duration, type Layers } from '@/store/useStore';
 import { BASEMAPS } from '@/lib/basemaps';
 import { ago, fmtAltShort } from '@/lib/format';
@@ -404,7 +404,7 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
       <CommandGroup key="sondes" heading={q ? t('app.command.section.sondes') : t('app.command.section.flying')}>
         {sondeHits.map((s) => (
           <CommandItem key={s.serial} value={`sonde:${s.serial}`} onSelect={() => run(() => useStore.getState().select(s.serial, true))}>
-            <Icon3D id={s.phase} className="-my-1 size-8!" />
+            <SondeIcon3D sonde={s} className="-my-1 size-8!" />
             <div className="flex min-w-0 flex-1 items-baseline gap-2">
               <span className="truncate tabular font-semibold">{s.serial}</span>
               <span className="text-muted-foreground truncate text-xs">{[s.type, s.subtype && s.subtype !== s.type ? s.subtype : null].filter(Boolean).join(' · ')}</span>

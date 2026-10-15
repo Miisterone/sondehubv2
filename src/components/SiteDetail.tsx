@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconButton, Section, Stat, cx } from './ui';
-import { Icon3D } from './Icon3D';
+import { Icon3D, SondeIcon3D } from './Icon3D';
 import { HelpHint } from './HelpHint';
 import { t, useT } from '@/i18n';
 
@@ -188,7 +188,7 @@ export function SiteDetail({ id }: { id: string }) {
                       onClick={() => select(s.serial, true)}
                       className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2"
                     >
-                      <Icon3D id={s.phase} size={34} className="-my-1" />
+                      <SondeIcon3D sonde={s} size={34} className="-my-1" />
                       <span className="min-w-0 flex-1">
                         <span className="tabular text-foreground block truncate text-[13.5px] font-semibold">{s.serial}</span>
                         <span className="block truncate text-[12.5px]">

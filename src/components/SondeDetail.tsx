@@ -46,7 +46,7 @@ import { ReplayControls, ReplayStats, canReplay, startReplay } from './ReplayBar
 import { AtmoIndices } from './AtmoIndices';
 import { AtmospherePanel } from './AtmospherePanel';
 import { IconButton, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
-import { AltitudeColumn, Icon3D } from './Icon3D';
+import { AltitudeColumn, Icon3D, SondeIcon3D } from './Icon3D';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
 import { NavMenu } from './NavMenu';
@@ -301,7 +301,7 @@ export function SondeDetail({ serial }: { serial: string }) {
         <IconButton label={t('sonde.header.back')} side="bottom" onClick={() => select(null)}>
           <ArrowLeft />
         </IconButton>
-        {!compact && <Icon3D id={sonde.phase} size={38} className="-my-1.5" />}
+        {!compact && <SondeIcon3D sonde={sonde} size={38} className="-my-1.5" />}
         <div className="ml-0.5 min-w-0 flex-1">
           <h2 className={cx('tabular truncate leading-tight font-semibold', compact ? 'text-[15px]' : 'text-[16px]')}>{sonde.serial}</h2>
           {compact ? (

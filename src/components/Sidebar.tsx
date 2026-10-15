@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { IconButton, Logo, Segmented, Toggle, cx } from './ui';
-import { Icon3D } from './Icon3D';
+import { Icon3D, SondeIcon3D } from './Icon3D';
 import { EmptyState, RowSkeleton } from './ListParts';
 import { HistoryPanel } from './HistoryPanel';
 import { SondeDetail } from './SondeDetail';
@@ -1396,7 +1396,7 @@ function SondeItem({
           className="focus-visible:ring-ring/50 flex min-w-0 flex-1 items-start gap-3 py-3 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
         >
           <span className="-my-1 -ml-1.5 grid size-10 shrink-0 place-items-center" title={s ? PHASE_LABEL[s.phase] : undefined}>
-            {s ? <Icon3D id={s.phase} size={40} /> : <Star className="text-faint size-4" />}
+            {s ? <SondeIcon3D sonde={s} size={40} /> : <Star className="text-faint size-4" />}
           </span>
           <span className="min-w-0 flex-1">
             <span className="tabular text-foreground block truncate text-[14.5px] leading-5 font-semibold">{serial}</span>

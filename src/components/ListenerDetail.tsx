@@ -9,7 +9,7 @@ import { PHASE_LABEL } from '@/lib/icons';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HelpHint } from './HelpHint';
 import { IconButton, Section, Stat } from './ui';
-import { Icon3D } from './Icon3D';
+import { Icon3D, SondeIcon3D } from './Icon3D';
 import { intlTag, useT } from '@/i18n';
 
 const LIVE_MS = 120_000;
@@ -207,7 +207,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
                         onClick={() => select(h.sonde.serial, true)}
                         className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                       >
-                        <Icon3D id={h.sonde.phase} size={32} className="-my-1" />
+                        <SondeIcon3D sonde={h.sonde} size={32} className="-my-1" />
                         <span className="min-w-0 flex-1">
                           <span className="tabular text-foreground block truncate text-[13px] font-semibold">{h.sonde.serial}</span>
                           <span className="block truncate text-[12.5px]">

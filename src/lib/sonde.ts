@@ -110,6 +110,15 @@ export function verticalSpeed(s: Pick<Sonde, 'last' | 'lastTime' | 'track'>): nu
   return undefined;
 }
 
+const GLIDER_BATT_V = 3.3;
+const GLIDER_BATT_TOLERANCE_V = 0.2;
+
+export function isGlider(s: Pick<Sonde, 'type' | 'subtype' | 'last'>): boolean {
+  const batt = s.last.batt;
+  const m20 = [s.subtype, s.type].some((v) => v?.toUpperCase().startsWith('M20'));
+  return m20 && typeof batt === 'number' && Math.abs(batt - GLIDER_BATT_V) <= GLIDER_BATT_TOLERANCE_V;
+}
+
 const RS_TYPES: Record<string, string> = {
   '11': 'LMS6-403',
   '17': 'DFM-09',
