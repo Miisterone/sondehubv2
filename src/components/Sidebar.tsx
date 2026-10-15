@@ -11,7 +11,7 @@ import { bearing, cardinal, compass, distance } from '@/lib/geo';
 import { findLaunch, siteLabel, verticalSpeed, type Launch } from '@/lib/sonde';
 import { locateUser } from '@/lib/geolocation';
 import { isPickClick, useNearbyCentre, type Centre } from '@/lib/watchPoint';
-import { enableAlerts } from '@/lib/alerts';
+import { disableAlerts, enableAlerts } from '@/lib/alerts';
 import { PHASE_LABEL } from '@/lib/icons';
 import { t as translate, useT, type TKey } from '@/i18n';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { IconButton, Logo, Segmented, cx } from './ui';
+import { IconButton, Logo, Segmented, Toggle, cx } from './ui';
 import { Icon3D, type Icon3DId } from './Icon3D';
 import { SondeDetail } from './SondeDetail';
 import { SiteDetail } from './SiteDetail';
@@ -856,7 +856,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
             />
           </div>
         </div>
-        <AlertCta enabled={alerts.enabled} radiusKm={alerts.radiusKm} units={units} />
+        <AlertPanel radiusKm={alerts.radiusKm} units={units} />
         {groups.length === 0 ? (
           loading && total === 0 ? (
             skeleton(4)
@@ -1254,40 +1254,81 @@ function EmptyState({
   );
 }
 
-function AlertCta({ enabled, radiusKm, units }: { enabled: boolean; radiusKm: number; units: Units }) {
+function AlertPanel({ radiusKm, units }: { radiusKm: number; units: Units }) {
+  const alerts = useStore((s) => s.settings.alerts);
+  const nFavs = useStore((s) => s.settings.favourites.length);
+  const { setAlerts } = useStore.getState();
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   const tr = useT();
-  if (enabled) {
+
+  if (!alerts.enabled) {
     return (
-      <p className="flex items-center gap-2 px-5 pt-3 text-[12.5px]">
-        <BellRing className="text-foreground size-4 shrink-0" />
-        {tr('sidebar.alerts.enabled', { radius: fmtRadius(radiusKm, units) })}
-      </p>
+      <div className="mx-5 mt-4 flex items-center gap-3 rounded-lg border px-4 py-3">
+        <Bell className="text-foreground size-5 shrink-0" />
+        <p className="min-w-0 flex-1 text-[13px] leading-snug">
+          <span className="text-foreground block font-semibold">{tr('sidebar.alerts.ctaTitle')}</span>
+          {tr('sidebar.alerts.ctaText', { radius: fmtRadius(radiusKm, units) })}
+        </p>
+        <Button
+          size="sm"
+          className="shrink-0"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await enableAlerts();
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy && <LoaderCircle className="animate-spin" />}
+          {tr('sidebar.alerts.enable')}
+        </Button>
+      </div>
     );
   }
+
   return (
-    <div className="mx-5 mt-4 flex items-center gap-3 rounded-lg border px-4 py-3">
-      <Bell className="text-foreground size-5 shrink-0" />
-      <p className="min-w-0 flex-1 text-[13px] leading-snug">
-        <span className="text-foreground block font-semibold">{tr('sidebar.alerts.ctaTitle')}</span>
-        {tr('sidebar.alerts.ctaText', { radius: fmtRadius(radiusKm, units) })}
-      </p>
-      <Button
-        size="sm"
-        className="shrink-0"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          try {
-            await enableAlerts();
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {busy && <LoaderCircle className="animate-spin" />}
-        {tr('sidebar.alerts.enable')}
-      </Button>
+    <div className="mx-5 mt-4 rounded-lg border">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <BellRing className="text-foreground size-5 shrink-0" />
+        <p className="text-foreground min-w-0 flex-1 text-[13px] leading-snug">{tr('sidebar.alerts.enabled', { radius: fmtRadius(radiusKm, units) })}</p>
+        <Button variant="outline" size="sm" className="shrink-0" aria-expanded={open} aria-controls="alert-settings" onClick={() => setOpen((v) => !v)}>
+          {tr('sidebar.alerts.settings')}
+          <ChevronDown className={cx('transition-transform', open && 'rotate-180')} />
+        </Button>
+      </div>
+      {open && (
+        <div id="alert-settings" className="border-t px-2 pt-1 pb-2">
+          <Toggle checked={alerts.landings} onChange={(v) => setAlerts({ landings: v })} label={tr('map.alerts.landings')} hint={tr('map.alerts.landingsHint')} />
+          <Toggle
+            checked={alerts.launchDetected}
+            onChange={(v) => setAlerts({ launchDetected: v })}
+            label={tr('map.alerts.launchDetected')}
+            hint={tr('map.alerts.launchDetectedHint')}
+          />
+          <Toggle
+            checked={alerts.launchPlanned}
+            onChange={(v) => setAlerts({ launchPlanned: v })}
+            label={tr('map.alerts.launchPlanned')}
+            hint={tr('map.alerts.launchPlannedHint')}
+          />
+          <Toggle
+            checked={alerts.favourites}
+            onChange={(v) => setAlerts({ favourites: v })}
+            label={tr('map.alerts.favourites')}
+            hint={nFavs ? tr('map.alerts.favouritesHintCount', { count: nFavs }) : tr('map.alerts.favouritesHint')}
+          />
+          <div className="flex items-center justify-between gap-3 px-2 pt-2">
+            <span className="text-faint text-[12px]">{tr('map.alerts.enableHint')}</span>
+            <Button variant="ghost" size="sm" className="-mr-1 shrink-0" onClick={disableAlerts}>
+              {tr('sidebar.alerts.disable')}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

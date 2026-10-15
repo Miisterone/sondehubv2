@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import { Bell, BellRing, Layers as LayersIcon, LocateFixed, MapPin, Moon, Sun } from 'lucide-react';
+import { Layers as LayersIcon, Moon, Sun } from 'lucide-react';
 import { useStore, type Layers } from '@/store/useStore';
 import { BASEMAPS } from '@/lib/basemaps';
 import type { IconId } from '@/lib/icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { locateUser } from '@/lib/geolocation';
-import { disableAlerts, enableAlerts } from '@/lib/alerts';
 import { IconButton, MapIcon, Segmented, Toggle, cx } from './ui';
 import { t, useT } from '@/i18n';
 
@@ -43,109 +40,6 @@ export function setTheme(next: 'dark' | 'light') {
 
 function SectionTitle({ children }: { children: string }) {
   return <h3 className="mb-2 px-0.5 text-[14px] font-semibold">{children}</h3>;
-}
-
-const RADII = [25, 50, 100, 200] as const;
-
-/** Landing alerts: master switch, radius, favourites and position status. */
-function AlertsSection() {
-  const alerts = useStore((s) => s.settings.alerts);
-  const nFavs = useStore((s) => s.settings.favourites.length);
-  const loc = useStore((s) => s.userLocation);
-  const point = useStore((s) => s.settings.watchPoint);
-  const { setAlerts } = useStore.getState();
-  const t = useT();
-  const [busy, setBusy] = useState(false);
-  const [locating, setLocating] = useState(false);
-
-  const toggleMaster = async (on: boolean) => {
-    if (!on) return disableAlerts();
-    setBusy(true);
-    try {
-      await enableAlerts();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const locate = async () => {
-    setLocating(true);
-    await locateUser({ fly: true });
-    setLocating(false);
-  };
-
-  return (
-    <section aria-labelledby="alerts-title">
-      <h3 id="alerts-title" className="mb-2 flex items-center gap-1.5 px-0.5 text-[14px] font-semibold">
-        <Bell className="size-3.5" aria-hidden /> {t('map.alerts.title')}
-      </h3>
-      <div className="-mx-1.5">
-        <Toggle
-          checked={alerts.enabled || busy}
-          onChange={(v) => void toggleMaster(v)}
-          label={busy ? t('map.alerts.enabling') : t('map.alerts.enable')}
-          hint={t('map.alerts.enableHint')}
-          swatch={
-            <span className={cx('grid size-8 shrink-0 place-items-center rounded-lg', alerts.enabled ? 'bg-primary/10 text-primary' : 'bg-chip text-muted-foreground')}>
-              {alerts.enabled ? <BellRing className="size-4" /> : <Bell className="size-4" />}
-            </span>
-          }
-        />
-      </div>
-
-      {alerts.enabled && (
-        <div className="mt-1 space-y-1">
-          <div className="text-muted-foreground flex min-h-7 items-center gap-1.5 px-0.5 text-[12px]">
-            <MapPin className="size-3.5 shrink-0" aria-hidden />
-            {point ? (
-              <span className="truncate">{t('map.alerts.aroundPoint', { place: point.label || `${point.lat.toFixed(2)}, ${point.lon.toFixed(2)}` })}</span>
-            ) : loc ? (
-              <span className="tabular truncate">
-                {t('map.alerts.position', { lat: loc.lat.toFixed(2), lon: loc.lon.toFixed(2) })}
-              </span>
-            ) : (
-              <>
-                <span className="truncate">{t('map.alerts.positionUnknown')}</span>
-                <Button variant="link" size="sm" className="h-auto gap-1 p-0 text-[12px]" disabled={locating} onClick={() => void locate()}>
-                  <LocateFixed className="size-3.5" /> {locating ? t('map.alerts.locating') : t('map.alerts.locate')}
-                </Button>
-              </>
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-2 px-0.5 py-1">
-            <span className="text-[13px] font-medium">{t('map.alerts.radius')}</span>
-            <Segmented
-              size="sm"
-              value={String(alerts.radiusKm)}
-              onChange={(v) => setAlerts({ radiusKm: Number(v) })}
-              options={RADII.map((r) => ({ value: String(r), label: `${r} km` }))}
-            />
-          </div>
-          <div className="-mx-1.5">
-            <Toggle checked={alerts.landings} onChange={(v) => setAlerts({ landings: v })} label={t('map.alerts.landings')} hint={t('map.alerts.landingsHint')} />
-            <Toggle
-              checked={alerts.launchDetected}
-              onChange={(v) => setAlerts({ launchDetected: v })}
-              label={t('map.alerts.launchDetected')}
-              hint={t('map.alerts.launchDetectedHint')}
-            />
-            <Toggle
-              checked={alerts.launchPlanned}
-              onChange={(v) => setAlerts({ launchPlanned: v })}
-              label={t('map.alerts.launchPlanned')}
-              hint={t('map.alerts.launchPlannedHint')}
-            />
-            <Toggle
-              checked={alerts.favourites}
-              onChange={(v) => setAlerts({ favourites: v })}
-              label={t('map.alerts.favourites')}
-              hint={nFavs ? t('map.alerts.favouritesHintCount', { count: nFavs }) : t('map.alerts.favouritesHint')}
-            />
-          </div>
-        </div>
-      )}
-    </section>
-  );
 }
 
 /** Layers button + popover with basemaps, overlays, units and theme. */
@@ -217,10 +111,6 @@ export function LayerPanel() {
             ))}
           </div>
         </div>
-
-        <Separator className="my-3" />
-
-        <AlertsSection />
 
         <Separator className="my-3" />
 

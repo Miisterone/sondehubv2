@@ -39,7 +39,7 @@ Aucune clé d'API ni backend : l'application parle directement à l'API publique
 - **Vent en altitude** : vent moyen par couche de 250 m déduit du déplacement GPS, profil vitesse/direction et hodographe.
 - **Fiabilité de la prévision** : historique des prédictions d'atterrissage pendant la session et écart dans le temps.
 - **Fiche station** : sondes captées, portée max, SNR, élévation minimale, diagramme polaire de couverture (depuis la carte, la fiche sonde ou ⌘K).
-- **Alertes d'atterrissage** près de vous et pour les sondes suivies (toasts + notifications système).
+- **Alertes** dans l'app, réglées depuis l'onglet Près de moi : atterrissages, lâchers détectés et lâchers prévus dans le rayon, éclatement et atterrissage imminent des favoris.
 - **Signaler une récupération** directement sur SondeHub (publication publique, après confirmation).
 - Palette de commandes **⌘K / Ctrl K** : sondes, stations, sites, actions.
 - Carte de bienvenue à la première visite, FAQ, thème clair/sombre, unités métriques/impériales, partage natif, export KML/CSV.
@@ -54,7 +54,7 @@ src/
   lib/mapData.ts    construction des GeoJSON pour la carte
   lib/icons.ts      icônes dessinées en canvas (HiDPI), couleurs
   store/useStore.ts état global (zustand) : sondes, prédictions, réglages
-  lib/alerts.ts     alertes d'atterrissage (activation, permissions)
+  lib/alerts.ts     alertes (activation, permissions)
   lib/geolocation.ts position de l'utilisateur partagée
   lib/watchPoint.ts lieu choisi à la place du GPS (recherche, coordonnées, centre de référence)
   lib/atmo.ts       thermodynamique : profil, pression, adiabatiques, indices, vent par couche
