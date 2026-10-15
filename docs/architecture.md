@@ -327,5 +327,4 @@ Pistes concrètes :
 - [ ] Espacer ou suspendre le rechargement complet de `/predictions` (60 s) quand le flux MQTT est `live`, puisqu'il pousse déjà les prédictions.
 - [ ] Ajouter des tests unitaires sur `computePhase`, `applyFrame` / `insertPoint` et `reduce` de `api/flight.ts` : ce sont les fonctions les plus sensibles et le dépôt n'a aucun test.
 - [ ] Migrer la clé `sondetrack.settings.v1` vers un nom `sondehubv2.*` en relisant l'ancienne une fois, sinon le renommage efface les réglages des visiteurs.
-- [ ] Vérifier le lien GitHub de `AboutModal.tsx`, qui pointe vers `Miisterone/sondehubv2` alors que le dépôt s'appelle `sondetrack`.
 - [ ] Si le volume grimpe, déplacer l'ingestion MQTT et le calcul des phases dans un Web Worker.
