@@ -18,8 +18,8 @@ export function chartTheme(theme: 'dark' | 'light'): ChartTheme {
         text: '#b4bdc9',
         ink: '#f6f8fa',
         surface: '#0e1013',
-        accent: '#91a4f4',
-        accentFill: 'rgba(145,164,244,0.12)',
+        accent: '#699cfc',
+        accentFill: 'rgba(105,156,252,0.12)',
         pred: '#fb7185',
         zero: '#6b7480',
       }
@@ -29,9 +29,9 @@ export function chartTheme(theme: 'dark' | 'light'): ChartTheme {
         text: '#425466',
         ink: '#0a0a0a',
         surface: '#ffffff',
-        accent: '#3451d1',
-        accentFill: 'rgba(52,81,209,0.10)',
-        pred: '#be123c',
+        accent: '#1362fb',
+        accentFill: 'rgba(19,98,251,0.10)',
+        pred: '#fc4e69',
         zero: '#7a8597',
       };
 }

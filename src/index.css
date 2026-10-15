@@ -29,10 +29,19 @@
   --color-panel: var(--panel);
   --color-surface: var(--surface);
   --color-faint: var(--text-faint);
+  --color-primary-soft: var(--primary-soft);
   --color-asc: var(--phase-asc);
   --color-desc: var(--phase-desc);
   --color-landed: var(--phase-landed);
   --color-lost: var(--phase-lost);
+  --color-asc-fg: var(--phase-asc-fg);
+  --color-desc-fg: var(--phase-desc-fg);
+  --color-landed-fg: var(--phase-landed-fg);
+  --color-lost-fg: var(--phase-lost-fg);
+  --color-asc-soft: var(--phase-asc-soft);
+  --color-desc-soft: var(--phase-desc-soft);
+  --color-landed-soft: var(--phase-landed-soft);
+  --color-lost-soft: var(--phase-lost-soft);
   --color-landing: var(--mark-landing);
   --color-listener: var(--mark-listener);
   --color-live: var(--live);
@@ -68,8 +77,9 @@
   --card-foreground: #0a0a0a;
   --popover: #ffffff;
   --popover-foreground: #0a0a0a;
-  --primary: #3451d1;
+  --primary: #1362fb;
   --primary-foreground: #ffffff;
+  --primary-soft: #eef4ff;
   --secondary: #f6f8fa;
   --secondary-foreground: #0a0a0a;
   --muted: #f6f8fa;
@@ -79,7 +89,7 @@
   --destructive: #b42318;
   --border: #e6e8eb;
   --input: #7a8597;
-  --ring: #3451d1;
+  --ring: #1362fb;
 
   --panel: #ffffff;
   --panel-solid: #ffffff;
@@ -90,20 +100,28 @@
   --text: #425466;
   --text-dim: #425466;
   --text-faint: #57657a;
-  --chart-pred: #be123c;
-  --live: #13803f;
-  --upcoming: #7489e5;
-  --phase-asc: #0369a1;
-  --phase-desc: #b45309;
-  --phase-landed: #047857;
-  --phase-lost: #64748b;
-  --mark-landing: #be123c;
-  --mark-burst: #c2410c;
-  --mark-listener: #6d28d9;
-  --mark-chase: #be185d;
-  --mark-site: #0f766e;
-  --mark-recovered: #047857;
-  --mark-me: #1d4ed8;
+  --chart-pred: #fc4e69;
+  --live: #14a444;
+  --upcoming: #518cfc;
+  --phase-asc: #1499d4;
+  --phase-desc: #d17a12;
+  --phase-landed: #14a26b;
+  --phase-lost: #7a8597;
+  --phase-asc-fg: #0d76a5;
+  --phase-desc-fg: #a35e0b;
+  --phase-landed-fg: #0d7e53;
+  --phase-lost-fg: #57657a;
+  --phase-asc-soft: #e9f6fe;
+  --phase-desc-soft: #fff1e5;
+  --phase-landed-soft: #e4faed;
+  --phase-lost-soft: #f1f3f5;
+  --mark-landing: #fc4e69;
+  --mark-burst: #f36012;
+  --mark-listener: #aa71fc;
+  --mark-chase: #fc449f;
+  --mark-site: #149f99;
+  --mark-recovered: #14a26b;
+  --mark-me: #1362fb;
   color-scheme: light;
 }
 .dark {
@@ -113,8 +131,9 @@
   --card-foreground: #f6f8fa;
   --popover: #15181c;
   --popover-foreground: #f6f8fa;
-  --primary: #91a4f4;
+  --primary: #699cfc;
   --primary-foreground: #0a0a0a;
+  --primary-soft: #11213e;
   --secondary: #16191d;
   --secondary-foreground: #f6f8fa;
   --muted: #16191d;
@@ -124,7 +143,7 @@
   --destructive: #f4877c;
   --border: #262a30;
   --input: #6b7480;
-  --ring: #91a4f4;
+  --ring: #699cfc;
 
   --panel: #0e1013;
   --panel-solid: #0e1013;
@@ -137,18 +156,26 @@
   --text-faint: #8e98a6;
   --chart-pred: #fb7185;
   --live: #3dbe74;
-  --upcoming: #5468b8;
+  --upcoming: #3869ca;
   --phase-asc: #38bdf8;
   --phase-desc: #fbbf24;
   --phase-landed: #34d399;
   --phase-lost: #94a3b8;
+  --phase-asc-fg: #38bdf8;
+  --phase-desc-fg: #fbbf24;
+  --phase-landed-fg: #34d399;
+  --phase-lost-fg: #94a3b8;
+  --phase-asc-soft: #0d2a39;
+  --phase-desc-soft: #36210d;
+  --phase-landed-soft: #0f2d1f;
+  --phase-lost-soft: #18273c;
   --mark-landing: #fb7185;
   --mark-burst: #fb923c;
   --mark-listener: #a78bfa;
   --mark-chase: #f472b6;
   --mark-site: #2dd4bf;
   --mark-recovered: #4ade80;
-  --mark-me: #60a5fa;
+  --mark-me: #699cfc;
   color-scheme: dark;
 }
 
@@ -454,13 +481,13 @@ input[type='search']::-webkit-search-cancel-button {
 }
 
 :root {
-  --i3-a50: #eef1fc;
-  --i3-a100: #dce2f9;
-  --i3-a200: #c3cdf5;
-  --i3-a300: #9aabee;
-  --i3-a500: #3451d1;
-  --i3-a700: #2539a0;
-  --i3-a900: #18256b;
+  --i3-a50: #ebf2fe;
+  --i3-a100: #d5e4ff;
+  --i3-a200: #b6d0ff;
+  --i3-a300: #83aeff;
+  --i3-a500: #1362fb;
+  --i3-a700: #0b40ad;
+  --i3-a900: #062a72;
   --i3-shadow: #e6e8eb;
   --i3-top: #f6f8fa;
   --i3-left: #e6e8eb;
@@ -475,13 +502,13 @@ input[type='search']::-webkit-search-cancel-button {
   --i3-grey-right: #425466;
 }
 .dark {
-  --i3-a50: #e1e7fd;
-  --i3-a100: #c9d3fa;
-  --i3-a200: #aab8f4;
-  --i3-a300: #8199f0;
-  --i3-a500: #5f7ae6;
-  --i3-a700: #3f58c4;
-  --i3-a900: #1f2a52;
+  --i3-a50: #dce9fe;
+  --i3-a100: #bfd6ff;
+  --i3-a200: #97bcff;
+  --i3-a300: #699cfc;
+  --i3-a500: #387afe;
+  --i3-a700: #0d55df;
+  --i3-a900: #13285a;
   --i3-shadow: #1c2025;
   --i3-top: #2a2f36;
   --i3-left: #22262c;

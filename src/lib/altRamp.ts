@@ -1,7 +1,7 @@
 export const ALT_BANDS = [0, 8000, 16000, 24000, 32000] as const;
 
-const ON_LIGHT = ['#4c6fe0', '#3451d1', '#2a3fa8', '#1f2f7e', '#141e55'];
-const ON_DARK = ['#4c6fe0', '#6f8bea', '#91a4f4', '#b8c5f8', '#e1e7fd'];
+const ON_LIGHT = ['#0497ed', '#007fe4', '#0e67d8', '#2150c5', '#2339b1'];
+const ON_DARK = ['#0f7cdb', '#1d93fe', '#63aeff', '#9fccff', '#d8eaff'];
 
 export function altColours(darkBase: boolean): string[] {
   return darkBase ? ON_DARK : ON_LIGHT;

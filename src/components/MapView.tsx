@@ -5,7 +5,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { ExpressionSpecification, LayerSpecification, SymbolLayerSpecification } from '@maplibre/maplibre-gl-style-spec';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStore } from '../store/useStore';
-import { basemapById, FONT } from '../lib/basemaps';
+import { basemapById, FONT, retouchBasemap } from '../lib/basemaps';
 import { applyTerrain, TERRAIN_PITCH } from '../lib/terrain';
 import { addIcons, markColours, phaseColours, type Tone } from '../lib/icons';
 import {
@@ -614,6 +614,7 @@ export function MapView() {
     });
 
     map.on('style.load', () => {
+      retouchBasemap(map, currentBase);
       applyTerrain(map, useStore.getState().settings.terrain, currentBase);
       installOverlays(map, basemapDark);
       synced = {};

@@ -12,7 +12,7 @@ import { findLaunch, isGlider, siteLabel, verticalSpeed, type Launch } from '@/l
 import { locateUser } from '@/lib/geolocation';
 import { isPickClick, useNearbyCentre, type Centre } from '@/lib/watchPoint';
 import { disableAlerts, enableAlerts } from '@/lib/alerts';
-import { PHASE_LABEL } from '@/lib/icons';
+import { PHASE_FG_VAR, PHASE_LABEL } from '@/lib/icons';
 import { t as translate, useT, type TKey } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerDescription, DrawerPortal, DrawerTitle } from '@/components/ui/drawer';
@@ -390,6 +390,7 @@ const isTouch = () => window.matchMedia('(hover: none)').matches;
 interface Metric {
   label: string;
   value: string;
+  tone?: FlightPhase;
 }
 
 interface Item {
@@ -461,7 +462,7 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
         status: sentence([where && translate(pt ? 'sidebar.status.nearPoint' : 'sidebar.status.near', where), from, stale]) || translate('sidebar.status.ascending'),
         metrics: [
           { label: translate('sidebar.metric.altitude'), value: alt },
-          { label: translate('sidebar.metric.ascent'), value: speed },
+          { label: translate('sidebar.metric.ascent'), value: speed, tone: 'ascending' },
           glider
             ? home
             : {
@@ -489,7 +490,7 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
         strong: !!(landing && where),
         metrics: [
           { label: translate('sidebar.metric.altitude'), value: alt },
-          { label: translate('sidebar.metric.descent'), value: speed },
+          { label: translate('sidebar.metric.descent'), value: speed, tone: 'descending' },
           glider
             ? home
             : { label: translate('sidebar.metric.landing'), value: landing ? (t > now ? relative(t, now) : translate('sidebar.metric.imminent')) : '—' },
@@ -947,9 +948,9 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     body = (
       <>
         {showHint && total > 0 && (
-          <div className="bg-surface mx-5 mt-5 rounded-lg border px-4 py-3">
+          <div className="bg-primary-soft mx-5 mt-5 rounded-lg px-4 py-3">
             <div className="flex items-start gap-3">
-              <p className="min-w-0 flex-1 text-[13px] leading-relaxed">
+              <p className="text-foreground min-w-0 flex-1 text-[13px] leading-relaxed">
                 {tr(isTouch() ? 'sidebar.flying.hintTouch' : 'sidebar.flying.hintClick')}
               </p>
               <button
@@ -1440,7 +1441,12 @@ function SondeItem({
                 {item.metrics.map((m) => (
                   <span key={m.label} className="min-w-0">
                     <span className="text-faint block truncate text-[12px] leading-4">{m.label}</span>
-                    <span className="tabular text-foreground mt-0.5 block truncate text-[14px] leading-5 font-semibold">{m.value}</span>
+                    <span
+                      className="tabular text-foreground mt-0.5 block truncate text-[14px] leading-5 font-semibold"
+                      style={m.tone ? { color: PHASE_FG_VAR[m.tone] } : undefined}
+                    >
+                      {m.value}
+                    </span>
                   </span>
                 ))}
               </span>

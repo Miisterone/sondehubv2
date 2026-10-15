@@ -1,4 +1,5 @@
 import type { StyleSpecification } from '@maplibre/maplibre-gl-style-spec';
+import type { Map as MlMap } from 'maplibre-gl';
 import type { BasemapId } from '../store/useStore';
 import { t } from '@/i18n';
 import darkPreview from '../assets/basemaps/dark.webp';
@@ -23,6 +24,8 @@ function raster(tiles: string[], attribution: string, maxzoom = 19): StyleSpecif
   };
 }
 
+type PaintOverrides = Record<string, Record<string, string>>;
+
 export interface Basemap {
   id: BasemapId;
   label: string;
@@ -32,6 +35,27 @@ export interface Basemap {
   /** Placeholder colour behind the thumbnail while it loads. */
   swatch: string;
   hillshade: number;
+  retouch?: PaintOverrides;
+}
+
+const POSITRON_RETOUCH: PaintOverrides = {
+  background: { 'background-color': '#f6f8fa' },
+  water: { 'fill-color': '#d3e4f2' },
+  waterway: { 'line-color': '#b9d3ea' },
+  park: { 'fill-color': '#e2eee0' },
+  landcover_wood: { 'fill-color': '#dfebdd' },
+  landuse_residential: { 'fill-color': '#eef1f4' },
+  building: { 'fill-color': '#e9edf1', 'fill-outline-color': '#dde2e8' },
+  road_area_pier: { 'fill-color': '#f6f8fa' },
+  road_pier: { 'line-color': '#f6f8fa' },
+};
+
+export function retouchBasemap(map: MlMap, base: Basemap) {
+  if (!base.retouch) return;
+  for (const [layer, paint] of Object.entries(base.retouch)) {
+    if (!map.getLayer(layer)) continue;
+    for (const [prop, value] of Object.entries(paint)) map.setPaintProperty(layer, prop as Parameters<MlMap['setPaintProperty']>[1], value);
+  }
 }
 
 export const BASEMAPS: Basemap[] = [
@@ -65,8 +89,9 @@ export const BASEMAPS: Basemap[] = [
     dark: false,
     style: 'https://tiles.openfreemap.org/styles/positron',
     preview: positronPreview,
-    swatch: '#f2f2f2',
+    swatch: '#f6f8fa',
     hillshade: 0.3,
+    retouch: POSITRON_RETOUCH,
   },
   {
     id: 'satellite',

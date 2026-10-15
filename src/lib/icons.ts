@@ -5,7 +5,7 @@ import { t } from '@/i18n';
 export type Tone = 'light' | 'dark';
 
 const PHASES: Record<Tone, Record<FlightPhase, string>> = {
-  light: { ascending: '#0369a1', descending: '#b45309', landed: '#047857', lost: '#64748b' },
+  light: { ascending: '#1499d4', descending: '#d17a12', landed: '#14a26b', lost: '#7a8597' },
   dark: { ascending: '#38bdf8', descending: '#fbbf24', landed: '#34d399', lost: '#94a3b8' },
 };
 
@@ -16,6 +16,20 @@ export const PHASE_VAR: Record<FlightPhase, string> = {
   descending: 'var(--phase-desc)',
   landed: 'var(--phase-landed)',
   lost: 'var(--phase-lost)',
+};
+
+export const PHASE_FG_VAR: Record<FlightPhase, string> = {
+  ascending: 'var(--phase-asc-fg)',
+  descending: 'var(--phase-desc-fg)',
+  landed: 'var(--phase-landed-fg)',
+  lost: 'var(--phase-lost-fg)',
+};
+
+export const PHASE_SOFT_VAR: Record<FlightPhase, string> = {
+  ascending: 'var(--phase-asc-soft)',
+  descending: 'var(--phase-desc-soft)',
+  landed: 'var(--phase-landed-soft)',
+  lost: 'var(--phase-lost-soft)',
 };
 
 export const PHASE_LABEL: Record<FlightPhase, string> = {
@@ -34,8 +48,8 @@ export const PHASE_LABEL: Record<FlightPhase, string> = {
 };
 
 const MARKS = {
-  light: { listener: '#6d28d9', chase: '#be185d', site: '#0f766e', landing: '#be123c', burst: '#c2410c', recovered: '#047857', unrecovered: '#a16207', me: '#1d4ed8' },
-  dark: { listener: '#a78bfa', chase: '#f472b6', site: '#2dd4bf', landing: '#fb7185', burst: '#fb923c', recovered: '#4ade80', unrecovered: '#facc15', me: '#60a5fa' },
+  light: { listener: '#aa71fc', chase: '#fc449f', site: '#149f99', landing: '#fc4e69', burst: '#f36012', recovered: '#14a26b', unrecovered: '#b58912', me: '#1362fb' },
+  dark: { listener: '#a78bfa', chase: '#f472b6', site: '#2dd4bf', landing: '#fb7185', burst: '#fb923c', recovered: '#4ade80', unrecovered: '#facc15', me: '#699cfc' },
 } satisfies Record<Tone, Record<string, string>>;
 
 export type MarkColours = (typeof MARKS)['light'];

@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from 'cn';
 import type { FlightPhase } from '@/lib/types';
-import { iconUrl, PHASE_LABEL, PHASE_VAR, type IconId } from '@/lib/icons';
+import { iconUrl, PHASE_FG_VAR, PHASE_LABEL, PHASE_SOFT_VAR, PHASE_VAR, type IconId } from '@/lib/icons';
 import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -58,10 +58,8 @@ export function PhaseBadge({ phase, className }: { phase: FlightPhase; className
   useLocale();
   return (
     <span
-      className={cn(
-        'text-foreground inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] font-semibold whitespace-nowrap',
-        className,
-      )}
+      className={cn('inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[12px] font-semibold whitespace-nowrap', className)}
+      style={{ background: PHASE_SOFT_VAR[phase], color: PHASE_FG_VAR[phase] }}
     >
       <span className="size-2 rounded-full" style={{ background: PHASE_VAR[phase] }} />
       {PHASE_LABEL[phase]}
