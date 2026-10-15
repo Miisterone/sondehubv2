@@ -88,7 +88,7 @@ export function FlightTimeline({
               <span className="bg-primary inline-block h-2 w-3.5 rounded-[2px]" /> {t('sonde.timeline.elapsed')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="bg-primary/20 inline-block h-2 w-3.5 rounded-[2px]" /> {t('sonde.timeline.upcoming')}
+              <span className="bg-upcoming inline-block h-2 w-3.5 rounded-[2px]" /> {t('sonde.timeline.upcoming')}
             </span>
           </div>
         )}
@@ -139,7 +139,7 @@ export function FlightTimeline({
 
 function Segment({ grow, filled, first, last }: { grow: number; filled: number; first?: boolean; last?: boolean }) {
   return (
-    <div className={cx('bg-primary/20 relative h-full min-w-[6px] overflow-hidden', first ? 'rounded-l-full' : '', last ? 'rounded-r-full' : '')} style={{ flexGrow: grow, flexBasis: 0 }}>
+    <div className={cx('bg-upcoming relative h-full min-w-[6px] overflow-hidden', first ? 'rounded-l-full' : '', last ? 'rounded-r-full' : '')} style={{ flexGrow: grow, flexBasis: 0 }}>
       <div className="bg-primary h-full" style={{ width: `${filled}%` }} />
     </div>
   );

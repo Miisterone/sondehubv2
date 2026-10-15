@@ -34,7 +34,7 @@ export function HelpHint({
           aria-label={t('app.helpHint.ariaLabel', { title })}
           // The extra ::after area makes the 14 px icon an easy touch target without changing the layout.
           className={cn(
-            'text-faint hover:text-foreground focus-visible:ring-ring/50 data-[state=open]:text-primary relative inline-grid size-3.5 shrink-0 cursor-help place-items-center rounded-full align-middle transition-colors outline-none after:absolute after:-inset-2 focus-visible:ring-2',
+            'text-faint hover:text-foreground focus-visible:ring-ring data-[state=open]:text-primary relative inline-grid size-3.5 shrink-0 cursor-help place-items-center rounded-full align-middle transition-colors outline-none after:absolute after:-inset-2 focus-visible:ring-2',
             className,
           )}
           onClick={(e) => e.stopPropagation()}

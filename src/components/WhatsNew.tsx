@@ -52,7 +52,7 @@ function Entry({ item, fresh }: { item: WhatsNewItem; fresh: boolean }) {
           <button
             type="button"
             onClick={() => run(action.run)}
-            className="text-primary focus-visible:ring-ring/50 mt-1 -ml-1 rounded-sm px-1 text-[13px] font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2"
+            className="text-primary focus-visible:ring-ring mt-1 -ml-1 rounded-sm px-1 text-[13px] font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2"
           >
             {t(action.label)}
           </button>
@@ -78,7 +78,7 @@ export function WhatsNew() {
           <PopoverTrigger
             data-tour="whats-new"
             aria-label={label}
-            className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 data-[state=open]:bg-accent data-[state=open]:text-foreground relative inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px]"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground relative inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <Megaphone className="size-[18px]" />
             {unread > 0 && <span aria-hidden className="bg-primary ring-background absolute top-2 right-2 size-2 rounded-full ring-2" />}

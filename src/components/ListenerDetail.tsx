@@ -205,7 +205,7 @@ export function ListenerDetail({ callsign }: { callsign: string }) {
                       <button
                         type="button"
                         onClick={() => select(h.sonde.serial, true)}
-                        className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                        className="hover:bg-surface focus-visible:ring-ring flex w-full items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                       >
                         <SondeIcon3D sonde={h.sonde} size={32} className="-my-1" />
                         <span className="min-w-0 flex-1">

@@ -15,23 +15,23 @@ export function chartTheme(theme: 'dark' | 'light'): ChartTheme {
     ? {
         axis: '#262a30',
         grid: '#1c2025',
-        text: '#a3adba',
+        text: '#b4bdc9',
         ink: '#f6f8fa',
         surface: '#0e1013',
-        accent: '#8199f0',
-        accentFill: 'rgba(129,153,240,0.12)',
-        pred: '#6e7783',
-        zero: '#4a515b',
+        accent: '#91a4f4',
+        accentFill: 'rgba(145,164,244,0.12)',
+        pred: '#fb7185',
+        zero: '#6b7480',
       }
     : {
         axis: '#e6e8eb',
-        grid: '#eef0f3',
+        grid: '#e6e8eb',
         text: '#425466',
         ink: '#0a0a0a',
         surface: '#ffffff',
         accent: '#3451d1',
         accentFill: 'rgba(52,81,209,0.10)',
-        pred: '#7d8796',
-        zero: '#b8bec7',
+        pred: '#be123c',
+        zero: '#7a8597',
       };
 }

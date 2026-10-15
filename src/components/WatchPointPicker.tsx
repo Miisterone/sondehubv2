@@ -24,7 +24,7 @@ export function CentreBar({ centre, open, onToggle }: { centre: Centre; open: bo
         onClick={onToggle}
         aria-expanded={open}
         aria-label={tr('sidebar.nearby.changeCentre', { place: label })}
-        className="bg-background text-foreground hover:bg-surface focus-visible:ring-ring/50 inline-flex h-7 min-w-0 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-medium outline-none focus-visible:ring-2"
+        className="bg-background text-foreground hover:bg-surface focus-visible:ring-ring inline-flex h-7 min-w-0 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-medium outline-none focus-visible:ring-2"
       >
         {centre.kind === 'point' ? <MapPin className="text-primary size-3.5 shrink-0" /> : <LocateFixed className="text-primary size-3.5 shrink-0" />}
         <span className="truncate">{label}</span>

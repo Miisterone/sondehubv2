@@ -1,7 +1,8 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from 'cn';
 import type { FlightPhase } from '@/lib/types';
-import { iconUrl, PHASE_COLOUR, PHASE_LABEL, type IconId } from '@/lib/icons';
+import { iconUrl, PHASE_LABEL, PHASE_VAR, type IconId } from '@/lib/icons';
+import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -62,7 +63,7 @@ export function PhaseBadge({ phase, className }: { phase: FlightPhase; className
         className,
       )}
     >
-      <span className="size-2 rounded-full" style={{ background: PHASE_COLOUR[phase] }} />
+      <span className="size-2 rounded-full" style={{ background: PHASE_VAR[phase] }} />
       {PHASE_LABEL[phase]}
     </span>
   );
@@ -113,7 +114,7 @@ export function Segmented<T extends string>({
       type="single"
       value={value}
       onValueChange={(v: string) => v && onChange(v as T)}
-      className={cn('bg-surface rounded-md border p-0.5', className)}
+      className={cn('bg-surface border-input rounded-md border p-0.5', className)}
     >
       {options.map((o) => (
         <ToggleGroupItem
@@ -121,7 +122,7 @@ export function Segmented<T extends string>({
           value={o.value}
           title={o.title}
           className={cn(
-            'text-muted-foreground hover:text-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:border-border rounded-[5px]! border border-transparent font-medium hover:bg-transparent',
+            'text-muted-foreground hover:text-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:border-input rounded-[5px]! border border-transparent font-medium hover:bg-transparent',
             size === 'sm' ? 'h-7 min-w-0 px-2.5 text-[12px]' : 'h-8 px-3 text-[13px]',
           )}
         >
@@ -161,5 +162,6 @@ export function Sparkline({ values, colour, width = 64, height = 22 }: { values:
 }
 
 export function MapIcon({ id, size = 20, className, title }: { id: IconId; size?: number; className?: string; title?: string }) {
-  return <img src={iconUrl(id)} width={size} height={size} alt="" title={title} draggable={false} className={cx('inline-block shrink-0 select-none', className)} />;
+  const theme = useStore((st) => st.settings.theme);
+  return <img src={iconUrl(id, theme)} width={size} height={size} alt="" title={title} draggable={false} className={cx('inline-block shrink-0 select-none', className)} />;
 }

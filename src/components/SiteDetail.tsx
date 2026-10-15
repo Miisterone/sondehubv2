@@ -186,7 +186,7 @@ export function SiteDetail({ id }: { id: string }) {
                     <button
                       type="button"
                       onClick={() => select(s.serial, true)}
-                      className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2"
+                      className="hover:bg-surface focus-visible:ring-ring flex w-full items-center gap-3 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-2"
                     >
                       <SondeIcon3D sonde={s} size={34} className="-my-1" />
                       <span className="min-w-0 flex-1">
@@ -276,7 +276,7 @@ export function SiteDetail({ id }: { id: string }) {
                       <button
                         type="button"
                         onClick={() => openHistoryEntry({ serial: f.serial, launch: f.first, last: f.last })}
-                        className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-start gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                        className="hover:bg-surface focus-visible:ring-ring flex w-full items-start gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="text-foreground block truncate text-[13px] font-semibold">
@@ -354,7 +354,7 @@ function ForecastRow({
     <button
       type="button"
       onClick={() => onFly(l.lat, l.lon)}
-      className="hover:bg-surface focus-visible:ring-ring/50 block w-full px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+      className="hover:bg-surface focus-visible:ring-ring block w-full px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
     >
       {when}
       <span className="block text-[12.5px] leading-snug">

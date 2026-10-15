@@ -35,7 +35,7 @@ export function StatusPill() {
           tabIndex={0}
           role="status"
           aria-label={t('sidebar.connection.ariaLabel', { status: LABEL[conn], hint })}
-          className="text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 cursor-default items-center gap-1.5 rounded-sm whitespace-nowrap outline-none focus-visible:ring-2"
+          className="text-foreground focus-visible:ring-ring inline-flex shrink-0 cursor-default items-center gap-1.5 rounded-sm whitespace-nowrap outline-none focus-visible:ring-2"
         >
           <span className={cx('relative size-2 shrink-0 rounded-full', DOT[conn], conn === 'live' && 'live-dot')} />
           {LABEL[conn]}

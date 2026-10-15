@@ -2,11 +2,20 @@ import type { Map as MlMap } from 'maplibre-gl';
 import type { FlightPhase } from './types';
 import { t } from '@/i18n';
 
-export const PHASE_COLOUR: Record<FlightPhase, string> = {
-  ascending: '#38bdf8',
-  descending: '#fbbf24',
-  landed: '#34d399',
-  lost: '#94a3b8',
+export type Tone = 'light' | 'dark';
+
+const PHASES: Record<Tone, Record<FlightPhase, string>> = {
+  light: { ascending: '#0369a1', descending: '#b45309', landed: '#047857', lost: '#64748b' },
+  dark: { ascending: '#38bdf8', descending: '#fbbf24', landed: '#34d399', lost: '#94a3b8' },
+};
+
+export const phaseColours = (tone: Tone): Record<FlightPhase, string> => PHASES[tone];
+
+export const PHASE_VAR: Record<FlightPhase, string> = {
+  ascending: 'var(--phase-asc)',
+  descending: 'var(--phase-desc)',
+  landed: 'var(--phase-landed)',
+  lost: 'var(--phase-lost)',
 };
 
 export const PHASE_LABEL: Record<FlightPhase, string> = {
@@ -24,16 +33,14 @@ export const PHASE_LABEL: Record<FlightPhase, string> = {
   },
 };
 
-export const COLOURS = {
-  listener: '#a78bfa',
-  chase: '#f472b6',
-  site: '#2dd4bf',
-  landing: '#fb7185',
-  burst: '#fb923c',
-  recovered: '#4ade80',
-  unrecovered: '#facc15',
-  me: '#3b82f6',
-};
+const MARKS = {
+  light: { listener: '#6d28d9', chase: '#be185d', site: '#0f766e', landing: '#be123c', burst: '#c2410c', recovered: '#047857', unrecovered: '#a16207', me: '#1d4ed8' },
+  dark: { listener: '#a78bfa', chase: '#f472b6', site: '#2dd4bf', landing: '#fb7185', burst: '#fb923c', recovered: '#4ade80', unrecovered: '#facc15', me: '#60a5fa' },
+} satisfies Record<Tone, Record<string, string>>;
+
+export type MarkColours = (typeof MARKS)['light'];
+
+export const markColours = (tone: Tone): MarkColours => MARKS[tone];
 
 const PR = 2; // render icons at 2x for crisp HiDPI display
 
@@ -432,41 +439,52 @@ const heading = (fill: string): Draw => (ctx, s) => {
 };
 
 /** Every icon used on the map, also rendered as images for the UI so both always match. */
-export const ICONS = {
-  'sonde-ascending': [34, balloon(PHASE_COLOUR.ascending)],
-  'sonde-descending': [32, parachute(PHASE_COLOUR.descending)],
-  'sonde-landed': [30, landed(PHASE_COLOUR.landed)],
-  'sonde-lost': [32, balloon(PHASE_COLOUR.lost, true)],
-  'heading-ascending': [16, heading(PHASE_COLOUR.ascending)],
-  'heading-descending': [16, heading(PHASE_COLOUR.descending)],
-  landing: [24, target(COLOURS.landing)],
-  'landing-small': [16, target(COLOURS.landing)],
-  burst: [20, burst(COLOURS.burst)],
-  listener: [18, antenna(COLOURS.listener)],
-  chase: [22, car(COLOURS.chase)],
-  site: [16, site(COLOURS.site)],
-  'recovery-ok': [18, recovery(COLOURS.recovered, true)],
-  'recovery-ko': [18, recovery(COLOURS.unrecovered, false)],
-} satisfies Record<string, [number, Draw]>;
+function iconsFor(tone: Tone) {
+  const p = PHASES[tone];
+  const m = MARKS[tone];
+  return {
+    'sonde-ascending': [34, balloon(p.ascending)],
+    'sonde-descending': [32, parachute(p.descending)],
+    'sonde-landed': [30, landed(p.landed)],
+    'sonde-lost': [32, balloon(p.lost, true)],
+    'heading-ascending': [16, heading(p.ascending)],
+    'heading-descending': [16, heading(p.descending)],
+    landing: [24, target(m.landing)],
+    'landing-small': [16, target(m.landing)],
+    burst: [20, burst(m.burst)],
+    listener: [18, antenna(m.listener)],
+    chase: [22, car(m.chase)],
+    site: [16, site(m.site)],
+    'recovery-ok': [18, recovery(m.recovered, true)],
+    'recovery-ko': [18, recovery(m.unrecovered, false)],
+  } satisfies Record<string, [number, Draw]>;
+}
 
-export type IconId = keyof typeof ICONS;
+type IconSet = ReturnType<typeof iconsFor>;
 
-export function addIcons(map: MlMap) {
-  for (const [id, [size, draw]] of Object.entries(ICONS)) {
-    if (map.hasImage(id)) continue;
+export type IconId = keyof IconSet;
+
+const iconSets: Partial<Record<Tone, IconSet>> = {};
+const icons = (tone: Tone): IconSet => (iconSets[tone] ??= iconsFor(tone));
+
+export function addIcons(map: MlMap, tone: Tone) {
+  for (const [id, [size, draw]] of Object.entries(icons(tone))) {
     const c = canvasFor(size, draw);
-    map.addImage(id, c.getContext('2d')!.getImageData(0, 0, c.width, c.height), { pixelRatio: PR });
+    const img = c.getContext('2d')!.getImageData(0, 0, c.width, c.height);
+    if (map.hasImage(id)) map.updateImage(id, img);
+    else map.addImage(id, img, { pixelRatio: PR });
   }
 }
 
-const urlCache = new Map<IconId, string>();
+const urlCache = new Map<string, string>();
 /** PNG data URL of a map icon, for use in <img> tags. */
-export function iconUrl(id: IconId): string {
-  let url = urlCache.get(id);
+export function iconUrl(id: IconId, tone: Tone = 'light'): string {
+  const key = `${tone}:${id}`;
+  let url = urlCache.get(key);
   if (!url) {
-    const [size, draw] = ICONS[id];
+    const [size, draw] = icons(tone)[id];
     url = canvasFor(size, draw).toDataURL('image/png');
-    urlCache.set(id, url);
+    urlCache.set(key, url);
   }
   return url;
 }

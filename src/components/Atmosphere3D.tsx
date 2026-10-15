@@ -106,8 +106,8 @@ function palette(theme: 'dark' | 'light'): Palette {
         cloudEdge: '#454c57',
         freezing: '#7d8796',
         proj: '#3a414b',
-        accent: '#8199f0',
-        pred: '#7d8796',
+        accent: '#91a4f4',
+        pred: '#fb7185',
         ring: '#f6f8fa',
         ringOpacity: 0.16,
         payload: '#d8dde4',
@@ -137,7 +137,7 @@ function palette(theme: 'dark' | 'light'): Palette {
         freezing: '#7d8796',
         proj: '#b3bcc7',
         accent: '#3451d1',
-        pred: '#7d8796',
+        pred: '#be123c',
         ring: '#0a0a0a',
         ringOpacity: 0.2,
         payload: '#f6f8fa',
@@ -944,7 +944,7 @@ class Engine {
     const wide = view === 'top' ? 3 : 3.2;
     if (fore.length > 1) this.root.add(this.line(fore, pal.pred, 2.1, { dashed: true }));
     const meas2 = meas.length > 1 ? meas : [meas[0], meas[0]];
-    const faint = this.line(meas2, pal.accent, wide, { opacity: 0.22 });
+    const faint = this.line(meas2, pal.accent, wide, { opacity: 0.55 });
     const played = this.line(meas2, pal.accent, wide);
     faint.visible = false;
     this.root.add(faint, played);
@@ -975,7 +975,7 @@ class Engine {
 
     if (s.crossing && view !== 'profile') {
       const cw = W(s.crossing.p);
-      const ring = new Mesh(new RingGeometry(0.15 * K, 0.2 * K, 64), this.basic(pal.accent));
+      const ring = new Mesh(new RingGeometry(0.15 * K, 0.2 * K, 64), this.basic(pal.ink));
       ring.rotation.x = -Math.PI / 2;
       ring.position.copy(cw);
       if (view === 'top') ring.position.y = HEIGHT + 0.05;
@@ -1482,7 +1482,7 @@ export default function Atmosphere3D({ scene, flight, theme, units, mode, view, 
       role="img"
       aria-label={label}
       tabIndex={draggable ? 0 : undefined}
-      className={`focus-visible:ring-ring/50 relative h-full w-full overflow-hidden outline-none select-none focus-visible:ring-2 ${draggable ? 'cursor-grab touch-pan-y active:cursor-grabbing' : mode === 'full' ? 'touch-none' : ''} ${className ?? ''}`}
+      className={`focus-visible:ring-ring relative h-full w-full overflow-hidden outline-none select-none focus-visible:ring-2 ${draggable ? 'cursor-grab touch-pan-y active:cursor-grabbing' : mode === 'full' ? 'touch-none' : ''} ${className ?? ''}`}
     >
       <div ref={overlay} className="pointer-events-none absolute inset-0" />
     </div>

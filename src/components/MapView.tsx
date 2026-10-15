@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStore } from '../store/useStore';
 import { basemapById, FONT } from '../lib/basemaps';
 import { applyTerrain, TERRAIN_PITCH } from '../lib/terrain';
-import { addIcons, COLOURS, PHASE_COLOUR } from '../lib/icons';
+import { addIcons, markColours, phaseColours, type Tone } from '../lib/icons';
 import {
   burstFC,
   EMPTY,
@@ -79,7 +79,9 @@ const PHASE_MATCH = (values: Record<'ascending' | 'descending' | 'landed' | 'los
 
 /** Background tracks: landed flights recede, and everything dims while one sonde is selected. */
 const trackOpacity = (dim: boolean) =>
-  PHASE_MATCH(dim ? { ascending: 0.3, descending: 0.3, landed: 0.16, lost: 0.12 } : { ascending: 0.85, descending: 0.85, landed: 0.4, lost: 0.3 });
+  PHASE_MATCH(dim ? { ascending: 0.8, descending: 0.8, landed: 0.55, lost: 0.5 } : { ascending: 1, descending: 1, landed: 0.75, lost: 0.7 });
+
+const casingOpacity = (dim: boolean) => (dim ? 0.5 : 0.7);
 
 function burstText(): ExpressionSpecification {
   const label = (key: 'map.layer.burstLabel' | 'map.layer.releaseLabel'): ExpressionSpecification => {
@@ -99,7 +101,10 @@ function mapUiStrings(): Record<string, string> {
 }
 
 function installOverlays(map: MlMap, darkBase: boolean) {
-  addIcons(map);
+  const tone: Tone = darkBase ? 'dark' : 'light';
+  const phase = phaseColours(tone);
+  const mark = markColours(tone);
+  addIcons(map, tone);
   for (const id of SOURCES) {
     if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: EMPTY, ...(KEYED_SOURCES.has(id) ? { promoteId: 'serial' } : {}) });
   }
@@ -135,7 +140,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     source: 'pred-paths',
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': ['case', ['get', 'selected'], COLOURS.landing, darkBase ? '#cbd5e1' : '#475569'],
+      'line-color': ['case', ['get', 'selected'], mark.landing, darkBase ? '#cbd5e1' : '#475569'],
       'line-width': ['case', ['get', 'selected'], 2.5, 1.3],
       'line-opacity': ['case', ['get', 'selected'], 0.95, 0.5],
       'line-dasharray': [2, 2],
@@ -148,7 +153,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     source: 'site-paths',
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': ['case', ['get', 'next'], COLOURS.landing, darkBase ? '#cbd5e1' : '#475569'],
+      'line-color': ['case', ['get', 'next'], mark.landing, darkBase ? '#cbd5e1' : '#475569'],
       'line-width': ['case', ['get', 'next'], 2.5, 1.4],
       'line-opacity': ['case', ['get', 'next'], 0.95, 0.55],
       'line-dasharray': [2, 2],
@@ -165,12 +170,24 @@ function installOverlays(map: MlMap, darkBase: boolean) {
   });
 
   add({
+    id: 'tracks-casing',
+    type: 'line',
+    source: 'tracks',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': darkBase ? '#020617' : '#ffffff',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 3, 3.2, 10, 5],
+      'line-opacity': casingOpacity(false),
+    },
+  });
+
+  add({
     id: 'tracks-line',
     type: 'line',
     source: 'tracks',
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': PHASE_MATCH(PHASE_COLOUR),
+      'line-color': PHASE_MATCH(phase),
       'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1.2, 10, 2.5],
       'line-opacity': trackOpacity(false),
     },
@@ -184,7 +201,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     filter: ['==', ['get', 'serial'], ''],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': PHASE_MATCH(PHASE_COLOUR),
+      'line-color': PHASE_MATCH(phase),
       'line-width': ['interpolate', ['linear'], ['zoom'], 3, 3, 10, 5],
       'line-opacity': 1,
     },
@@ -213,7 +230,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     type: 'line',
     source: 'links',
     paint: {
-      'line-color': COLOURS.listener,
+      'line-color': mark.listener,
       'line-width': 1.4,
       'line-opacity': 0.7,
       'line-dasharray': [1, 2],
@@ -235,7 +252,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     maxzoom: 7,
     filter: ['==', ['get', 'mobile'], false],
     paint: {
-      'circle-color': COLOURS.listener,
+      'circle-color': mark.listener,
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 1.6, 7, 3.2],
       'circle-opacity': 0.55,
       'circle-stroke-width': 0,
@@ -355,32 +372,32 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     id: 'alert-radius-fill',
     type: 'fill',
     source: 'alert-radius',
-    paint: { 'fill-color': COLOURS.me, 'fill-opacity': 0.05 },
+    paint: { 'fill-color': mark.me, 'fill-opacity': 0.05 },
   });
   add({
     id: 'alert-radius-line',
     type: 'line',
     source: 'alert-radius',
-    paint: { 'line-color': COLOURS.me, 'line-width': 1.5, 'line-opacity': 0.6, 'line-dasharray': [3, 2] },
+    paint: { 'line-color': mark.me, 'line-width': 1.5, 'line-opacity': 0.6, 'line-dasharray': [3, 2] },
   });
   add({
     id: 'watch-point-halo',
     type: 'circle',
     source: 'watch-point',
-    paint: { 'circle-color': COLOURS.me, 'circle-opacity': 0.15, 'circle-radius': 14 },
+    paint: { 'circle-color': mark.me, 'circle-opacity': 0.15, 'circle-radius': 14 },
   });
   add({
     id: 'watch-point-dot',
     type: 'circle',
     source: 'watch-point',
-    paint: { 'circle-color': '#ffffff', 'circle-radius': 6, 'circle-stroke-color': COLOURS.me, 'circle-stroke-width': 3 },
+    paint: { 'circle-color': '#ffffff', 'circle-radius': 6, 'circle-stroke-color': mark.me, 'circle-stroke-width': 3 },
   });
   add({
     id: 'me-accuracy',
     type: 'circle',
     source: 'me',
     paint: {
-      'circle-color': COLOURS.me,
+      'circle-color': mark.me,
       'circle-opacity': 0.12,
       'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 0, ['get', 'r0'], 20, ['get', 'r20']],
       'circle-pitch-alignment': 'map',
@@ -390,7 +407,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     id: 'me-dot',
     type: 'circle',
     source: 'me',
-    paint: { 'circle-color': COLOURS.me, 'circle-radius': 7, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 },
+    paint: { 'circle-color': mark.me, 'circle-radius': 7, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 },
   });
 
   const sondeLayout = (labelZoom: number): SymbolLayerSpecification['layout'] => ({
@@ -417,7 +434,7 @@ function installOverlays(map: MlMap, darkBase: boolean) {
     maxzoom: GROUND_ICON_ZOOM,
     filter: ground,
     paint: {
-      'circle-color': PHASE_MATCH(PHASE_COLOUR),
+      'circle-color': PHASE_MATCH(phase),
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 2.5, GROUND_ICON_ZOOM, 4],
       'circle-stroke-color': darkBase ? '#0b1220' : '#ffffff',
       'circle-stroke-width': 1,
@@ -584,6 +601,7 @@ export function MapView() {
       if (map.getLayer('tracks-line') && dimmed !== !!selected) {
         dimmed = !!selected;
         map.setPaintProperty('tracks-line', 'line-opacity', trackOpacity(dimmed));
+        if (map.getLayer('tracks-casing')) map.setPaintProperty('tracks-casing', 'line-opacity', casingOpacity(dimmed));
       }
     };
     const schedule = () => {
@@ -668,7 +686,7 @@ export function MapView() {
         ['track-selected-casing', 0.8],
       ] as const) {
         if (!map.getLayer(id)) continue;
-        map.setPaintProperty(id, 'line-opacity', t === null ? full : (['case', ['<=', ['get', 't0'], t], full, full * 0.2] as ExpressionSpecification));
+        map.setPaintProperty(id, 'line-opacity', t === null ? full : (['case', ['<=', ['get', 't0'], t], full, full * 0.45] as ExpressionSpecification));
       }
     };
     const applyReplay = (s: ReturnType<typeof useStore.getState>, force = false) => {

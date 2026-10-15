@@ -26,7 +26,7 @@ export function LanguageSelect({ side = 'bottom', variant = 'icon' }: { side?: '
       {variant === 'field' ? (
         <DropdownMenuTrigger
           aria-label={label}
-          className="border-soft hover:bg-accent focus-visible:ring-ring/50 inline-flex h-9 w-full items-center gap-2.5 rounded-md border px-3 text-left text-[13px] outline-none focus-visible:ring-[3px]"
+          className="border-soft hover:bg-accent focus-visible:ring-ring inline-flex h-9 w-full items-center gap-2.5 rounded-md border px-3 text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <FlagIcon locale={locale} />
           <span className="text-foreground flex-1 truncate">{currentName}</span>
@@ -37,7 +37,7 @@ export function LanguageSelect({ side = 'bottom', variant = 'icon' }: { side?: '
           <TooltipTrigger asChild>
             <DropdownMenuTrigger
               aria-label={label}
-              className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px]"
+              className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring inline-flex size-9 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <FlagIcon locale={locale} />
             </DropdownMenuTrigger>

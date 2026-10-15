@@ -956,7 +956,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
                 type="button"
                 onClick={onDismissHint}
                 aria-label={tr('sidebar.flying.dismissHint')}
-                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mt-1 -mr-2 grid size-7 shrink-0 place-items-center rounded-md outline-none focus-visible:ring-2"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -mt-1 -mr-2 grid size-7 shrink-0 place-items-center rounded-md outline-none focus-visible:ring-2"
               >
                 <X className="size-4" />
               </button>
@@ -992,7 +992,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
               type="button"
               aria-expanded={showGround}
               onClick={() => setShowGround((v) => !v)}
-              className="hover:bg-surface focus-visible:ring-ring/50 mt-4 flex w-full items-center gap-3 border-t border-b px-5 py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+              className="hover:bg-surface focus-visible:ring-ring mt-4 flex w-full items-center gap-3 border-t border-b px-5 py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
             >
               <span className="min-w-0 flex-1">
                 <span className="font-heading text-foreground flex items-baseline gap-2 text-[14px] font-semibold">
@@ -1161,7 +1161,7 @@ function TabBar({ tab, onTab, counts }: { tab: Tab; onTab: (t: Tab) => void; cou
             tabIndex={on ? 0 : -1}
             onClick={() => !on && onTab(t.id)}
             className={cx(
-              'focus-visible:ring-ring/50 flex items-baseline gap-1.5 rounded-t-sm border-b-2 pt-1 pb-3 text-[14px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2',
+              'focus-visible:ring-ring flex items-baseline gap-1.5 rounded-t-sm border-b-2 pt-1 pb-3 text-[14px] font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2',
               on ? 'border-primary text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
             )}
           >
@@ -1356,7 +1356,7 @@ function FavButton({ serial }: { serial: string }) {
             toast(fav ? tr('sidebar.fav.removed', { serial }) : tr('sidebar.fav.added', { serial }), { id: 'fav' });
           }}
           className={cx(
-            'focus-visible:ring-ring/50 hover:bg-surface grid size-8 shrink-0 place-items-center rounded-md transition-[opacity,color,background-color] outline-none focus-visible:ring-2',
+            'focus-visible:ring-ring hover:bg-surface grid size-8 shrink-0 place-items-center rounded-md transition-[opacity,color,background-color] outline-none focus-visible:ring-2',
             fav
               ? 'text-foreground opacity-100'
               : 'text-faint hover:text-foreground opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
@@ -1382,7 +1382,7 @@ function TechToggle({ id, expanded, onClick }: { id: string; expanded: boolean; 
           aria-label={tr('sidebar.tech.title')}
           onClick={onClick}
           className={cx(
-            'focus-visible:ring-ring/50 hover:bg-surface grid size-8 shrink-0 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2',
+            'focus-visible:ring-ring hover:bg-surface grid size-8 shrink-0 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2',
             expanded ? 'text-foreground' : 'text-faint hover:text-foreground',
           )}
         >
@@ -1427,7 +1427,7 @@ function SondeItem({
           data-testid={s ? 'sonde-row' : 'sonde-row-placeholder'}
           data-nav-row
           onClick={() => select(serial, true)}
-          className="focus-visible:ring-ring/50 flex min-w-0 flex-1 items-start gap-3 py-3 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+          className="focus-visible:ring-ring flex min-w-0 flex-1 items-start gap-3 py-3 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
         >
           <span className="-my-1 -ml-1.5 grid size-10 shrink-0 place-items-center" title={s ? PHASE_LABEL[s.phase] : undefined}>
             {s ? <SondeIcon3D sonde={s} size={40} /> : <Star className="text-faint size-4" />}

@@ -10,7 +10,6 @@ import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
 import { usefulPrediction } from '@/lib/filter';
 import { distance } from '@/lib/geo';
-import { COLOURS } from '@/lib/icons';
 import { IS_MAC } from '@/lib/platform';
 import {
   NEARBY_EVENT,
@@ -195,7 +194,7 @@ function Terms({ items }: { items: [string, string][] }) {
 function PredictedPath() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden>
-      <path d="M3 15 L17 5" fill="none" stroke={COLOURS.landing} strokeWidth="2.4" strokeDasharray="3.2 2.6" strokeLinecap="round" />
+      <path d="M3 15 L17 5" fill="none" stroke="var(--mark-landing)" strokeWidth="2.4" strokeDasharray="3.2 2.6" strokeLinecap="round" />
     </svg>
   );
 }

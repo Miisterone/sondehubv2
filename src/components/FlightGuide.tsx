@@ -53,7 +53,7 @@ export function FlightGuide({ className }: { className?: string }) {
         <button
           type="button"
           className={cx(
-            'text-primary focus-visible:ring-ring/50 flex h-7 items-center gap-1.5 rounded-md px-1.5 text-[13px] font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2',
+            'text-primary focus-visible:ring-ring flex h-7 items-center gap-1.5 rounded-md px-1.5 text-[13px] font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2',
             className,
           )}
         >

@@ -260,7 +260,7 @@ export function SondeDetail({ serial }: { serial: string }) {
             <button
               type="button"
               onClick={() => selectListener(r.callsign, true)}
-              className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+              className="hover:bg-surface focus-visible:ring-ring flex w-full items-center gap-3 px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
             >
             <Icon3D id={listeners[r.callsign]?.mobile ? 'chase' : 'station'} size={30} className={cx('-my-1', fresh ? '' : 'opacity-40 grayscale')} />
             <div className="min-w-0 flex-1">
@@ -465,7 +465,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                 tabIndex={on ? 0 : -1}
                 onClick={() => selectTab(x.id)}
                 className={cx(
-                  'focus-visible:ring-ring/50 -mb-px rounded-t-sm border-b-2 pt-2.5 pb-3 text-[14px] whitespace-nowrap transition-colors outline-none focus-visible:ring-2',
+                  'focus-visible:ring-ring -mb-px rounded-t-sm border-b-2 pt-2.5 pb-3 text-[14px] whitespace-nowrap transition-colors outline-none focus-visible:ring-2',
                   on ? 'border-primary text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground border-transparent font-normal',
                 )}
               >
@@ -653,7 +653,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                       aria-expanded={evolutionOpen}
                       aria-controls="prediction-evolution"
                       onClick={() => setEvolutionOpen((v) => !v)}
-                      className="focus-visible:ring-ring/50 flex w-full items-center gap-3 py-3 text-left outline-none focus-visible:ring-2"
+                      className="focus-visible:ring-ring flex w-full items-center gap-3 py-3 text-left outline-none focus-visible:ring-2"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="text-foreground block text-[13.5px] font-semibold">{t('sonde.evolution.title')}</span>

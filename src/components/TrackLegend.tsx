@@ -1,7 +1,7 @@
 import { Map as MapIcon } from 'lucide-react';
 import type { FlightPhase } from '@/lib/types';
 import { ALT_BANDS, altBand, altColours } from '@/lib/altRamp';
-import { COLOURS, PHASE_COLOUR, PHASE_LABEL } from '@/lib/icons';
+import { markColours, phaseColours, PHASE_LABEL } from '@/lib/icons';
 import { fmtAltShort, type Units } from '@/lib/format';
 import { t, Trans, useT } from '@/i18n';
 
@@ -40,6 +40,8 @@ export function TrackLegend({
 }) {
   const t = useT();
   const colours = altColours(darkBase);
+  const phase = phaseColours(darkBase ? 'dark' : 'light');
+  const mark = markColours(darkBase ? 'dark' : 'light');
   const at = position(alt);
   const anchor = at < 18 ? 'left' : at > 82 ? 'right' : 'center';
 
@@ -90,7 +92,7 @@ export function TrackLegend({
         <ul className="space-y-2 text-[13px] leading-snug">
           {showPrediction && (
             <li className="flex items-start gap-3">
-              <span className="mt-[9px] w-7 shrink-0 border-t-[2.5px] border-dashed" style={{ borderColor: COLOURS.landing }} aria-hidden />
+              <span className="mt-[9px] w-7 shrink-0 border-t-[2.5px] border-dashed" style={{ borderColor: mark.landing }} aria-hidden />
               <span>
                 <Trans k="atmo3d.track.prediction" tags={{ b: (c) => <span className="text-foreground font-semibold">{c}</span> }} />
               </span>
@@ -112,7 +114,7 @@ export function TrackLegend({
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
           {PHASES.map((p) => (
             <li key={p} className="flex items-center gap-1.5">
-              <span className="h-[3px] w-4 rounded-full" style={{ background: PHASE_COLOUR[p] }} aria-hidden />
+              <span className="h-[3px] w-4 rounded-full" style={{ background: phase[p] }} aria-hidden />
               {PHASE_LABEL[p]}
             </li>
           ))}

@@ -57,7 +57,7 @@ export function UpcomingLaunches({ limit = 5, className }: { limit?: number; cla
             <button
               type="button"
               onClick={() => selectSite(r.site.id, true)}
-              className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-center gap-3 px-5 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+              className="hover:bg-surface focus-visible:ring-ring flex w-full items-center gap-3 px-5 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
             >
               <Icon3D id="launch" size={36} className="-my-1" />
               <span className="min-w-0 flex-1">

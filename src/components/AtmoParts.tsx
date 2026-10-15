@@ -31,7 +31,7 @@ export function ViewSwitch({ value, onChange, stretch = false }: { value: AtmoVi
           aria-pressed={value === v}
           onClick={() => onChange(v)}
           className={cx(
-            'focus-visible:ring-ring/50 rounded-md border px-4 text-[13px] outline-none focus-visible:ring-2',
+            'focus-visible:ring-ring rounded-md border px-4 text-[13px] outline-none focus-visible:ring-2',
             stretch ? 'h-10 flex-1 text-[14px]' : 'h-8',
             value === v ? 'bg-background text-foreground border-border font-semibold' : 'text-muted-foreground hover:text-foreground border-transparent',
           )}
@@ -152,7 +152,7 @@ export function AtmoTimeline({ serial, flight, scene, phase, compact }: { serial
           {replay ? (
             <>
               <div className="bg-primary absolute top-[8px] left-0 h-1 rounded-full" style={{ width: `${curPct}%` }} />
-              <div className="bg-primary/25 absolute top-[8px] h-1 rounded-full" style={{ left: `${curPct}%`, width: `${Math.max(0, nowPct - curPct)}%` }} />
+              <div className="bg-upcoming absolute top-[8px] h-1 rounded-full" style={{ left: `${curPct}%`, width: `${Math.max(0, nowPct - curPct)}%` }} />
             </>
           ) : (
             <div className="bg-primary absolute top-[8px] left-0 h-1 rounded-full" style={{ width: `${nowPct}%` }} />
@@ -175,7 +175,7 @@ export function AtmoTimeline({ serial, flight, scene, phase, compact }: { serial
             style={{ width: `${nowPct}%` }}
           />
           <span
-            className="bg-primary border-background ring-primary peer-focus-visible:ring-ring/60 pointer-events-none absolute top-0 block size-5 rounded-full border-[3px] ring-1 peer-focus-visible:ring-4"
+            className="bg-primary border-background ring-primary peer-focus-visible:ring-ring pointer-events-none absolute top-0 block size-5 rounded-full border-[3px] ring-1 peer-focus-visible:ring-4"
             style={{ left: `calc(${curPct}% - 10px)` }}
           />
         </div>
@@ -270,7 +270,7 @@ export function AtmoColumn({ scene, units, alt, replaying, height = 330 }: { sce
           <div key={a} className="bg-border absolute right-0 left-0" style={{ bottom: px(a), height: Math.max(2, px(b) - px(a)) }} />
         ))}
         <div className="absolute right-0 left-0 border-t-[1.5px]" style={{ bottom: px(scene.tropopause.z), borderColor: 'var(--text-faint)', borderTopStyle: scene.tropopause.measured ? 'solid' : 'dashed' }} />
-        {scene.freezing !== null && scene.freezing > 0 && <div className="border-[var(--chart-pred)] absolute right-0 left-0 border-t border-dashed" style={{ bottom: px(scene.freezing) }} />}
+        {scene.freezing !== null && scene.freezing > 0 && <div className="border-input absolute right-0 left-0 border-t border-dashed" style={{ bottom: px(scene.freezing) }} />}
         <div className="bg-primary absolute left-[11px] w-[3px] rounded-full" style={{ bottom: 0, height: px(alt) }} />
         {scene.burstP && <div className="border-[var(--chart-pred)] absolute left-[11px] border-l-2 border-dashed" style={{ bottom: px(alt), height: Math.max(0, px(scene.burstP[2]) - px(alt)) }} />}
       </div>

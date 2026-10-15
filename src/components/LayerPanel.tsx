@@ -76,7 +76,7 @@ export function LayerPanel() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setSettings({ basemap: b.id })}
-                className="group focus-visible:ring-ring/50 rounded-lg text-center outline-none focus-visible:ring-[3px]"
+                className="group focus-visible:ring-ring rounded-lg text-center outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <span
                   className={cx(

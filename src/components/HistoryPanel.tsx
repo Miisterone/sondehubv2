@@ -460,7 +460,7 @@ function HistoryRow({ e, units, centre }: { e: HistoryEntry; units: Units; centr
         onClick={() => openHistoryEntry(e)}
         onPointerEnter={(ev) => ev.pointerType === 'mouse' && useStore.getState().setHovered(e.serial)}
         onPointerLeave={(ev) => ev.pointerType === 'mouse' && useStore.getState().setHovered(null)}
-        className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-start gap-3 py-3 pr-5 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+        className="hover:bg-surface focus-visible:ring-ring flex w-full items-start gap-3 py-3 pr-5 pl-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
       >
         <span className="-my-1 -ml-1.5 grid size-10 shrink-0 place-items-center">
           <Icon3D id={icon} size={40} />
