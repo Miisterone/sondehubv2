@@ -47,6 +47,7 @@ export interface WatchPoint {
 export interface Settings {
   theme: 'dark' | 'light';
   basemap: BasemapId;
+  terrain: boolean;
   units: Units;
   duration: Duration;
   layers: Layers;
@@ -74,6 +75,7 @@ function localeUnits(): Units {
 const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   basemap: 'positron',
+  terrain: false,
   units: localeUnits(),
   favourites: [],
   alerts: { enabled: false, radiusKm: 25, landings: true, launchDetected: true, launchPlanned: false, favourites: true },

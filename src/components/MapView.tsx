@@ -5,6 +5,7 @@ import type { ExpressionSpecification, LayerSpecification, SymbolLayerSpecificat
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useStore } from '../store/useStore';
 import { basemapById, FONT } from '../lib/basemaps';
+import { applyTerrain, TERRAIN_PITCH } from '../lib/terrain';
 import { addIcons, COLOURS, PHASE_COLOUR } from '../lib/icons';
 import {
   burstFC,
@@ -452,6 +453,7 @@ export function MapView() {
       style: base.style,
       center: hashCenter.center,
       zoom: hashCenter.zoom,
+      pitch: settings.terrain ? TERRAIN_PITCH : 0,
       attributionControl: { compact: true },
       locale: mapUiStrings(),
       maxPitch: 75,
@@ -480,6 +482,7 @@ export function MapView() {
     let dimmed = false;
     let frame = 0;
     let basemapDark = base.dark;
+    let currentBase = base;
 
     const setData = (id: SourceId, deps: unknown[], build: () => GeoJSON.FeatureCollection) => {
       const prev = synced[id];
@@ -584,6 +587,7 @@ export function MapView() {
     });
 
     map.on('style.load', () => {
+      applyTerrain(map, useStore.getState().settings.terrain, currentBase);
       installOverlays(map, basemapDark);
       synced = {};
       sondesSrc.reset();
@@ -623,7 +627,14 @@ export function MapView() {
       if (s.settings.basemap !== prev.settings.basemap) {
         const b = basemapById(s.settings.basemap);
         basemapDark = b.dark;
+        currentBase = b;
         map.setStyle(b.style, { diff: false });
+      }
+      if (s.settings.terrain !== prev.settings.terrain) {
+        const on = s.settings.terrain;
+        if (map.getSource('sondes')) applyTerrain(map, on, currentBase);
+        if (on && map.getPitch() < 30) map.easeTo({ pitch: TERRAIN_PITCH, duration: 900 });
+        else if (!on && map.getPitch() > 0) map.easeTo({ pitch: 0, duration: 700 });
       }
       if (s.settings.units !== prev.settings.units) scale.setUnit(s.settings.units);
     });

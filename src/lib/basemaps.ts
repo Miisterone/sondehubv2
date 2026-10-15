@@ -31,6 +31,7 @@ export interface Basemap {
   preview: string;
   /** Placeholder colour behind the thumbnail while it loads. */
   swatch: string;
+  hillshade: number;
 }
 
 export const BASEMAPS: Basemap[] = [
@@ -43,6 +44,7 @@ export const BASEMAPS: Basemap[] = [
     style: 'https://tiles.openfreemap.org/styles/dark',
     preview: darkPreview,
     swatch: '#1b1b1b',
+    hillshade: 0.5,
   },
   {
     id: 'liberty',
@@ -53,6 +55,7 @@ export const BASEMAPS: Basemap[] = [
     style: 'https://tiles.openfreemap.org/styles/liberty',
     preview: libertyPreview,
     swatch: '#f3efe6',
+    hillshade: 0.3,
   },
   {
     id: 'positron',
@@ -63,6 +66,7 @@ export const BASEMAPS: Basemap[] = [
     style: 'https://tiles.openfreemap.org/styles/positron',
     preview: positronPreview,
     swatch: '#f2f2f2',
+    hillshade: 0.3,
   },
   {
     id: 'satellite',
@@ -75,6 +79,7 @@ export const BASEMAPS: Basemap[] = [
     },
     preview: satellitePreview,
     swatch: '#3d4a32',
+    hillshade: 0.2,
   },
   {
     id: 'topo',
@@ -89,6 +94,7 @@ export const BASEMAPS: Basemap[] = [
     ),
     preview: topoPreview,
     swatch: '#4f9a3c',
+    hillshade: 0,
   },
   {
     id: 'osm',
@@ -99,6 +105,7 @@ export const BASEMAPS: Basemap[] = [
     },
     preview: osmPreview,
     swatch: '#f2efe9',
+    hillshade: 0.3,
   },
 ];
 

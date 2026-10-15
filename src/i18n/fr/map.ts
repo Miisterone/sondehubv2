@@ -32,6 +32,8 @@ export const map = {
   'map.layers.theme': 'Thème',
   'map.layers.dark': 'Sombre',
   'map.layers.light': 'Clair',
+  'map.layers.terrain.label': 'Relief 3D',
+  'map.layers.terrain.hint': 'Montagnes en volume, carte inclinée',
   'map.layers.landings.label': 'Points d’atterrissage',
   'map.layers.landings.hint': 'Prédiction pour chaque sonde en vol',
   'map.layers.allPredictions.label': 'Toutes les trajectoires prévues',

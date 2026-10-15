@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from 'cn';
 
-export type Icon3DId = 'ascending' | 'descending' | 'landed' | 'lost' | 'burst' | 'landing' | 'station' | 'chase' | 'launch' | 'locate';
+export type Icon3DId = 'ascending' | 'descending' | 'landed' | 'lost' | 'burst' | 'landing' | 'station' | 'chase' | 'launch' | 'locate' | 'relief';
 
 const HI = '#ffffff';
 
@@ -204,6 +204,20 @@ function Launch() {
   );
 }
 
+function Relief() {
+  return (
+    <>
+      <Tile cy={34} w={19} />
+      <polygon points="31,15 24,30.5 31.5,34.5" className="i3-a300" />
+      <polygon points="31,15 31.5,34.5 40,31" className="i3-a500" />
+      <polygon points="20,9 8,31.5 21,37.5" className="i3-a100" />
+      <polygon points="20,9 21,37.5 33,31" className="i3-a500" />
+      <polygon points="20,9 16.8,15 18.6,15.9 20.3,16.6" fill={HI} />
+      <polygon points="20,9 20.3,16.6 23.2,15" className="i3-a50" />
+    </>
+  );
+}
+
 const ART: Record<Icon3DId, () => ReactNode> = {
   ascending: () => <Balloon />,
   descending: () => <Parachute />,
@@ -215,6 +229,7 @@ const ART: Record<Icon3DId, () => ReactNode> = {
   chase: () => <Chase />,
   launch: () => <Launch />,
   locate: () => <Locate />,
+  relief: () => <Relief />,
 };
 
 export function Icon3D({ id, size = 40, className, title }: { id: Icon3DId; size?: number; className?: string; title?: string }) {

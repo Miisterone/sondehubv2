@@ -76,5 +76,5 @@ Endpoints utilisés (`https://api.v2.sondehub.org`) : `/sondes/telemetry?duratio
 
 ## Crédits
 
-Données : SondeHub / Project Horus. Prédictions : Tawhiri (CUSF). Fonds : OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap.
+Données : SondeHub / Project Horus. Prédictions : Tawhiri (CUSF). Fonds : OpenFreeMap, OpenStreetMap, Esri, OpenTopoMap. Relief 3D : Mapterhorn.
 Projet indépendant, non affilié à SondeHub.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Moon, RotateCcw, Sun, X } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
@@ -284,6 +284,16 @@ function PaletteBody({ close, onAbout }: { close: () => void; onAbout: () => voi
         run: () => setSettings({ basemap: b.id }),
       });
     }
+    const terrainOn = settings.terrain;
+    list.push({
+      id: 'terrain',
+      group: 'basemap',
+      label: terrainOn ? t('app.command.terrain.disable') : t('app.command.terrain.enable'),
+      keywords: `${t('app.command.terrain.keywords')} terrain relief 3d mountain montagne`,
+      icon: <Mountain />,
+      hint: <span className={cx('text-[11px] tracking-normal', terrainOn ? 'text-foreground' : 'text-muted-foreground')}>{terrainOn ? t('app.command.layer.shown') : t('app.command.layer.hidden')}</span>,
+      run: () => setSettings({ terrain: !terrainOn }),
+    });
     for (const d of Object.keys(DURATION_HOURS) as Duration[]) {
       list.push({
         id: `duration-${d}`,

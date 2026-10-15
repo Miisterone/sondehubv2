@@ -6,6 +6,7 @@ import type { IconId } from '@/lib/icons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { IconButton, MapIcon, Segmented, Toggle, cx } from './ui';
+import { Icon3D } from './Icon3D';
 import { t, useT } from '@/i18n';
 
 const overlay = (key: keyof Layers, icon: IconId) => ({
@@ -90,6 +91,20 @@ export function LayerPanel() {
               </button>
             );
           })}
+        </div>
+
+        <div className="-mx-1.5 mt-2">
+          <Toggle
+            checked={settings.terrain}
+            onChange={(terrain) => setSettings({ terrain })}
+            label={t('map.layers.terrain.label')}
+            hint={t('map.layers.terrain.hint')}
+            swatch={
+              <span className="bg-chip grid size-8 shrink-0 place-items-center rounded-lg">
+                <Icon3D id="relief" size={26} />
+              </span>
+            }
+          />
         </div>
 
         <div className="mt-4">
