@@ -293,6 +293,7 @@ export interface SiteOverlay {
   site: string;
   forecasts: SiteForecast[];
   past: PastFlight[];
+  zone?: { lat: number; lon: number; radiusM: number };
 }
 
 export interface Replay {
@@ -322,6 +323,7 @@ interface State {
   reverse: Record<string, ReversePrediction>;
 
   selected: string | null;
+  missing: string | null;
   selectedSite: string | null;
   selectedListener: string | null;
   replay: Replay | null;
@@ -349,7 +351,8 @@ interface State {
   toggleFavourite: (serial: string) => void;
   setAlerts: (patch: Partial<AlertSettings>) => void;
   loadTelemetry: (data: TelemetryResponse, replace: boolean) => void;
-  mergeHistory: (serial: string, data: TelemetryResponse) => void;
+  mergeHistory: (serial: string, data: TelemetryResponse, archived?: boolean) => void;
+  setMissing: (serial: string | null) => void;
   ingest: (frames: Frame[]) => void;
   setPredictions: (preds: Prediction[], replace: boolean) => void;
   setListeners: (ls: Listener[]) => void;
@@ -386,6 +389,7 @@ export const useStore = create<State>((set, get) => ({
   reverse: {},
 
   selected: null,
+  missing: null,
   selectedSite: null,
   selectedListener: null,
   replay: null,
@@ -426,7 +430,10 @@ export const useStore = create<State>((set, get) => ({
   },
 
   loadTelemetry: (data, replace) => {
-    const sondes: Record<string, Sonde> = replace ? {} : { ...get().sondes };
+    const { selected, settings } = get();
+    const sondes: Record<string, Sonde> = replace
+      ? Object.fromEntries(Object.entries(get().sondes).filter(([k, s]) => s.archived && (k === selected || settings.favourites.includes(k))))
+      : { ...get().sondes };
     const now = Date.now();
     for (const [serial, byTime] of Object.entries(data)) {
       const frames = Object.values(byTime).filter(isValidFrame).sort((a, b) => frameTime(a) - frameTime(b));
@@ -439,7 +446,7 @@ export const useStore = create<State>((set, get) => ({
     set({ sondes, lastUpdate: now });
   },
 
-  mergeHistory: (serial, data) => {
+  mergeHistory: (serial, data, archived = false) => {
     const byTime = data[serial];
     if (!byTime) return;
     const existing = get().sondes[serial];
@@ -449,9 +456,12 @@ export const useStore = create<State>((set, get) => ({
     for (const f of frames) s = applyFrame(s, f, 0);
     recomputeMax(s);
     s.detailed = true;
+    if (archived && !existing) s.archived = true;
     s.phase = computePhase(s);
-    set({ sondes: { ...get().sondes, [serial]: s } });
+    set({ sondes: { ...get().sondes, [serial]: s }, missing: get().missing === serial ? null : get().missing });
   },
+
+  setMissing: (missing) => set({ missing }),
 
   ingest: (frames) => {
     if (frames.length === 0) return;
@@ -548,8 +558,8 @@ export const useStore = create<State>((set, get) => ({
     const keepReplay = replay && replay.serial === serial ? replay : null;
     set(
       serial
-        ? { selected: serial, selectedSite: null, selectedListener: null, siteOverlay: null, replay: keepReplay }
-        : { selected: null, follow: false, replay: null },
+        ? { selected: serial, missing: null, selectedSite: null, selectedListener: null, siteOverlay: null, replay: keepReplay }
+        : { selected: null, missing: null, follow: false, replay: null },
     );
     if (serial && fly) {
       const s = get().sondes[serial];

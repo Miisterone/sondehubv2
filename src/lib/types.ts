@@ -69,6 +69,7 @@ export interface Sonde {
   phase: FlightPhase;
   /** True once the full-resolution history was fetched for this sonde. */
   detailed?: boolean;
+  archived?: boolean;
 }
 
 export interface PredictionPoint {

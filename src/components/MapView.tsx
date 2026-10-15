@@ -31,6 +31,7 @@ import { altStepExpression } from '../lib/altRamp';
 import { ago, fmtAlt, fmtAltShort } from '../lib/format';
 import { intlTag, t, useLocale } from '../i18n';
 import { centreOf, isPickClick, placeWatchPointFromClick } from '../lib/watchPoint';
+import { HISTORY_OVERLAY, openHistoryEntry } from '../lib/history';
 
 // MapLibre locates its worker relative to its own module URL, which bundling breaks: point at the emitted file.
 setWorkerUrl(workerUrl);
@@ -52,6 +53,7 @@ const SOURCES = [
   'me',
   'alert-radius',
   'watch-point',
+  'history-zone',
 ] as const;
 type SourceId = (typeof SOURCES)[number];
 
@@ -282,6 +284,12 @@ function installOverlays(map: MlMap, darkBase: boolean) {
   });
 
   add({
+    id: 'history-zone-line',
+    type: 'line',
+    source: 'history-zone',
+    paint: { 'line-color': darkBase ? '#94a3b8' : '#64748b', 'line-width': 1.2, 'line-opacity': 0.7, 'line-dasharray': [2, 2] },
+  });
+  add({
     id: 'site-past-dots',
     type: 'circle',
     source: 'site-points',
@@ -498,7 +506,7 @@ export function MapView() {
         const lines = new Map<string, Entry>();
         for (const so of Object.values(sondes)) {
           const isSel = so.serial === selected;
-          if (!isSel && !visible(so)) continue;
+          if (!isSel && (so.archived || !visible(so))) continue;
           points.set(so.serial, { deps: [so, isSel], build: () => sondeFeature(so, isSel) });
           if (!isSel && so.track.length >= 2) lines.set(so.serial, { deps: trackDeps(so), build: () => trackFeature(so) });
         }
@@ -515,6 +523,12 @@ export function MapView() {
       setData('reverse', [sel, selected ? reverse[selected] : undefined], () => reverseFC(selected ? reverse[selected] : undefined, sel));
       setData('site-paths', [siteOverlay?.forecasts], () => sitePathsFC(siteOverlay?.forecasts ?? []));
       setData('site-points', [siteOverlay?.forecasts, siteOverlay?.past], () => sitePointsFC(siteOverlay?.forecasts ?? [], siteOverlay?.past ?? []));
+      const zone = siteOverlay?.zone;
+      setData('history-zone', [zone?.lat, zone?.lon, zone?.radiusM], () =>
+        zone
+          ? { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: circleRing(zone.lon, zone.lat, zone.radiusM) }, properties: {} }] }
+          : EMPTY,
+      );
       setData('links', [sel, L.receiverLinks, listeners], () => (L.receiverLinks ? receiverLinksFC(sel, listeners, now) : EMPTY));
       setData('listeners', [listeners, L.listeners, L.chase, Math.floor(now / 60000)], () => listenersFC(listeners, L.listeners, L.chase, now));
       setData('sites', [sites, L.sites], () => (L.sites ? sitesFC(sites) : EMPTY));
@@ -723,6 +737,11 @@ export function MapView() {
       const f = e.features?.[0];
       const p = f?.properties;
       if (!f || !p || f.geometry.type !== 'Point') return;
+      if (useStore.getState().siteOverlay?.site === HISTORY_OVERLAY) {
+        const [lon, lat] = f.geometry.coordinates as [number, number];
+        openHistoryEntry({ serial: String(p.serial), last: { lat, lon, alt: Number(p.alt), time: Number(p.time) } });
+        return;
+      }
       const units = useStore.getState().settings.units;
       popupHtml = () => {
         const when = new Date(Number(p.time)).toLocaleString(intlTag(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

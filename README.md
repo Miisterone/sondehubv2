@@ -15,7 +15,9 @@ npm run build      # build statique dans dist/ (hébergeable n'importe où : Net
 npm run preview    # sert le build
 ```
 
-Aucune clé d'API ni backend : l'application parle directement à l'API publique SondeHub (CORS ouvert).
+Aucune clé d'API : l'application parle directement à l'API publique SondeHub (CORS ouvert). Deux petites fonctions Vercel (`api/`)
+lisent les archives S3 de SondeHub pour l'historique ; `npm run dev` et `npm run preview` les servent aussi en local. Sur un hébergement
+purement statique, l'historique par site lit S3 en direct et seuls les vols des 3 derniers jours s'ouvrent en détail.
 
 ## Fonctionnalités
 
@@ -32,6 +34,7 @@ Aucune clé d'API ni backend : l'application parle directement à l'API publique
 **Interface (shadcn/ui)**
 - Liste : recherche, filtres par phase, tri, favoris « Suivies » épinglés, mode **Près de moi** (sondes et atterrissages prévus dans un rayon de 25 à 200 km, autour de la position GPS ou d'un lieu choisi : recherche Photon, coordonnées GPS ou point sur la carte), navigation clavier.
 - Fiche sonde : résumé en langage clair, prédiction d'atterrissage avec compte à rebours et menu **Naviguer** (Google Maps, Waze, Plans, OSM), graphiques (altitude, sondage T°/HR, vitesse verticale), récepteurs avec SNR, bulles d'aide ⓘ sur le jargon.
+- **Historique** : vols des 7 ou 30 derniers jours autour de votre position ou du centre de la carte, résumé de la zone (éclatement médian, direction et distance de retombée), points de chute sur la carte ; chaque vol, même ancien, s'ouvre dans la fiche complète et par lien direct.
 - **Prochains lâchers** : stations à moins de 400 km triées par heure de lâcher estimée (onglet Près de moi, et liste En vol vide).
 - **Rejouer le vol** : lecture accélérée (×60, ×300, ×1200) ou curseur, marqueur sur la carte, tracé parcouru mis en avant, suivi caméra.
 - **Émagramme Skew-T** : température, point de rosée, particule de surface, adiabatiques sèches et humides, rapport de mélange, barbules de vent ; pression mesurée ou recalculée (hypsométrie) quand la sonde n'a pas de capteur ; dépiquage des trames incohérentes entre stations.
@@ -59,12 +62,17 @@ src/
   lib/watchPoint.ts lieu choisi à la place du GPS (recherche, coordonnées, centre de référence)
   lib/atmo.ts       thermodynamique : profil, pression, adiabatiques, indices, vent par couche
   lib/flight.ts     données de vol pour les graphiques, interpolation du replay
+  lib/history.ts    historique : vols par site, derniers signaux récents, chargement d'un vol passé
+api/
+  site-flights.ts   vols d'un site de lâcher sur 31 jours (résumés S3, cache CDN 30 min)
+  flight.ts         vol archivé complet, dédoublonné et allégé (cache CDN long)
   components/       MapView, Sidebar, SondeDetail, CommandPalette, Notifiers, RecoveryDialog…
   components/ui/    composants shadcn/ui
 ```
 
 Endpoints utilisés (`https://api.v2.sondehub.org`) : `/sondes/telemetry?duration=` , `/sondes/telemetry?serial=`,
-`/predictions`, `/listeners/telemetry?duration=1d`, `/sites`, `/recovered?last=`, `PUT /recovered` (signalements) — et `wss://ws-reader.v2.sondehub.org/`.
+`/predictions`, `/listeners/telemetry?duration=1d`, `/sites`, `/sondes?lat=&lon=&distance=&last=`, `/recovered?last=`, `PUT /recovered` (signalements)
+— et `wss://ws-reader.v2.sondehub.org/`. Archives : `https://sondehub-history.s3.amazonaws.com` (`launchsites/`, `serial/`).
 
 ## Crédits
 

@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '@/store/useStore';
-import { ago, fmtAlt, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtFreq, fmtHSpeed, fmtNum, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
+import { ago, fmtAlt, fmtAltShort, fmtClock, fmtCoord, fmtDateTime, fmtDist, fmtFreq, fmtHSpeed, fmtNum, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import type { Prediction, PredictionPoint, Sonde } from '@/lib/types';
 import { bearing, cardinal, compass, distance, elevation, towards } from '@/lib/geo';
 import { buildFlight, buildSounding } from '@/lib/flight';
@@ -136,6 +136,7 @@ export function SondeDetail({ serial }: { serial: string }) {
   const recovery = useStore((s) => s.recoveries[serial]);
   const predHistory = useStore((s) => s.predHistory[serial]);
   const replaying = useStore((s) => s.replay?.serial === serial);
+  const missing = useStore((s) => s.missing === serial);
   const { select, selectSite, selectListener, setFollow, requestFly, toggleFavourite } = useStore.getState();
   const [allReceivers, setAllReceivers] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -186,14 +187,24 @@ export function SondeDetail({ serial }: { serial: string }) {
           </IconButton>
           <div className="min-w-0 flex-1 space-y-1.5">
             <h2 className="tabular truncate text-[16px] font-semibold">{serial}</h2>
-            <Skeleton className="bg-surface h-3 w-32" />
+            {!missing && <Skeleton className="bg-surface h-3 w-32" />}
           </div>
         </div>
-        <div className="space-y-4 px-5 py-5">
-          <p className="text-[13px]">{t('sonde.header.loading')}</p>
-          <Skeleton className="bg-surface h-10 w-40" />
-          <Skeleton className="bg-surface h-28 w-full rounded-lg" />
-        </div>
+        {missing ? (
+          <div className="space-y-3 px-5 py-6">
+            <p className="text-foreground text-[15px] font-semibold">{t('sonde.header.notFoundTitle')}</p>
+            <p className="max-w-80 text-[13.5px] leading-relaxed">{t('sonde.header.notFoundText', { serial })}</p>
+            <Button variant="outline" size="sm" className="text-[13px]" onClick={() => select(null)}>
+              <ArrowLeft /> {t('sonde.header.back')}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4 px-5 py-5" role="status" aria-live="polite">
+            <p className="text-[13px]">{t('sonde.header.loading')}</p>
+            <Skeleton className="bg-surface h-10 w-40" />
+            <Skeleton className="bg-surface h-28 w-full rounded-lg" />
+          </div>
+        )}
       </div>
     );
   }
@@ -339,7 +350,11 @@ export function SondeDetail({ serial }: { serial: string }) {
             <PhaseBadge phase={sonde.phase} />
             <span className="flex items-center gap-2 text-[12.5px]">
               <span className={cx('relative size-2 shrink-0 rounded-full', live ? 'live-dot bg-live' : 'bg-faint')} />
-              {live ? t('sonde.status.live', { ago: ago(sonde.lastTime, now) }) : t('sonde.status.lastSignal', { ago: ago(sonde.lastTime, now) })}
+              {sonde.archived
+                ? t('sonde.status.archived', { date: fmtDateTime(sonde.track[0]?.[3] ?? sonde.lastTime) })
+                : live
+                  ? t('sonde.status.live', { ago: ago(sonde.lastTime, now) })
+                  : t('sonde.status.lastSignal', { ago: ago(sonde.lastTime, now) })}
             </span>
           </div>
 

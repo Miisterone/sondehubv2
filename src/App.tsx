@@ -10,11 +10,26 @@ import { PickBanner } from './components/WatchPointPicker';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { useStore } from './store/useStore';
-import { fetchListeners, fetchPredictions, fetchRecoveries, fetchReverse, fetchSites, fetchSondeHistory, fetchTelemetry } from './lib/api';
+import { fetchListeners, fetchPredictions, fetchRecoveries, fetchReverse, fetchSites, fetchTelemetry } from './lib/api';
+import { loadSondeHistory } from './lib/history';
 import { startLiveFeed } from './lib/live';
 import { t, useLocale } from './i18n';
 
 const PREDICTIONS_REFRESH_MS = 60_000;
+
+function loadSelected(serial: string, signal: AbortSignal) {
+  loadSondeHistory(serial, useStore.getState().sondes[serial], signal)
+    .then((r) => {
+      if (signal.aborted) return;
+      const st = useStore.getState();
+      if (r) st.mergeHistory(serial, r.data, r.archived);
+      else if (!st.sondes[serial] && st.selected === serial) st.setMissing(serial);
+    })
+    .catch(() => {
+      const st = useStore.getState();
+      if (!signal.aborted && !st.sondes[serial] && st.selected === serial) st.setMissing(serial);
+    });
+}
 
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
@@ -40,7 +55,7 @@ export default function App() {
           st.setLoading(false);
           // Re-fetch the full history of the selected sonde, which the reload just replaced.
           const sel = useStore.getState().selected;
-          if (sel) fetchSondeHistory(sel, ctrl.signal).then((d) => useStore.getState().mergeHistory(sel, d)).catch(() => {});
+          if (sel && !useStore.getState().sondes[sel]?.archived) loadSelected(sel, ctrl.signal);
         })
         .catch((e) => {
           if (ctrl.signal.aborted) return;
@@ -120,11 +135,7 @@ export default function App() {
     if (!selected) return;
     document.title = t('app.sondeTitle', { serial: selected });
     const ctrl = new AbortController();
-    if (!useStore.getState().sondes[selected]?.detailed) {
-      fetchSondeHistory(selected, ctrl.signal)
-        .then((d) => useStore.getState().mergeHistory(selected, d))
-        .catch(() => {});
-    }
+    if (!useStore.getState().sondes[selected]?.detailed) loadSelected(selected, ctrl.signal);
     return () => {
       ctrl.abort();
       document.title = t('app.title');

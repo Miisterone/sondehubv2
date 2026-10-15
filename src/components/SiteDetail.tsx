@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Crosshair, ExternalLink, RotateCw } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { fetchPastFlight, fetchSiteForecast, listSiteFlights, siteProfile } from '@/lib/api';
+import { fetchSiteForecast, siteProfile } from '@/lib/api';
+import { fetchSiteFlights, mainDirection, median, openHistoryEntry } from '@/lib/history';
 import type { LaunchSite, PastFlight, SiteForecast, Sonde } from '@/lib/types';
 import { fmtAltShort, fmtDist, fmtVSpeed, type Units } from '@/lib/format';
 import { bearing, cardinal, distance } from '@/lib/geo';
@@ -16,7 +17,6 @@ import { HelpHint } from './HelpHint';
 import { t, useT } from '@/i18n';
 
 const HISTORY_DAYS = 30;
-const HISTORY_MAX = 60;
 const RECENT_ROWS = 8;
 
 type Forecast = { t: number; state: 'loading' } | { t: number; state: 'ok'; data: SiteForecast } | { t: number; state: 'error' };
@@ -33,25 +33,6 @@ async function pool<T, R>(items: T[], size: number, fn: (x: T) => Promise<R>, si
   };
   await Promise.all(Array.from({ length: Math.min(size, items.length) }, worker));
   return out;
-}
-
-function median(values: number[]): number | null {
-  if (!values.length) return null;
-  const v = [...values].sort((a, b) => a - b);
-  const m = v.length >> 1;
-  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
-}
-
-function mainDirection(bearings: number[]): number | null {
-  if (bearings.length < 3) return null;
-  let x = 0;
-  let y = 0;
-  for (const b of bearings) {
-    x += Math.sin((b * Math.PI) / 180);
-    y += Math.cos((b * Math.PI) / 180);
-  }
-  if (Math.hypot(x, y) / bearings.length < 0.35) return null;
-  return ((Math.atan2(x, y) * 180) / Math.PI + 360) % 360;
 }
 
 function fromSite(site: LaunchSite, lat: number, lon: number, units: Units): string {
@@ -106,27 +87,12 @@ export function SiteDetail({ id }: { id: string }) {
     if (!site) return;
     const ctrl = new AbortController();
     setHistory({ state: 'loading' });
-    const d = new Date();
-    const months = [
-      [d.getUTCFullYear(), d.getUTCMonth() + 1],
-      d.getUTCMonth() === 0 ? [d.getUTCFullYear() - 1, 12] : [d.getUTCFullYear(), d.getUTCMonth()],
-    ];
     const since = Date.now() - HISTORY_DAYS * 86_400_000;
-    Promise.all(months.map(([y, m]) => listSiteFlights(site.id, y, m, ctrl.signal)))
-      .then((lists) => {
-        const recent = lists
-          .flat()
-          .filter((f) => Date.parse(f.date) >= since - 86_400_000)
-          .sort((a, b) => (a.date < b.date ? 1 : -1))
-          .slice(0, HISTORY_MAX);
-        return pool(recent, 6, (f) => fetchPastFlight(f, ctrl.signal).catch(() => null), ctrl.signal);
-      })
+    fetchSiteFlights(site.id)
       .then((list) => {
         if (ctrl.signal.aborted) return;
         const end = Date.now();
-        const flights = list
-          .filter((f): f is PastFlight => f !== null && f.first.time >= since && f.first.time <= end)
-          .sort((a, b) => b.first.time - a.first.time);
+        const flights = list.filter((f) => f.first.time >= since && f.first.time <= end).sort((a, b) => b.first.time - a.first.time);
         setHistory({ state: 'ok', flights });
       })
       .catch(() => !ctrl.signal.aborted && setHistory({ state: 'error' }));
@@ -309,7 +275,7 @@ export function SiteDetail({ id }: { id: string }) {
                     <li key={f.serial}>
                       <button
                         type="button"
-                        onClick={() => requestFly(f.last.lon, f.last.lat, 10)}
+                        onClick={() => openHistoryEntry({ serial: f.serial, launch: f.first, last: f.last })}
                         className="hover:bg-surface focus-visible:ring-ring/50 flex w-full items-start gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
                       >
                         <span className="min-w-0 flex-1">

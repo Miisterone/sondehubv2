@@ -21,11 +21,12 @@ import { Kbd } from '@/components/ui/kbd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { IconButton, Logo, Segmented, Toggle, cx } from './ui';
-import { Icon3D, type Icon3DId } from './Icon3D';
+import { Icon3D } from './Icon3D';
+import { EmptyState, RowSkeleton } from './ListParts';
+import { HistoryPanel } from './HistoryPanel';
 import { SondeDetail } from './SondeDetail';
 import { SiteDetail } from './SiteDetail';
 import { ListenerDetail } from './ListenerDetail';
@@ -53,6 +54,7 @@ const TAPPABLE_LAYERS = [
   'listeners-icons',
   'chase-icons',
   'listeners-dots',
+  'site-past-dots',
 ];
 
 const MAX_ROWS = 300;
@@ -61,7 +63,7 @@ const ALL_TYPES = '__all';
 
 export const NEARBY_EVENT = 'sondehubv2:nearby';
 
-type Tab = 'nearby' | 'flying' | 'following';
+type Tab = 'nearby' | 'flying' | 'following' | 'history';
 type GeoState = 'idle' | 'locating' | 'failed';
 
 const TAB_KEY = 'sondetrack.tab.v1';
@@ -119,7 +121,7 @@ function writeKey(key: string, value: string) {
 
 function readTab(): Tab {
   const t = readKey(TAB_KEY);
-  return t === 'nearby' || t === 'following' ? t : 'flying';
+  return t === 'nearby' || t === 'following' || t === 'history' ? t : 'flying';
 }
 
 async function geoGranted(): Promise<boolean> {
@@ -184,7 +186,8 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (readTab() === 'nearby') locateIfAllowed();
+    const initial = readTab();
+    if (initial === 'nearby' || initial === 'history') locateIfAllowed();
   }, [locateIfAllowed]);
 
   useEffect(() => {
@@ -256,7 +259,7 @@ export function Sidebar({ onAbout }: { onAbout: () => void }) {
       tab={tab}
       onTab={(t) => {
         setTab(t);
-        if (t === 'nearby') locateIfAllowed();
+        if (t === 'nearby' || t === 'history') locateIfAllowed();
       }}
       geo={geo}
       onLocate={locate}
@@ -534,7 +537,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const all = useMemo(() => Object.values(sondes), [sondes]);
+  const all = useMemo(() => Object.values(sondes).filter((s) => !s.archived), [sondes]);
   const visible = useMemo(() => makeVisible(query, phaseFilter, typeFilter), [query, phaseFilter, typeFilter]);
   const predOf = useCallback(
     (s: Sonde) => {
@@ -888,6 +891,8 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         <UpcomingLaunches className="mt-2 border-t" />
       </>
     );
+  } else if (tab === 'history') {
+    body = <HistoryPanel units={units} me={me} locating={geo === 'locating'} onLocate={onLocate} />;
   } else if (tab === 'following') {
     body =
       groups.length === 0 ? (
@@ -1031,7 +1036,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
           <FiltersButton counts={counts} types={types} />
         </div>
 
-        {!results && <TabBar tab={tab} onTab={onTab} counts={{ nearby: nearbyCount, flying: flyingCount, following: favourites.length }} />}
+        {!results && <TabBar tab={tab} onTab={onTab} counts={{ nearby: nearbyCount, flying: flyingCount, following: favourites.length, history: undefined }} />}
       </div>
 
       <ScrollArea data-vaul-no-drag={scrollLocked ? '' : undefined} className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:block!">
@@ -1045,7 +1050,9 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
                 ? tr('sidebar.tabs.nearby')
                 : tab === 'following'
                   ? tr('sidebar.tabs.following')
-                  : tr('sidebar.tabs.flying')
+                  : tab === 'history'
+                    ? tr('sidebar.tabs.history')
+                    : tr('sidebar.tabs.flying')
           }
           className="pb-8"
           onKeyDown={onListKey}
@@ -1077,6 +1084,12 @@ const TABS: { id: Tab; label: string }[] = [
       return translate('sidebar.tabs.following');
     },
   },
+  {
+    id: 'history',
+    get label() {
+      return translate('sidebar.tabs.history');
+    },
+  },
 ];
 
 function TabBar({ tab, onTab, counts }: { tab: Tab; onTab: (t: Tab) => void; counts: Record<Tab, number | undefined> }) {
@@ -1085,7 +1098,7 @@ function TabBar({ tab, onTab, counts }: { tab: Tab; onTab: (t: Tab) => void; cou
     <div
       role="tablist"
       aria-label={tr('sidebar.tabs.label')}
-      className="mt-3 -mb-px flex gap-6 md:mt-4"
+      className="mt-3 -mx-5 -mb-px flex gap-5 overflow-x-auto px-5 [scrollbar-width:none] md:mt-4 [&::-webkit-scrollbar]:hidden"
       onKeyDown={(e) => {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
         e.preventDefault();
@@ -1207,50 +1220,6 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
         )}
       </PopoverContent>
     </Popover>
-  );
-}
-
-function RowSkeleton() {
-  return (
-    <li className="flex items-start gap-3 border-b px-5 py-4">
-      <Skeleton className="bg-surface size-8 shrink-0 rounded-md" />
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="bg-surface h-4 w-28 rounded-sm" />
-        <Skeleton className="bg-surface h-3.5 w-52 rounded-sm" />
-        <div className="grid grid-cols-3 gap-3 pt-1.5">
-          <Skeleton className="bg-surface h-8 rounded-sm" />
-          <Skeleton className="bg-surface h-8 rounded-sm" />
-          <Skeleton className="bg-surface h-8 rounded-sm" />
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function EmptyState({
-  icon,
-  art,
-  title,
-  children,
-  actions,
-}: {
-  icon?: ReactNode;
-  art?: Icon3DId;
-  title: string;
-  children?: ReactNode;
-  actions?: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-start px-5 py-8">
-      {art ? (
-        <Icon3D id={art} size={96} className="-mt-3 mb-2 -ml-2.5" />
-      ) : (
-        <span className="text-muted-foreground mb-4 grid size-10 place-items-center rounded-md border [&>svg]:size-5">{icon}</span>
-      )}
-      <h2 className="text-[16px] font-semibold">{title}</h2>
-      {children && <p className="mt-1 max-w-80 text-[13.5px] leading-relaxed">{children}</p>}
-      {actions && <div className="mt-4 flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
   );
 }
 

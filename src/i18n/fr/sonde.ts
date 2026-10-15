@@ -26,6 +26,8 @@ export const sonde = {
 
   'sonde.header.back': 'Retour à la liste',
   'sonde.header.loading': 'Chargement de la sonde…',
+  'sonde.header.notFoundTitle': 'Vol introuvable',
+  'sonde.header.notFoundText': 'Aucune donnée pour {serial}, ni en direct ni dans les archives SondeHub. Vérifiez le numéro de série ou réessayez plus tard.',
   'sonde.header.defaultModel': 'Radiosonde météo',
   'sonde.header.center': 'Centrer la carte sur la sonde',
   'sonde.header.share': 'Partager cette sonde',
@@ -39,6 +41,7 @@ export const sonde = {
 
   'sonde.status.live': 'En direct · {ago}',
   'sonde.status.lastSignal': 'Dernier signal · {ago}',
+  'sonde.status.archived': 'Vol archivé du {date}',
 
   'sonde.hero.columnLabel': 'Altitude {alt}',
   'sonde.hero.columnLabelBurst': 'Altitude {alt}, éclatement {burst}',
