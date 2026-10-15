@@ -3,7 +3,6 @@ import { cn } from 'cn';
 import { isGlider } from '@/lib/sonde';
 import type { FlightPhase, Sonde } from '@/lib/types';
 import { GLIDER, turn, yawForHeading, type GliderPose, type GliderTone, type V3 } from '@/lib/gliderModel';
-import { drawSonde, sondeKind, type SondeKind } from '@/lib/sondeModels';
 
 export type Icon3DId =
   | FlightPhase
@@ -423,56 +422,6 @@ export function SondeIcon3D({
   ...props
 }: Omit<Icon3DProps, 'id'> & { sonde: Pick<Sonde, 'phase' | 'type' | 'subtype' | 'last'>; phase?: FlightPhase }) {
   return <Icon3D id={isGlider(sonde) ? `glider-${phase}` : phase} {...props} />;
-}
-
-const typeArt = new Map<SondeKind, ReactNode>();
-
-function sondeTypeArt(kind: SondeKind): ReactNode {
-  let art = typeArt.get(kind);
-  if (art === undefined) {
-    art = drawSonde(kind).map((d, i) =>
-      d.kind === 'poly' ? (
-        <polygon key={i} points={d.points} fill={d.fill} stroke={d.fill} strokeWidth="0.25" strokeLinejoin="round" />
-      ) : d.kind === 'line' ? (
-        <path key={i} d={d.d} fill="none" stroke={d.stroke} strokeWidth={d.width} strokeLinecap="round" strokeLinejoin="round" />
-      ) : (
-        <ellipse key={i} cx={d.cx} cy={d.cy} rx={d.rx} ry={d.ry} className="i3-shadow" />
-      ),
-    );
-    typeArt.set(kind, art);
-  }
-  return art;
-}
-
-export function SondeTypeIcon3D({
-  sonde,
-  kind,
-  size = 40,
-  className,
-  title,
-}: {
-  sonde?: Pick<Sonde, 'type' | 'subtype' | 'manufacturer'>;
-  kind?: SondeKind;
-  size?: number;
-  className?: string;
-  title?: string;
-}) {
-  const k = kind ?? (sonde ? sondeKind(sonde) : 'generic');
-  return (
-    <svg
-      viewBox="0 0 48 48"
-      width={size}
-      height={size}
-      className={cn('inline-block shrink-0 select-none', className)}
-      role={title ? 'img' : undefined}
-      aria-label={title}
-      aria-hidden={title ? undefined : true}
-      focusable="false"
-      data-sonde-kind={k}
-    >
-      {sondeTypeArt(k)}
-    </svg>
-  );
 }
 
 export function AltitudeColumn({ alt, burst, label, className }: { alt: number; burst: number | null; label: string; className?: string }) {

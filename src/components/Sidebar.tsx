@@ -9,7 +9,6 @@ import { makeVisible, typeKey, usefulPrediction } from '@/lib/filter';
 import { ago, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtFreq, fmtHSpeed, fmtRadius, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import { bearing, cardinal, compass, distance } from '@/lib/geo';
 import { findLaunch, isGlider, siteLabel, verticalSpeed, type Launch } from '@/lib/sonde';
-import { sondeKind, type SondeKind } from '@/lib/sondeModels';
 import { locateUser } from '@/lib/geolocation';
 import { isPickClick, useNearbyCentre, type Centre } from '@/lib/watchPoint';
 import { disableAlerts, enableAlerts } from '@/lib/alerts';
@@ -25,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { IconButton, Logo, Segmented, Toggle, cx } from './ui';
-import { Icon3D, SondeIcon3D, SondeTypeIcon3D } from './Icon3D';
+import { Icon3D, SondeIcon3D } from './Icon3D';
 import { EmptyState, RowSkeleton } from './ListParts';
 import { HistoryPanel } from './HistoryPanel';
 import { SondeDetail } from './SondeDetail';
@@ -608,19 +607,14 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   }, [all]);
 
   const types = useMemo(() => {
-    const m = new Map<string, { count: number; maker?: string; kinds: Map<SondeKind, number> }>();
+    const m = new Map<string, { count: number; maker?: string }>();
     for (const s of all) {
       const k = typeKey(s);
-      const kind = sondeKind(s);
       const e = m.get(k);
-      if (e) {
-        e.count++;
-        e.kinds.set(kind, (e.kinds.get(kind) ?? 0) + 1);
-      } else m.set(k, { count: 1, maker: s.manufacturer && s.manufacturer !== k ? s.manufacturer : undefined, kinds: new Map([[kind, 1]]) });
+      if (e) e.count++;
+      else m.set(k, { count: 1, maker: s.manufacturer && s.manufacturer !== k ? s.manufacturer : undefined });
     }
-    return [...m.entries()]
-      .map(([k, e]): [string, TypeEntry] => [k, { count: e.count, maker: e.maker, kind: [...e.kinds.entries()].sort((a, b) => b[1] - a[1])[0][0] }])
-      .sort((a, b) => b[1].count - a[1].count);
+    return [...m.entries()].sort((a, b) => b[1].count - a[1].count);
   }, [all]);
 
   const results = useMemo(() => {
@@ -1180,13 +1174,7 @@ function TabBar({ tab, onTab, counts }: { tab: Tab; onTab: (t: Tab) => void; cou
   );
 }
 
-interface TypeEntry {
-  count: number;
-  maker?: string;
-  kind: SondeKind;
-}
-
-function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>; types: [string, TypeEntry][] }) {
+function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>; types: [string, { count: number; maker?: string }][] }) {
   const phaseFilter = useStore((s) => s.phaseFilter);
   const typeFilter = useStore((s) => s.typeFilter);
   const duration = useStore((s) => s.settings.duration);
@@ -1228,16 +1216,7 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
             <div className="text-foreground mb-2 text-[13px] font-semibold">{tr('sidebar.filters.type')}</div>
             <Select value={typeFilter ?? ALL_TYPES} onValueChange={(v) => setTypeFilter(v === ALL_TYPES ? null : v)}>
               <SelectTrigger aria-label={tr('sidebar.filters.type')} className="text-foreground h-9 w-full text-[13.5px]">
-                <SelectValue>
-                  {typeFilter ? (
-                    <span className="flex min-w-0 items-center gap-2">
-                      <SondeTypeIcon3D kind={types.find(([k]) => k === typeFilter)?.[1].kind ?? sondeKind({ type: typeFilter })} size={30} className="-my-1.5 -ml-1 size-[30px]" />
-                      <span className="truncate">{typeFilter}</span>
-                    </span>
-                  ) : (
-                    tr('sidebar.filters.allTypes')
-                  )}
-                </SelectValue>
+                <SelectValue>{typeFilter ?? tr('sidebar.filters.allTypes')}</SelectValue>
               </SelectTrigger>
               <SelectContent position="popper" className="max-h-72">
                 <SelectItem value={ALL_TYPES} className="text-[13.5px]">
@@ -1245,13 +1224,11 @@ function FiltersButton({ counts, types }: { counts: Record<FlightPhase, number>;
                 </SelectItem>
                 {typeFilter && !types.some(([k]) => k === typeFilter) && (
                   <SelectItem value={typeFilter} className="text-[13.5px]">
-                    <SondeTypeIcon3D kind={sondeKind({ type: typeFilter })} size={32} className="-my-1.5 -ml-1 size-8" />
                     {typeFilter}
                   </SelectItem>
                 )}
                 {types.map(([k, t]) => (
                   <SelectItem key={k} value={k} className="text-[13.5px] *:[span]:last:flex-1">
-                    <SondeTypeIcon3D kind={t.kind} size={32} className="-my-1.5 -ml-1 size-8" />
                     {k}
                     <span className="text-muted-foreground ml-auto pl-3 text-[12px]">
                       {t.maker ? `${t.maker} · ` : ''}

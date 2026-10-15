@@ -13,6 +13,7 @@ import {
   FileCode2,
   FileSpreadsheet,
   Gauge,
+  Hash,
   LocateFixed,
   PackageCheck,
   Play,
@@ -45,7 +46,7 @@ import { ReplayControls, ReplayStats, canReplay, startReplay } from './ReplayBar
 import { AtmoIndices } from './AtmoIndices';
 import { AtmospherePanel } from './AtmospherePanel';
 import { IconButton, PhaseBadge, Section, Segmented, Stat, cx } from './ui';
-import { AltitudeColumn, Icon3D, SondeIcon3D, SondeTypeIcon3D } from './Icon3D';
+import { AltitudeColumn, Icon3D, SondeIcon3D } from './Icon3D';
 import { HELP, HelpHint } from './HelpHint';
 import { RecoveryDialog } from './RecoveryDialog';
 import { NavMenu } from './NavMenu';
@@ -762,16 +763,7 @@ export function SondeDetail({ serial }: { serial: string }) {
 
           {tab === 'technical' && (
             <>
-              <div className="flex items-center gap-4" data-testid="sonde-model">
-                <SondeTypeIcon3D sonde={sonde} size={80} className="-my-3 -ml-2.5" />
-                <div className="min-w-0">
-                  <div className="text-muted-foreground text-[12px]">{t('sonde.tx.model')}</div>
-                  <div className="font-heading text-foreground truncate text-[18px] leading-tight font-semibold">{sonde.subtype ?? sonde.type ?? '—'}</div>
-                  {sonde.manufacturer && <div className="truncate text-[13px]">{sonde.manufacturer}</div>}
-                </div>
-              </div>
-
-              <Section title={t('sonde.receivers.title')} right={<HelpHint title={HELP.receivers.title} align="end">{HELP.receivers.text}</HelpHint>} className="border-t pt-6">
+              <Section title={t('sonde.receivers.title')} right={<HelpHint title={HELP.receivers.title} align="end">{HELP.receivers.text}</HelpHint>}>
                 {receivers.length === 0 ? (
                   <p className="text-[13px]">{t('sonde.receivers.none')}</p>
                 ) : (
@@ -794,6 +786,7 @@ export function SondeDetail({ serial }: { serial: string }) {
               <Section title={t('sonde.tx.title')} className="border-t pt-6">
                 <div className="grid grid-cols-3 gap-x-4 gap-y-4">
                   <Stat icon={<Radio />} label={t('sonde.tx.frequency')} value={fmtFreq(f.frequency, false)} sub={f.frequency ? 'MHz' : undefined} />
+                  <Stat icon={<Hash />} label={t('sonde.tx.model')} value={sonde.subtype ?? sonde.type ?? '—'} sub={sonde.manufacturer} />
                   <Stat icon={<Timer />} label={t('sonde.tx.frame')} value={f.frame !== undefined ? t('sonde.tx.frameNumber', { frame: f.frame }) : '—'} sub={fmtClock(sonde.lastTime)} />
                   <Stat icon={<BatteryMedium />} label={t('sonde.tx.battery')} value={fmtNum(f.batt, ' V', 2)} />
                   <Stat icon={<Satellite />} label={t('sonde.tx.satellites')} value={fmtNum(f.sats, '', 0)} sub="GPS" />
