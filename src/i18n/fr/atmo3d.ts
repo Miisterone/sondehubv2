@@ -23,6 +23,7 @@ export const atmo3d = {
   'atmo3d.scene.launch': 'Lâcher',
   'atmo3d.scene.firstSignal': 'Premier signal',
   'atmo3d.scene.burst': 'Éclatement',
+  'atmo3d.scene.release': 'Largage',
   'atmo3d.scene.burstPredicted': 'Éclatement prévu',
   'atmo3d.scene.landingPredicted': 'Atterrissage prévu',
   'atmo3d.scene.tropopause': 'Tropopause {alt}',

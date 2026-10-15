@@ -54,6 +54,7 @@ export interface AtmoScene {
   burstP: Vec3 | null;
   landingP: Vec3 | null;
   airborneStart: boolean;
+  glider: boolean;
   center: [number, number];
   span: number;
   top: number;
@@ -189,6 +190,7 @@ export function buildAtmoScene(d: FlightData, sounding: Sounding, profile: Profi
     burstP: d.burstP !== null ? at(d.burstP, d.altP[d.burstP]) : null,
     landingP: d.landingP !== null ? at(d.landingP, d.altP[d.landingP]) : null,
     airborneStart: (d.alt[0] ?? 0) >= 3_000,
+    glider: d.glider,
     center,
     span,
     top,

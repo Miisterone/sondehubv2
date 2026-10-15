@@ -1,4 +1,5 @@
 import type { FlightPhase, Prediction, Sonde } from './types';
+import { isGlider } from './sonde';
 import { t } from '@/i18n';
 
 export function typeKey(s: Pick<Sonde, 'type' | 'manufacturer'>): string {
@@ -26,7 +27,7 @@ export function makeVisible(query: string, phases: Record<FlightPhase, boolean>,
  * well above the ground: the predicted landing is then the best estimate of where it is.
  */
 export function usefulPrediction(s: Sonde | undefined, p: Prediction | undefined): p is Prediction {
-  if (!s || !p || !p.landing) return false;
+  if (!s || !p || !p.landing || isGlider(s)) return false;
   if (s.phase === 'ascending' || s.phase === 'descending') return true;
   return s.phase === 'landed' && s.last.alt > 1500 && p.descending;
 }

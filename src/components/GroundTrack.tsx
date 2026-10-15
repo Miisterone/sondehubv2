@@ -159,7 +159,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
     }
     addLabel(0, airborne ? tr('sonde.common.firstSignal') : tr('sonde.common.launch'));
     if (d.landingP !== null) addLabel(d.landingP, tr('sonde.common.landingPredicted'), 'end');
-    if (d.burst !== null) addLabel(d.burst, tr('sonde.common.burst'));
+    if (d.burst !== null) addLabel(d.burst, tr(d.glider ? 'sonde.common.release' : 'sonde.common.burst'));
     if (d.burstP !== null) addLabel(d.burstP, tr('sonde.common.burstPredicted'));
   }
 
@@ -276,7 +276,7 @@ export function GroundTrack({ d, units, now, live, serial, height = 250 }: { d: 
                 <circle cx="6" cy="6" r="3.5" fill="none" stroke="var(--chart-pred)" strokeWidth="2" />
               )}
             </svg>
-            {d.burst !== null ? tr('sonde.common.burst') : tr('sonde.common.burstPredicted')}
+            {d.burst !== null ? tr(d.glider ? 'sonde.common.release' : 'sonde.common.burst') : tr('sonde.common.burstPredicted')}
           </span>
         )}
         {d.landingP !== null && (

@@ -1070,7 +1070,7 @@ class Engine {
         prio: 6,
         anchor: () => bw,
         align: burstAlign,
-        title: () => t('atmo3d.scene.burst'),
+        title: () => t(s.glider ? 'atmo3d.scene.release' : 'atmo3d.scene.burst'),
         sub: () => (full && bt !== null ? t('atmo3d.scene.altAt', { alt: fmtAltShort(s.burst![2], units), time: clock(bt) }) : fmtAltShort(s.burst![2], units)),
         cls: 'text-foreground',
         titleCls: 'font-semibold',

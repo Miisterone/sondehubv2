@@ -9,6 +9,7 @@ export interface Launch {
   fromGround: boolean;
   estimated: boolean;
   near: { site: string; siteId: string; d: number; bearing: number } | null;
+  point: { lat: number; lon: number } | null;
 }
 
 const SITE_RADIUS_M = 30_000;
@@ -31,7 +32,7 @@ export function findLaunch(sonde: Pick<Sonde, 'track'>, sites: LaunchSite[], rev
   if (fromGround) {
     const close = nearest(sites, lat, lon);
     const site = assigned ?? (close && close.d < SITE_RADIUS_M ? close.site : null);
-    return { t, site: site?.name ?? null, siteId: site?.id ?? null, fromGround, estimated: false, near: null };
+    return { t, site: site?.name ?? null, siteId: site?.id ?? null, fromGround, estimated: false, near: null, point: { lat, lon } };
   }
   if (reverse) {
     let near: Launch['near'] = null;
@@ -41,9 +42,17 @@ export function findLaunch(sonde: Pick<Sonde, 'track'>, sites: LaunchSite[], rev
         near = { site: close.site.name, siteId: close.site.id, d: close.d, bearing: bearing(close.site.lat, close.site.lon, reverse.lat, reverse.lon) };
       }
     }
-    return { t: reverse.launchTime, site: assigned?.name ?? null, siteId: assigned?.id ?? null, fromGround, estimated: true, near };
+    return {
+      t: reverse.launchTime,
+      site: assigned?.name ?? null,
+      siteId: assigned?.id ?? null,
+      fromGround,
+      estimated: true,
+      near,
+      point: { lat: reverse.lat, lon: reverse.lon },
+    };
   }
-  return { t, site: null, siteId: null, fromGround, estimated: false, near: null };
+  return { t, site: null, siteId: null, fromGround, estimated: false, near: null, point: null };
 }
 
 export function siteLabel(name: string): string {

@@ -54,7 +54,7 @@ interface Milestone {
 function milestones(scene: AtmoScene, phase: FlightPhase): Milestone[] {
   const out: Milestone[] = [{ key: 'launch', t: scene.times.launch, name: scene.airborneStart ? t('atmo3d.scene.firstSignal') : t('atmo3d.scene.launch'), tone: 'ink', marker: 'launch' }];
   if (scene.crossing) out.push({ key: 'crossing', t: scene.crossing.t, name: t('atmo3d.timeline.tropopause'), tone: 'ink', marker: 'crossing' });
-  if (scene.times.burst !== null) out.push({ key: 'burst', t: scene.times.burst, name: t('atmo3d.scene.burst'), tone: 'ink', marker: 'burst' });
+  if (scene.times.burst !== null) out.push({ key: 'burst', t: scene.times.burst, name: t(scene.glider ? 'atmo3d.scene.release' : 'atmo3d.scene.burst'), tone: 'ink', marker: 'burst' });
   if (scene.times.burstPredicted !== null) out.push({ key: 'burstP', t: scene.times.burstPredicted, name: t('atmo3d.scene.burstPredicted'), tone: 'pred', marker: 'burstP' });
   if (scene.times.landing !== null) out.push({ key: 'landing', t: scene.times.landing, name: t('atmo3d.scene.landingPredicted'), tone: 'pred', marker: 'landing' });
   else if (phase === 'landed') out.push({ key: 'landing', t: scene.times.now, name: t('atmo3d.scene.landing'), tone: 'ink', marker: 'landing' });
@@ -224,7 +224,7 @@ export function AtmoColumn({ scene, units, alt, replaying, height = 330 }: { sce
   const ozone = scene.bands.find((b) => b.id === 'ozone');
   const crossed = !!scene.crossing && (replaying ? alt >= scene.tropopause.z || scene.times.burst !== null : true);
   const rows: Row[] = [];
-  if (scene.burst) rows.push({ key: 'burst', z: scene.burst[2], name: tr('atmo3d.scene.burst'), value: fmtAltShort(scene.burst[2], units), strong: true });
+  if (scene.burst) rows.push({ key: 'burst', z: scene.burst[2], name: tr(scene.glider ? 'atmo3d.scene.release' : 'atmo3d.scene.burst'), value: fmtAltShort(scene.burst[2], units), strong: true });
   if (scene.burstP) rows.push({ key: 'burstP', z: scene.burstP[2], name: tr('atmo3d.scene.burstPredicted'), value: fmtAltShort(scene.burstP[2], units), muted: true });
   rows.push({ key: 'now', z: alt, name: replaying ? tr('atmo3d.column.replay') : tr('atmo3d.column.now'), value: fmtAltShort(alt, units), strong: true, accent: true });
   if (ozone) rows.push({ key: 'ozone', z: ozone.from + 1000, name: tr('atmo3d.layer.ozone'), value: altRange(ozone.from, ozone.to, units) });
@@ -295,7 +295,7 @@ export function AtmoSteps({ scene, flight, units, phase, current }: { scene: Atm
     { key: 'launch', t: scene.times.launch, name: scene.airborneStart ? tr('atmo3d.scene.firstSignal') : tr('atmo3d.scene.launch'), value: fmtAlt(scene.launch[2], units), predicted: false },
   ];
   if (scene.crossing) rows.push({ key: 'crossing', t: scene.crossing.t, name: tr('atmo3d.scene.crossed'), value: fmtAlt(scene.tropopause.z, units), predicted: false });
-  if (scene.burst && scene.times.burst !== null) rows.push({ key: 'burst', t: scene.times.burst, name: tr('atmo3d.scene.burst'), value: fmtAlt(scene.burst[2], units), predicted: false });
+  if (scene.burst && scene.times.burst !== null) rows.push({ key: 'burst', t: scene.times.burst, name: tr(scene.glider ? 'atmo3d.scene.release' : 'atmo3d.scene.burst'), value: fmtAlt(scene.burst[2], units), predicted: false });
   rows.push({ key: 'now', t: scene.times.now, name: live ? tr('atmo3d.steps.live') : tr('atmo3d.scene.landing'), value: fmtAlt(scene.current[2], units), predicted: false });
   if (scene.burstP && scene.times.burstPredicted !== null) rows.push({ key: 'burstP', t: scene.times.burstPredicted, name: tr('atmo3d.scene.burstPredicted'), value: fmtAlt(scene.burstP[2], units), predicted: true });
   if (flight.landingP !== null && scene.times.landing !== null) {

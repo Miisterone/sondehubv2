@@ -76,8 +76,11 @@ const trackOpacity = (dim: boolean) =>
   PHASE_MATCH(dim ? { ascending: 0.3, descending: 0.3, landed: 0.16, lost: 0.12 } : { ascending: 0.85, descending: 0.85, landed: 0.4, lost: 0.3 });
 
 function burstText(): ExpressionSpecification {
-  const [before, after = ''] = t('map.layer.burstLabel').split('{alt}');
-  return ['concat', before, ['to-string', ['get', 'alt']], after] as ExpressionSpecification;
+  const label = (key: 'map.layer.burstLabel' | 'map.layer.releaseLabel'): ExpressionSpecification => {
+    const [before, after = ''] = t(key).split('{alt}');
+    return ['concat', before, ['to-string', ['get', 'alt']], after];
+  };
+  return ['case', ['==', ['get', 'glider'], true], label('map.layer.releaseLabel'), label('map.layer.burstLabel')] as ExpressionSpecification;
 }
 
 function mapUiStrings(): Record<string, string> {

@@ -8,7 +8,7 @@ import type { FlightPhase, Prediction, Sonde } from '@/lib/types';
 import { makeVisible, typeKey, usefulPrediction } from '@/lib/filter';
 import { ago, fmtAltShort, fmtClock, fmtCoord, fmtDist, fmtFreq, fmtHSpeed, fmtRadius, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import { bearing, cardinal, compass, distance } from '@/lib/geo';
-import { findLaunch, siteLabel, verticalSpeed, type Launch } from '@/lib/sonde';
+import { findLaunch, isGlider, siteLabel, verticalSpeed, type Launch } from '@/lib/sonde';
 import { locateUser } from '@/lib/geolocation';
 import { isPickClick, useNearbyCentre, type Centre } from '@/lib/watchPoint';
 import { disableAlerts, enableAlerts } from '@/lib/alerts';
@@ -431,6 +431,11 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
   const stale = now - s.lastTime > STALE_MS ? translate('sidebar.status.lastSignal', { ago: ago(s.lastTime, now) }) : null;
   const vv = verticalSpeed(s);
   const speed = vv === undefined ? '—' : fmtVSpeed(Math.abs(vv), units, false);
+  const glider = isGlider(s);
+  const home = {
+    label: translate('sonde.trajectory.fromLaunch'),
+    value: launch?.point ? fmtDist(distance(s.last.lat, s.last.lon, launch.point.lat, launch.point.lon), units) : '—',
+  };
 
   switch (s.phase) {
     case 'ascending': {
@@ -441,10 +446,12 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
         metrics: [
           { label: translate('sidebar.metric.altitude'), value: alt },
           { label: translate('sidebar.metric.ascent'), value: speed },
-          {
-            label: translate('sidebar.metric.burst'),
-            value: pred && pred.burstAltitude > s.last.alt ? translate('sidebar.metric.burstAt', { altitude: fmtAltShort(pred.burstAltitude, units) }) : '—',
-          },
+          glider
+            ? home
+            : {
+                label: translate('sidebar.metric.burst'),
+                value: pred && pred.burstAltitude > s.last.alt ? translate('sidebar.metric.burstAt', { altitude: fmtAltShort(pred.burstAltitude, units) }) : '—',
+              },
         ],
       };
     }
@@ -462,12 +469,14 @@ function describe(s: Sonde, pred: Prediction | null, launch: Launch | null, me: 
             from,
             stale,
           ]) ||
-          translate('sidebar.status.descending'),
+          translate(glider ? 'sidebar.status.gliding' : 'sidebar.status.descending'),
         strong: !!(landing && where),
         metrics: [
           { label: translate('sidebar.metric.altitude'), value: alt },
           { label: translate('sidebar.metric.descent'), value: speed },
-          { label: translate('sidebar.metric.landing'), value: landing ? (t > now ? relative(t, now) : translate('sidebar.metric.imminent')) : '—' },
+          glider
+            ? home
+            : { label: translate('sidebar.metric.landing'), value: landing ? (t > now ? relative(t, now) : translate('sidebar.metric.imminent')) : '—' },
         ],
       };
     }
@@ -604,19 +613,21 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
 
   const flying = useMemo(() => {
     const desc: Sonde[] = [];
+    const glide: Sonde[] = [];
     const asc: Sonde[] = [];
     const ground: Sonde[] = [];
     for (const s of all) {
       if (!visible(s)) continue;
-      if (s.phase === 'descending') desc.push(s);
+      if (s.phase === 'descending') (isGlider(s) ? glide : desc).push(s);
       else if (s.phase === 'ascending') asc.push(s);
       else ground.push(s);
     }
     const eta = (s: Sonde) => landingOf(s)?.time ?? Infinity;
     desc.sort((a, b) => eta(a) - eta(b) || a.last.alt - b.last.alt);
+    glide.sort((a, b) => a.last.alt - b.last.alt);
     asc.sort((a, b) => b.last.alt - a.last.alt);
     ground.sort((a, b) => b.lastTime - a.lastTime);
-    return { desc, asc, ground };
+    return { desc, glide, asc, ground };
   }, [all, visible, landingOf]);
 
   const nearby = useMemo(() => {
@@ -665,6 +676,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
     if (tab === 'following') return followed.length ? [{ id: 'following', items: followed }] : [];
     const g: Group[] = [];
     if (flying.desc.length) g.push({ id: 'desc', title: tr('sidebar.groups.descending'), items: flying.desc.slice(0, MAX_ROWS).map(item) });
+    if (flying.glide.length) g.push({ id: 'glide', title: tr('sidebar.groups.gliding'), items: flying.glide.slice(0, MAX_ROWS).map(item) });
     if (flying.asc.length) g.push({ id: 'asc', title: tr('sidebar.groups.ascending'), items: flying.asc.slice(0, MAX_ROWS).map(item) });
     if (showGround && flying.ground.length) g.push({ id: 'ground', items: flying.ground.slice(0, MAX_ROWS).map(item) });
     return g;
@@ -732,7 +744,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
   }, []);
 
   const total = all.length;
-  const flyingCount = flying.desc.length + flying.asc.length;
+  const flyingCount = flying.desc.length + flying.glide.length + flying.asc.length;
   const nearbyCount = nearby?.reduce((n, g) => n + g.items.length, 0);
 
   const renderGroup = (g: Group) => (

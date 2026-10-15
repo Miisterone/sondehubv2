@@ -60,6 +60,9 @@ export const app = {
   'app.help.burst.title': 'Éclatement',
   'app.help.burst.text':
     'En montant, le ballon gonfle à mesure que la pression baisse, jusqu’à éclater, en général entre 20 et 35 km d’altitude. La sonde redescend ensuite sous un petit parachute.',
+  'app.help.release.title': 'Largage',
+  'app.help.release.text':
+    'Cette sonde voyage dans un planeur. Il monte accroché à un ballon météo, puis il est largué en altitude et redescend en vol plané. On reconnaît ces M20 à leur batterie stable vers 3,3 V ; une M20 classique reste sous 3 V.',
   'app.help.maxAlt.title': 'Altitude max',
   'app.help.maxAlt.text': 'Point le plus haut atteint jusqu’ici. Pendant la montée, l’altitude d’éclatement prévue est indiquée en dessous.',
   'app.help.prediction.title': 'Prédiction',

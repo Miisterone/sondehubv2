@@ -104,6 +104,9 @@ export const lib = {
     'À cette altitude, la pression de l’air n’est plus que d’environ {pressure} hPa, soit {ratio} fois moins qu’au sol. Le ballon gonfle à mesure que l’air se raréfie, et finira par éclater, en général entre 20 et 35 km.',
   'lib.insights.pressure.textLastSignal':
     'À cette altitude, la pression de l’air n’est plus que d’environ {pressure} hPa, soit {ratio} fois moins qu’au sol. Le ballon gonfle à mesure que l’air se raréfie, jusqu’à éclater, sans doute peu après ce dernier signal.',
+  'lib.insights.pressure.titleRelease': 'Largage à {altitude}',
+  'lib.insights.pressure.textRelease':
+    'À cette altitude, la pression de l’air n’est plus que d’environ {pressure} hPa, soit {ratio} fois moins qu’au sol. C’est là que le planeur a quitté son ballon pour redescendre en vol plané.',
 
   'lib.compass.n': 'N',
   'lib.compass.nne': 'NNE',

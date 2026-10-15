@@ -1,4 +1,5 @@
 import type { Prediction, Sonde } from './types';
+import { isGlider } from './sonde';
 import { bearing, distance } from './geo';
 import { despikeValues } from './atmo';
 
@@ -28,6 +29,7 @@ export interface FlightData {
   burstP: number | null;
   landingP: number | null;
   forecast: boolean;
+  glider: boolean;
 }
 
 const fin = (v: number) => (Number.isFinite(v) ? v : null);
@@ -55,6 +57,7 @@ export function buildFlight(sonde: Sonde, prediction: Prediction | null): Flight
     burstP: null,
     landingP: null,
     forecast: false,
+    glider: isGlider(sonde),
   };
 
   let j = 0;

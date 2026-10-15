@@ -66,6 +66,14 @@ export const HELP = {
       return t('app.help.burst.text');
     },
   },
+  release: {
+    get title() {
+      return t('app.help.release.title');
+    },
+    get text() {
+      return t('app.help.release.text');
+    },
+  },
   maxAlt: {
     get title() {
       return t('app.help.maxAlt.title');

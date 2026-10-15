@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import type { Listener, LaunchSite, PastFlight, Prediction, Recovery, ReversePrediction, SiteForecast, Sonde } from './types';
 import { usefulPrediction } from './filter';
+import { isGlider } from './sonde';
 import { mapLabel } from './text';
 import { intlTag, t } from '@/i18n';
 
@@ -112,7 +113,7 @@ export function burstFC(s: Sonde | undefined): FC<Point> {
   if (!s || s.phase === 'ascending' || s.maxAltIdx < 0 || s.maxAltIdx >= s.track.length - 1) return fc([]);
   const p = s.track[s.maxAltIdx];
   if (s.maxAlt - s.last.alt < 500) return fc([]);
-  return fc([pt(p[0], p[1], { serial: s.serial, alt: Math.round(p[2]) })]);
+  return fc([pt(p[0], p[1], { serial: s.serial, alt: Math.round(p[2]), glider: isGlider(s) })]);
 }
 
 export function receiverLinksFC(s: Sonde | undefined, listeners: Record<string, Listener>, now: number): FC<LineString> {

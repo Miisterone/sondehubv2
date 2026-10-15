@@ -36,7 +36,7 @@ import { flightInsights } from '@/lib/insights';
 import { buildProfile } from '@/lib/atmo';
 import { downloadCSV, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
-import { findLaunch, fmtHour, siteLabel, type Launch } from '@/lib/sonde';
+import { findLaunch, fmtHour, isGlider, siteLabel, type Launch } from '@/lib/sonde';
 import { TrackLegend } from './TrackLegend';
 import { basemapById } from '@/lib/basemaps';
 import { PHASE_LABEL } from '@/lib/icons';
@@ -212,6 +212,7 @@ export function SondeDetail({ serial }: { serial: string }) {
   const f = sonde.last;
   const vv = f.vel_v;
   const useful = usefulPrediction(sonde, prediction);
+  const glider = isGlider(sonde);
   const landing = useful ? prediction.landing : null;
   const flying = sonde.phase === 'ascending' || sonde.phase === 'descending';
   const target = landing ? { lat: landing.lat, lon: landing.lon } : { lat: f.lat, lon: f.lon };
@@ -365,13 +366,13 @@ export function SondeDetail({ serial }: { serial: string }) {
               <div className="mt-1.5 flex items-center gap-1 text-[12.5px]">
                 <span className="min-w-0 truncate">
                   {burstAlt
-                    ? t('sonde.hero.burstAt', { alt: fmtAltShort(burstAlt, units) })
+                    ? t(glider ? 'sonde.hero.releaseAt' : 'sonde.hero.burstAt', { alt: fmtAltShort(burstAlt, units) })
                     : sonde.phase === 'ascending' && useful && prediction.burstAltitude > f.alt
                       ? t('sonde.hero.burstForecast', { alt: fmtAltShort(prediction.burstAltitude, units) })
                       : t('sonde.hero.maxReached', { alt: fmtAltShort(sonde.maxAlt, units) })}
                 </span>
-                <HelpHint title={burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
-                  {burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
+                <HelpHint title={glider ? HELP.release.title : burstAlt || sonde.phase === 'ascending' ? HELP.burst.title : HELP.maxAlt.title}>
+                  {glider ? HELP.release.text : burstAlt || sonde.phase === 'ascending' ? HELP.burst.text : HELP.maxAlt.text}
                 </HelpHint>
               </div>
             </div>
@@ -379,7 +380,14 @@ export function SondeDetail({ serial }: { serial: string }) {
               alt={f.alt}
               burst={columnMark}
               className="-my-2"
-              label={columnMark === null ? t('sonde.hero.columnLabel', { alt: fmtAltShort(f.alt, units) }) : t(burstAlt ? 'sonde.hero.columnLabelBurst' : 'sonde.hero.columnLabelBurstForecast', { alt: fmtAltShort(f.alt, units), burst: fmtAltShort(columnMark, units) })}
+              label={
+                columnMark === null
+                  ? t('sonde.hero.columnLabel', { alt: fmtAltShort(f.alt, units) })
+                  : t(burstAlt ? (glider ? 'sonde.hero.columnLabelRelease' : 'sonde.hero.columnLabelBurst') : 'sonde.hero.columnLabelBurstForecast', {
+                      alt: fmtAltShort(f.alt, units),
+                      burst: fmtAltShort(columnMark, units),
+                    })
+              }
             />
           </div>
 
@@ -393,7 +401,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                 {vv !== undefined && (vv >= 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />)}
                 {fmtVSpeed(vv, units)}
               </div>
-              <div className="text-faint truncate text-[12px]">{flying ? (falling ? t('sonde.hero.underParachute') : t('sonde.hero.carriedByBalloon')) : t('sonde.hero.lastMeasure')}</div>
+              <div className="text-faint truncate text-[12px]">{flying ? (falling ? t(glider ? 'sonde.hero.gliding' : 'sonde.hero.underParachute') : t('sonde.hero.carriedByBalloon')) : t('sonde.hero.lastMeasure')}</div>
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1 text-[12.5px]">
@@ -578,7 +586,11 @@ export function SondeDetail({ serial }: { serial: string }) {
                 {showLanding && (
                   <div className="space-y-3 rounded-lg border px-4 py-3.5">
                     <div className="flex items-start gap-3">
-                      <Icon3D id={landing ? 'landing' : sonde.phase === 'lost' ? 'lost' : 'landed'} size={36} className="-mt-1.5 -ml-1" />
+                      <Icon3D
+                        id={landing ? 'landing' : sonde.phase === 'lost' ? (glider ? 'glider-lost' : 'lost') : glider ? 'glider-landed' : 'landed'}
+                        size={36}
+                        className="-mt-1.5 -ml-1"
+                      />
                       <div className="min-w-0 flex-1 text-[13px] leading-relaxed">
                         <div className="text-foreground flex items-center gap-1.5 font-semibold">
                           <span className="truncate">
@@ -634,7 +646,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                   </div>
                 )}
 
-                {(flying || history.length > 1) && (
+                {!glider && (flying || history.length > 1) && (
                   <div className="border-t">
                     <button
                       type="button"
@@ -805,7 +817,7 @@ export function SondeDetail({ serial }: { serial: string }) {
 
               <Section title={t('sonde.data.title')} className="border-t pt-6">
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadKML(sonde, prediction)}>
+                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadKML(sonde, glider ? undefined : prediction)}>
                     <FileCode2 /> {t('sonde.data.exportKml')}
                   </Button>
                   <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadCSV(sonde)}>
@@ -909,6 +921,25 @@ function summarise(
     if (when) return t(k.when, { ago: when });
     return '';
   };
+  if (isGlider(sonde) && sonde.phase !== 'lost') {
+    const l = launched('balloon');
+    const home = launch?.point ? fmtDist(distance(f.lat, f.lon, launch.point.lat, launch.point.lon), units) : '';
+    if (sonde.phase === 'ascending') return l ? t('sonde.summary.glider.ascendingLaunched', { launched: l, alt }) : t('sonde.summary.glider.ascending', { alt });
+    if (sonde.phase === 'descending') {
+      const release = sonde.maxAlt - f.alt > 500 ? fmtAltShort(sonde.maxAlt, units) : '';
+      const main =
+        l && release
+          ? t('sonde.summary.glider.descendingLaunchedRelease', { launched: l, release, alt })
+          : l
+            ? t('sonde.summary.glider.descendingLaunched', { launched: l, alt })
+            : release
+              ? t('sonde.summary.glider.descendingRelease', { release, alt })
+              : t('sonde.summary.glider.descending', { alt });
+      return home ? `${main} ${t('sonde.summary.glider.homeFlying', { distance: home })}` : main;
+    }
+    const main = l ? t('sonde.summary.glider.landedLaunched', { launched: l, ago: ago(sonde.lastTime, now) }) : t('sonde.summary.glider.landed', { ago: ago(sonde.lastTime, now) });
+    return home ? `${main} ${t('sonde.summary.glider.homeLanded', { distance: home })}` : main;
+  }
   switch (sonde.phase) {
     case 'ascending': {
       const l = launched('balloon');

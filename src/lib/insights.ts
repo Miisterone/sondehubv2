@@ -168,14 +168,23 @@ export function flightInsights(sonde: Sonde, s: Sounding, d: FlightData, units: 
     out.push({
       id: 'pressure',
       title: burst
-        ? t('lib.insights.pressure.titleBurst', { altitude: fmtAltShort(top, units) })
+        ? t(d.glider ? 'lib.insights.pressure.titleRelease' : 'lib.insights.pressure.titleBurst', { altitude: fmtAltShort(top, units) })
         : sonde.phase === 'ascending'
           ? t('lib.insights.pressure.titleAscending', { altitude: fmtAltShort(top, units) })
           : t('lib.insights.pressure.titleLastSignal', { altitude: fmtAltShort(top, units) }),
-      text: t(burst ? 'lib.insights.pressure.textBurst' : sonde.phase === 'ascending' ? 'lib.insights.pressure.textAscending' : 'lib.insights.pressure.textLastSignal', {
-        pressure: p < 10 ? p.toLocaleString(intlTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(p),
-        ratio,
-      }),
+      text: t(
+        burst
+          ? d.glider
+            ? 'lib.insights.pressure.textRelease'
+            : 'lib.insights.pressure.textBurst'
+          : sonde.phase === 'ascending'
+            ? 'lib.insights.pressure.textAscending'
+            : 'lib.insights.pressure.textLastSignal',
+        {
+          pressure: p < 10 ? p.toLocaleString(intlTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(p),
+          ratio,
+        },
+      ),
     });
   }
 

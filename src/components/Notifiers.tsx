@@ -6,7 +6,7 @@ import { locateUser } from '@/lib/geolocation';
 import { usefulPrediction } from '@/lib/filter';
 import { bearing, compass, distance } from '@/lib/geo';
 import { ago, fmtAlt, fmtDist, relative } from '@/lib/format';
-import { findLaunch, siteLabel, upcomingLaunches } from '@/lib/sonde';
+import { findLaunch, isGlider, siteLabel, upcomingLaunches } from '@/lib/sonde';
 import { intlTag, t } from '@/i18n';
 import { currentCentre } from '@/lib/watchPoint';
 
@@ -117,8 +117,8 @@ function collectAlerts(): PendingAlert[] {
           out.push({
             serial,
             kind: 'burst',
-            title: t('map.alert.burstTitle'),
-            body: t('map.alert.burstBody', { serial, alt: fmtAlt(s.maxAlt, units) }),
+            title: t(isGlider(s) ? 'map.alert.releaseTitle' : 'map.alert.burstTitle'),
+            body: t(isGlider(s) ? 'map.alert.releaseBody' : 'map.alert.burstBody', { serial, alt: fmtAlt(s.maxAlt, units) }),
             rank: -1,
             view: () => viewSonde(serial),
           });

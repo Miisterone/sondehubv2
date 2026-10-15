@@ -119,7 +119,7 @@ export function AltitudeChart({ d, units, now, live, syncKey }: { d: FlightData;
         const x = pl.valToPos(d.x[d.burst], 'x', true);
         const y = pl.valToPos(v * u.alt, 'y', true);
         drawDot(pl, x, y, th.ink, th.surface, 3.5);
-        const b = drawLabel(pl, th, x, y, t('charts.altitude.burstAt', { alt: fmtAltShort(v, units) }), { prefer: 'right', avoid: boxes });
+        const b = drawLabel(pl, th, x, y, t(d.glider ? 'charts.altitude.releaseAt' : 'charts.altitude.burstAt', { alt: fmtAltShort(v, units) }), { prefer: 'right', avoid: boxes });
         if (b) boxes.push(b);
       }
     }
@@ -333,7 +333,10 @@ export function ProfileChart({ d, units, now, live }: { d: FlightData; units: Un
       if (v !== null) {
         const [x, y] = at(burst, v);
         drawDot(pl, x, y, burst <= d.last ? th.ink : th.pred, th.surface, 3.5, burst > d.last);
-        const b = drawLabel(pl, th, x, y, burst <= d.last ? t('charts.common.burst') : t('charts.common.burstPredicted'), { prefer: 'right', avoid: boxes });
+        const b = drawLabel(pl, th, x, y, burst <= d.last ? t(d.glider ? 'charts.common.release' : 'charts.common.burst') : t('charts.common.burstPredicted'), {
+          prefer: 'right',
+          avoid: boxes,
+        });
         if (b) boxes.push(b);
       }
     }
@@ -522,7 +525,7 @@ export function FlightTable({ d, units }: { d: FlightData; units: Units }) {
                 const hs = pick(d, d.hs, d.hsP, j).v;
                 const tag =
                   j === d.burst
-                    ? t('charts.common.burstLower')
+                    ? t(d.glider ? 'charts.common.releaseLower' : 'charts.common.burstLower')
                     : j === d.burstP
                       ? t('charts.common.burstPredictedLower')
                       : j === d.landingP

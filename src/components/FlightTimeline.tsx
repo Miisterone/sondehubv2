@@ -103,8 +103,8 @@ export function FlightTimeline({
           muted={launch?.estimated}
         />
         <Event
-          icon="burst"
-          label={t('sonde.common.burst')}
+          icon={d.glider ? 'glider-descending' : 'burst'}
+          label={t(d.glider ? 'sonde.common.release' : 'sonde.common.burst')}
           value={tb !== null ? clock(tb) : '—'}
           sub={
             tb !== null && burstAlt !== null
@@ -116,7 +116,7 @@ export function FlightTimeline({
           muted={burstPredicted}
         />
         <Event
-          icon={landingPredicted || !ended ? 'landing' : phase === 'lost' ? 'lost' : 'landed'}
+          icon={landingPredicted || !ended ? 'landing' : phase === 'lost' ? (d.glider ? 'glider-lost' : 'lost') : d.glider ? 'glider-landed' : 'landed'}
           label={landingPredicted || !ended ? t('sonde.timeline.landing') : t('sonde.timeline.lastSignal')}
           value={tl !== null ? clock(tl) : '—'}
           sub={tl !== null ? (landingPredicted && tl * 1000 > now ? relative(tl * 1000, now) : ago(tl * 1000, now)) : t('sonde.timeline.notEstimated')}
