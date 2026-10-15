@@ -154,7 +154,7 @@ export const lib = {
 
   'lib.alerts.enabled': 'Alertes activées — rayon {radius} km',
   'lib.alerts.enabledFavourites': 'Et pour vos sondes favorites, où qu’elles soient.',
-  'lib.alerts.disabled': 'Alertes d’atterrissage désactivées',
+  'lib.alerts.disabled': 'Alertes désactivées',
 
   'lib.export.track': 'Trajectoire {serial}',
   'lib.export.lastPosition': '{serial} (dernière position)',

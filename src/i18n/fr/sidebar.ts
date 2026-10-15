@@ -118,7 +118,7 @@ export const sidebar = {
   'sidebar.tabs.nearby': 'Près de moi',
   'sidebar.tabs.flying': 'En vol',
   'sidebar.tabs.following': 'Favoris',
-  'sidebar.alerts.enabled': 'Alertes activées pour les atterrissages à moins de {radius}.',
+  'sidebar.alerts.enabled': 'Alertes activées dans un rayon de {radius}.',
   'sidebar.alerts.ctaTitle': 'Être prévenu',
   'sidebar.alerts.ctaText': 'quand un ballon va atterrir à moins de {radius}',
   'sidebar.alerts.enable': 'Activer',

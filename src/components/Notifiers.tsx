@@ -5,13 +5,14 @@ import { useStore } from '@/store/useStore';
 import { locateUser } from '@/lib/geolocation';
 import { usefulPrediction } from '@/lib/filter';
 import { bearing, compass, distance } from '@/lib/geo';
-import { fmtAlt, fmtDist, relative } from '@/lib/format';
+import { ago, fmtAlt, fmtDist, relative } from '@/lib/format';
+import { findLaunch, siteLabel, upcomingLaunches } from '@/lib/sonde';
 import { intlTag, t } from '@/i18n';
 import { currentCentre } from '@/lib/watchPoint';
 
 /* ───────────────────────────── Landing alerts ───────────────────────────── */
 
-type AlertKind = 'near' | 'close' | 'burst' | 'soon';
+type AlertKind = 'near' | 'close' | 'burst' | 'soon' | 'launch' | 'planned';
 
 interface PendingAlert {
   serial: string;
@@ -20,6 +21,7 @@ interface PendingAlert {
   body: string;
   /** Sort key: lower is more urgent. */
   rank: number;
+  view: () => void;
 }
 
 /** Re-evaluate at most this often: data arrives every second, alerts don't need that pace. */
@@ -30,6 +32,9 @@ const SOON_MS = 10 * 60_000;
 const BURST_RECENT_MS = 15 * 60_000;
 /** More alerts than this in one pass are summarised in a single toast. */
 const MAX_TOASTS_PER_PASS = 3;
+const LAUNCH_RECENT_MS = 30 * 60_000;
+const PLANNED_LEAD_MS = 30 * 60_000;
+const PLANNED_RANK = 1e12;
 
 /* Dedupe log: serial:kind → when it was sent (+ distance for proximity), kept per tab session. */
 const SENT_KEY = 'sondetrack.alerts.sent.v1';
@@ -76,7 +81,7 @@ function collectAlerts(): PendingAlert[] {
   const out: PendingAlert[] = [];
 
   // Proximity: predicted landings inside the radius around the user.
-  if (loc) {
+  if (loc && alerts.landings) {
     for (const [serial, p] of Object.entries(st.predictions)) {
       const s = st.sondes[serial];
       if (!s || (s.phase !== 'ascending' && s.phase !== 'descending') || !usefulPrediction(s, p)) continue;
@@ -94,6 +99,7 @@ function collectAlerts(): PendingAlert[] {
         title: kind === 'near' ? t('map.alert.nearTitle') : t('map.alert.closeTitle'),
         body: t('map.alert.nearBody', { serial, dist: fmtDist(d, units), dir, when: when(L.time * 1000, now) }),
         rank: d,
+        view: () => viewSonde(serial),
       });
       markSent(serial, kind, d);
     }
@@ -114,6 +120,7 @@ function collectAlerts(): PendingAlert[] {
             title: t('map.alert.burstTitle'),
             body: t('map.alert.burstBody', { serial, alt: fmtAlt(s.maxAlt, units) }),
             rank: -1,
+            view: () => viewSonde(serial),
           });
           markSent(serial, 'burst');
         }
@@ -135,12 +142,57 @@ function collectAlerts(): PendingAlert[] {
                 })
               : t('map.alert.soonBody', { serial, when: when(landingMs, now) }),
             rank: -2,
+            view: () => viewSonde(serial),
           });
           markSent(serial, 'soon');
         }
       }
     }
   }
+
+  if (loc && alerts.launchDetected) {
+    for (const s of Object.values(st.sondes)) {
+      if (s.phase !== 'ascending' || log[`${s.serial}:launch`]) continue;
+      const rev = st.reverse[s.serial];
+      const launch = findLaunch(s, st.sites, rev);
+      if (!launch || now - launch.t > LAUNCH_RECENT_MS) continue;
+      const from = launch.fromGround ? { lat: s.track[0][1], lon: s.track[0][0] } : rev ? { lat: rev.lat, lon: rev.lon } : null;
+      if (!from) continue;
+      const d = distance(loc.lat, loc.lon, from.lat, from.lon);
+      if (d > radius) continue;
+      const params = { serial: s.serial, dist: fmtDist(d, units), dir: compass(bearing(loc.lat, loc.lon, from.lat, from.lon)), ago: ago(launch.t, now) };
+      out.push({
+        serial: s.serial,
+        kind: 'launch',
+        title: t('map.alert.launchTitle'),
+        body: launch.site ? t('map.alert.launchBodySite', { ...params, site: siteLabel(launch.site) }) : t('map.alert.launchBody', params),
+        rank: d,
+        view: () => viewSonde(s.serial),
+      });
+      markSent(s.serial, 'launch', d);
+    }
+  }
+
+  if (loc && alerts.launchPlanned) {
+    for (const site of st.sites) {
+      const d = distance(loc.lat, loc.lon, site.lat, site.lon);
+      if (d > radius) continue;
+      const at = upcomingLaunches(site.times, now, PLANNED_LEAD_MS, 1)[0];
+      if (at === undefined) continue;
+      const key = `${site.id}@${at}`;
+      if (log[`${key}:planned`]) continue;
+      out.push({
+        serial: key,
+        kind: 'planned',
+        title: t('map.alert.plannedTitle'),
+        body: t('map.alert.plannedBody', { site: siteLabel(site.name), dist: fmtDist(d, units), dir: compass(bearing(loc.lat, loc.lon, site.lat, site.lon)), when: when(at, now) }),
+        rank: PLANNED_RANK + at - now,
+        view: () => useStore.getState().selectSite(site.id, true),
+      });
+      markSent(key, 'planned');
+    }
+  }
+
   return out.sort((a, b) => a.rank - b.rank);
 }
 
@@ -157,7 +209,7 @@ function deliver(list: PendingAlert[]) {
       icon: <BellRing className="text-foreground size-4" />,
       duration: 30_000,
       closeButton: true,
-      action: { label: t('map.alert.view'), onClick: () => viewSonde(a.serial) },
+      action: { label: t('map.alert.view'), onClick: a.view },
     });
   }
   const rest = list.length - shown.length;
@@ -184,6 +236,8 @@ function useLandingAlerts() {
         s.predictions === prev.predictions &&
         s.userLocation === prev.userLocation &&
         s.settings.watchPoint === prev.settings.watchPoint &&
+        s.sites === prev.sites &&
+        s.now === prev.now &&
         s.settings.alerts === prev.settings.alerts &&
         s.settings.favourites === prev.settings.favourites
       )

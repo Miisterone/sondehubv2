@@ -31,6 +31,9 @@ export interface AlertSettings {
   /** Warn when a predicted landing falls within `radiusKm` of the user's position. */
   enabled: boolean;
   radiusKm: number;
+  landings: boolean;
+  launchDetected: boolean;
+  launchPlanned: boolean;
   /** Also warn shortly before followed (favourite) sondes land, wherever they are. */
   favourites: boolean;
 }
@@ -73,7 +76,7 @@ const DEFAULT_SETTINGS: Settings = {
   basemap: 'positron',
   units: localeUnits(),
   favourites: [],
-  alerts: { enabled: false, radiusKm: 50, favourites: true },
+  alerts: { enabled: false, radiusKm: 50, landings: true, launchDetected: true, launchPlanned: false, favourites: true },
   watchPoint: null,
   callsign: '',
   tutorialDone: false,

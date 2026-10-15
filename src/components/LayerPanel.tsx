@@ -122,6 +122,19 @@ function AlertsSection() {
             />
           </div>
           <div className="-mx-1.5">
+            <Toggle checked={alerts.landings} onChange={(v) => setAlerts({ landings: v })} label={t('map.alerts.landings')} hint={t('map.alerts.landingsHint')} />
+            <Toggle
+              checked={alerts.launchDetected}
+              onChange={(v) => setAlerts({ launchDetected: v })}
+              label={t('map.alerts.launchDetected')}
+              hint={t('map.alerts.launchDetectedHint')}
+            />
+            <Toggle
+              checked={alerts.launchPlanned}
+              onChange={(v) => setAlerts({ launchPlanned: v })}
+              label={t('map.alerts.launchPlanned')}
+              hint={t('map.alerts.launchPlannedHint')}
+            />
             <Toggle
               checked={alerts.favourites}
               onChange={(v) => setAlerts({ favourites: v })}
