@@ -19,7 +19,7 @@ flowchart TB
     subgraph SRC[Sources externes]
         TAW["Tawhiri, Photon<br/>prévision, géocodage"]
         REST["API REST<br/>api.v2.sondehub.org"]
-        S3["Archives S3<br/>sondehub-history"]
+        S3["Archives S3<br/>history.sondehub.org"]
         MQTT["Broker MQTT<br/>ws-reader (WSS)"]
     end
     subgraph LIB[Accès aux données]
@@ -76,7 +76,7 @@ L'application consomme six familles de services ; seule l'API REST SondeHub et l
 | `PUT /recovered` | Après confirmation de l'utilisateur | Publication d'un signalement de récupération | `lib/api.ts` |
 | `wss://ws-reader.v2.sondehub.org/` | Connexion permanente | Trames, prédictions, stations, récupérations en direct | `lib/live.ts` |
 | `/api/site-flights`, `/api/flight` | Onglet Historique, vol archivé | Résumés et vols complets tirés de S3 | `api/*.ts` |
-| S3 `sondehub-history` | Repli si `/api/` absent | Archives brutes (`launchsites/`, `serial/`) | `lib/api.ts`, `api/*.ts` |
+| S3 `history.sondehub.org` | Repli si `/api/` absent | Archives brutes (`launchsites/`, `serial/`) | `lib/api.ts`, `api/*.ts` |
 | Photon (komoot) | Recherche de lieu | Géocodage direct et inverse | `lib/watchPoint.ts` |
 | OpenFreeMap, Esri, OpenTopoMap, OSM, Mapterhorn | Tuiles à la volée | Fonds de carte, MNT pour le relief | `lib/basemaps.ts`, `lib/terrain.ts` |
 

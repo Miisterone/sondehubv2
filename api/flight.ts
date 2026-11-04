@@ -1,4 +1,4 @@
-const S3 = 'https://sondehub-history.s3.amazonaws.com';
+const S3 = 'https://history.sondehub.org';
 const MAX_FRAMES = 4000;
 const SETTLED_MS = 3 * 86_400_000;
 

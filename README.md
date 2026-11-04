@@ -75,7 +75,7 @@ api/
 
 Endpoints utilisés (`https://api.v2.sondehub.org`) : `/sondes/telemetry?duration=` , `/sondes/telemetry?serial=`,
 `/predictions`, `/listeners/telemetry?duration=1d`, `/sites`, `/sondes?lat=&lon=&distance=&last=`, `/recovered?last=`, `PUT /recovered` (signalements)
-— et `wss://ws-reader.v2.sondehub.org/`. Archives : `https://sondehub-history.s3.amazonaws.com` (`launchsites/`, `serial/`).
+— et `wss://ws-reader.v2.sondehub.org/`. Archives : `https://history.sondehub.org` (`launchsites/`, `serial/`).
 
 ## Référencement
 
