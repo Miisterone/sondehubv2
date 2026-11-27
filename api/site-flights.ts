@@ -121,13 +121,16 @@ async function siteFlights(site: string, now = Date.now()): Promise<Summary[]> {
 
 export default {
   async fetch(request: Request): Promise<Response> {
-    const site = new URL(request.url).searchParams.get('site') ?? '';
+    const url = new URL(request.url);
+    const site = url.searchParams.get('site') ?? '';
     if (!/^[\w-]{1,32}$/.test(site)) return json({ error: 'invalid site' }, 400, 'no-store');
+    if (url.search !== `?site=${site}`) return json({ error: 'invalid query' }, 400, 'no-store');
     try {
       const flights = await siteFlights(site);
       return json({ site, generated: Date.now(), days: DAYS, flights }, 200, 'public, max-age=600, s-maxage=1800, stale-while-revalidate=86400');
     } catch (e) {
-      return json({ error: (e as Error).message }, 502, 'no-store');
+      console.error(e);
+      return json({ error: 'upstream error' }, 502, 'no-store');
     }
   },
 };
