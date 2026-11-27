@@ -91,8 +91,10 @@ function reduce(serial: string, raw: Raw[]) {
 
 export default {
   async fetch(request: Request): Promise<Response> {
-    const serial = new URL(request.url).searchParams.get('serial') ?? '';
+    const url = new URL(request.url);
+    const serial = url.searchParams.get('serial') ?? '';
     if (!/^[\w.:-]{1,48}$/.test(serial)) return json({ error: 'invalid serial' }, 400, 'no-store');
+    if (url.search !== `?serial=${encodeURIComponent(serial)}`) return json({ error: 'invalid query' }, 400, 'no-store');
     try {
       const res = await fetch(`${S3}/serial/${encodeURIComponent(serial)}.json.gz`);
       if (res.status === 404 || res.status === 403) return json({}, 404, 'public, max-age=300, s-maxage=3600');
@@ -104,7 +106,8 @@ export default {
       const settled = Date.now() - reduced.last > SETTLED_MS;
       return json(reduced.frames, 200, settled ? 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=86400' : 'public, max-age=600, s-maxage=3600');
     } catch (e) {
-      return json({ error: (e as Error).message }, 502, 'no-store');
+      console.error(e);
+      return json({ error: 'upstream error' }, 502, 'no-store');
     }
   },
 };
