@@ -1,6 +1,6 @@
 {
-  "name": "SondeHub V2 — Radiosondes en temps réel",
-  "short_name": "SondeHub V2",
+  "name": "SondeHub2 — Radiosondes en temps réel",
+  "short_name": "SondeHub2",
   "description": "Suivi en temps réel des radiosondes météo : trajectoires, prédictions d'atterrissage, récepteurs.",
   "start_url": "/",
   "scope": "/",

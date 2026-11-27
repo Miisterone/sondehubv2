@@ -1,10 +1,10 @@
-# SondeHub V2 — Récupération des données et architecture
+# SondeHub2 — Récupération des données et architecture
 
 15/10/2026 · Joris
 
 ## Vue d'ensemble
 
-SondeHub V2 est une SPA React qui interroge directement les services publics de SondeHub depuis le navigateur, sans backend propre ni clé d'API. Les seules exceptions sont deux fonctions Vercel dans `api/`, qui lisent et allègent les archives S3 pour l'historique.
+SondeHub2 est une SPA React qui interroge directement les services publics de SondeHub depuis le navigateur, sans backend propre ni clé d'API. Les seules exceptions sont deux fonctions Vercel dans `api/`, qui lisent et allègent les archives S3 pour l'historique.
 
 Le modèle de données repose sur trois mécanismes complémentaires :
 

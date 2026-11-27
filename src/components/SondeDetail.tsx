@@ -897,7 +897,7 @@ async function share(sonde: Sonde, landing: PredictionPoint | null, now: number,
   const serial = sonde.serial;
   const replay = useStore.getState().replay;
   const at = replay?.serial === serial ? replayAt(flight, replay.t) : null;
-  const title = `${serial} · SondeHub V2`;
+  const title = `${serial} · SondeHub2`;
   if (at) {
     const text = t('sonde.share.instant', { serial, alt: fmtAlt(at.alt, units), time: fmtClock(at.t * 1000) });
     return shareLink({ title, text, url: pageLink({ s: serial, t: Math.round(at.t) }) });

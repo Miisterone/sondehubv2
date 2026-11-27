@@ -1,8 +1,8 @@
-# SondeHub V2
+# SondeHub2
 
 > Live tracking of weather radiosondes (weather balloons) launched every day by meteorological services worldwide: position, altitude, speed, flight path, landing prediction, burst point and receiving stations. Built on the open SondeHub network fed by radio amateurs. Free, no account, no API key.
 
-SondeHub V2 is a single-page web application (map + detail panel). Pages are client-rendered; the static HTML only contains a short description. Data is not owned by this site: it comes from the public SondeHub API (https://api.v2.sondehub.org) and its S3 archive (https://history.sondehub.org).
+SondeHub2 is a single-page web application (map + detail panel). Pages are client-rendered; the static HTML only contains a short description. Data is not owned by this site: it comes from the public SondeHub API (https://api.v2.sondehub.org) and its S3 archive (https://history.sondehub.org).
 
 ## Pages
 

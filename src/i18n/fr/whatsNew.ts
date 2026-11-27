@@ -1,6 +1,6 @@
 export const whatsNew = {
   'app.whatsNew.title': 'Nouveautés',
-  'app.whatsNew.intro': 'Les dernières évolutions de SondeHub V2.',
+  'app.whatsNew.intro': 'Les dernières évolutions de SondeHub2.',
   'app.whatsNew.badge': 'Nouveau',
   'app.whatsNew.unread_one': '{count} non lue',
   'app.whatsNew.unread_other': '{count} non lues',

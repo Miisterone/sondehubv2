@@ -1,5 +1,5 @@
 export const features = {
-  'app.siteTitle': '{site} — SondeHub V2',
+  'app.siteTitle': '{site} — SondeHub2',
   'app.command.glossary.keywords': 'glossaire lexique definitions vocabulaire termes',
 
   'sonde.data.exportGpx': 'Exporter en GPX',
@@ -30,7 +30,7 @@ export const features = {
   'charts.compare.note': 'Valeurs du sondage comparé ; l’écart est donné par rapport à ce vol.',
 
   'app.glossary.title': 'Glossaire',
-  'app.glossary.intro': 'Les termes utilisés dans SondeHub V2, expliqués simplement.',
+  'app.glossary.intro': 'Les termes utilisés dans SondeHub2, expliqués simplement.',
   'app.glossary.search': 'Rechercher un terme',
   'app.glossary.empty': 'Aucun terme ne correspond.',
   'app.glossary.radiosonde.term': 'Radiosonde',

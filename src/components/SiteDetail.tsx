@@ -151,7 +151,7 @@ export function SiteDetail({ id }: { id: string }) {
   const share = () => {
     const label = siteLabel(site.name);
     const text = next !== undefined ? t('map.site.shareNext', { site: label, when: relative(next, now) }) : t('map.site.shareText', { site: label });
-    void shareLink({ title: `${label} · SondeHub V2`, text, url: pageLink({ site: site.id }) });
+    void shareLink({ title: `${label} · SondeHub2`, text, url: pageLink({ site: site.id }) });
   };
 
   return (

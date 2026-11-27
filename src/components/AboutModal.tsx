@@ -77,7 +77,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
         <DialogHeader className="mb-4 flex-row items-center gap-3 pr-8 text-left">
           <Logo className="size-11 shrink-0" />
           <div className="min-w-0 space-y-1">
-            <DialogTitle>SondeHub V2</DialogTitle>
+            <DialogTitle>SondeHub2</DialogTitle>
             <DialogDescription>{t('app.about.subtitle')}</DialogDescription>
           </div>
         </DialogHeader>

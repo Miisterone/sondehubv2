@@ -1012,7 +1012,7 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
         <div className="flex items-center gap-2">
           <Logo className="mr-1 size-8 shrink-0 md:size-9" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-[19px] leading-tight font-semibold whitespace-nowrap">SondeHub V2</h1>
+            <h1 className="text-[19px] leading-tight font-semibold whitespace-nowrap">SondeHub2</h1>
             <p className="flex min-w-0 items-center gap-1.5 text-[13px] leading-snug">
               <StatusPill />
               <span aria-hidden className="text-faint max-md:hidden">

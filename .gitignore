@@ -148,6 +148,6 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
-# SondeHub V2
+# SondeHub2
 .DS_Store
 .vercel

@@ -6,7 +6,7 @@ import { fr } from '../src/i18n/fr';
 import { SEO_TEXT } from './content';
 
 export const SITE_URL = 'https://sondehub2.vercel.app';
-const SITE_NAME = 'SondeHub V2';
+const SITE_NAME = 'SondeHub2';
 const DEFAULT_LOCALE: Locale = 'en';
 const OG_IMAGE = { path: '/og-image.png', width: 1200, height: 630 };
 const LOCALE_DIR = path.resolve(import.meta.dirname, '../src/i18n/locales');

@@ -1,11 +1,11 @@
 export const app = {
-  'app.title': 'SondeHub V2 — Radiosondes en temps réel',
+  'app.title': 'SondeHub2 — Radiosondes en temps réel',
   'app.description': "Suivi en temps réel des radiosondes météo : trajectoires, prédictions d'atterrissage, récepteurs.",
   'app.language': 'Langue',
   'app.languageChoose': 'Choisir la langue',
   'app.languageCurrent': 'Langue : {name}',
   'app.loadError': 'Impossible de charger les sondes : {message}',
-  'app.sondeTitle': '{serial} — SondeHub V2',
+  'app.sondeTitle': '{serial} — SondeHub2',
 
   'app.common.close': 'Fermer',
   'app.common.locateMe': 'Me localiser',
@@ -28,7 +28,7 @@ export const app = {
     'Un petit boîtier électronique de quelques centaines de grammes, emporté par un ballon gonflé à l’hélium ou à l’hydrogène. Il mesure la pression, la température et l’humidité, en déduit le vent grâce à son GPS, et transmet le tout par radio chaque seconde. Les services météorologiques en lâchent environ deux fois par jour (vers 00 h et 12 h UTC) pour alimenter les prévisions. Vers 30 km d’altitude, le ballon éclate et la sonde redescend sous un petit parachute.',
   'app.about.faq.dataQ': 'D’où viennent les données ?',
   'app.about.faq.dataA':
-    'Des radioamateurs et passionnés, équipés d’un récepteur souvent très simple (clé SDR et antenne), décodent les signaux et les envoient au réseau <a>SondeHub</a>, qui les met librement à disposition. Les trajectoires et points d’atterrissage prévus sont calculés par le modèle Tawhiri (CUSF) à partir des prévisions de vent. SondeHub V2 ne fait qu’afficher ces données.',
+    'Des radioamateurs et passionnés, équipés d’un récepteur souvent très simple (clé SDR et antenne), décodent les signaux et les envoient au réseau <a>SondeHub</a>, qui les met librement à disposition. Les trajectoires et points d’atterrissage prévus sont calculés par le modèle Tawhiri (CUSF) à partir des prévisions de vent. SondeHub2 ne fait qu’afficher ces données.',
   'app.about.faq.accuracyQ': 'Quelle est la précision de la prédiction d’atterrissage ?',
   'app.about.faq.accuracyA':
     'Elle dépend surtout de la qualité des prévisions de vent. Approximative pendant la montée, elle s’affine nettement pendant la descente, à mesure que la sonde se rapproche du sol : elle est en général juste à quelques kilomètres près. La sonde passe souvent sous l’horizon radio avant de toucher le sol, donc la dernière position reçue reste un indice précieux.',
@@ -37,7 +37,7 @@ export const app = {
     'Elle est sans danger. Vous pouvez la garder, ou la recycler (électronique et piles) selon les règles de votre commune. Pensez à la signaler sur SondeHub avec le bouton « Signaler une récupération » de sa fiche : cela aide toute la communauté. Pour votre sécurité, respectez les propriétés privées, restez prudent au bord des routes, et ne grimpez jamais dans un arbre ni près d’une ligne électrique pour la récupérer.',
   'app.about.faq.alertsQ': 'Comment être alerté ?',
   'app.about.faq.alertsA':
-    'Activez votre position, puis les alertes d’atterrissage dans le panneau des couches (à droite de la carte). SondeHub V2 vous prévient quand un atterrissage est prévu près de chez vous, tant que la page reste ouverte.',
+    'Activez votre position, puis les alertes d’atterrissage dans le panneau des couches (à droite de la carte). SondeHub2 vous prévient quand un atterrissage est prévu près de chez vous, tant que la page reste ouverte.',
   'app.about.legend.heading': 'Légende',
   'app.about.legend.drift': 'Direction de dérive',
   'app.about.legend.burst': 'Éclatement du ballon',
@@ -102,7 +102,7 @@ export const app = {
   'app.help.receivers.text':
     'Stations de radioamateurs et de passionnés qui captent et décodent le signal de la sonde (vers 400 MHz) et partagent ses positions sur SondeHub. Les icônes de voiture sont des récepteurs mobiles.',
 
-  'app.welcome.title': 'Bienvenue sur SondeHub V2',
+  'app.welcome.title': 'Bienvenue sur SondeHub2',
   'app.welcome.close': 'Fermer l’introduction',
   'app.welcome.text':
     'Les radiosondes sont de petits capteurs lâchés sous des ballons météo, environ deux fois par jour, par les services météorologiques. Elles montent au-delà de 30 km puis retombent en parachute ; des radioamateurs les suivent ici en direct.',
@@ -224,7 +224,7 @@ export const app = {
   'app.command.layer.allPredictions.hide': 'Masquer toutes les trajectoires prévues',
   'app.command.layer.receiverLinks.show': 'Afficher les liens sonde ↔ récepteurs',
   'app.command.layer.receiverLinks.hide': 'Masquer les liens sonde ↔ récepteurs',
-  'app.command.about.label': 'À propos de SondeHub V2',
+  'app.command.about.label': 'À propos de SondeHub2',
   'app.command.about.keywords': 'a propos aide info credits sondehub faq questions',
   'app.command.intro.keywords': 'introduction bienvenue tutoriel aide decouvrir debut onboarding',
 } as const;
