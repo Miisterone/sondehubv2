@@ -10,7 +10,8 @@ type PluralBase<K> = K extends `${infer B}_other` ? B : never;
 export type TKey = Key | PluralBase<Key>;
 export type TParams = Record<string, string | number>;
 
-const STORAGE_KEY = 'sondehubv2.locale';
+const STORAGE_KEY = 'sondehub2.locale';
+const LEGACY_STORAGE_KEY = 'sondehubv2.locale';
 const FR = fr as Record<string, string>;
 const FR_RULES = new Intl.PluralRules('fr-FR');
 const loaders = import.meta.glob<Record<string, string>>('./locales/*.json', { import: 'default' });
@@ -118,7 +119,7 @@ function detect(): Locale {
   const fromUrl = urlLocale();
   if (fromUrl) return fromUrl;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
     if (isLocale(stored)) return stored;
   } catch {
     void 0;

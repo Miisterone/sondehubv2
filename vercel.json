@@ -4,7 +4,13 @@
     {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "sondetrack.vercel.app" }],
-      "destination": "https://sondehubv2.vercel.app/:path*",
+      "destination": "https://sondehub2.vercel.app/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "sondehubv2.vercel.app" }],
+      "destination": "https://sondehub2.vercel.app/:path*",
       "permanent": true
     },
     {

@@ -5,7 +5,7 @@ import { LOCALES, type Locale } from '../src/i18n/locales';
 import { fr } from '../src/i18n/fr';
 import { SEO_TEXT } from './content';
 
-export const SITE_URL = 'https://sondehubv2.vercel.app';
+export const SITE_URL = 'https://sondehub2.vercel.app';
 const SITE_NAME = 'SondeHub V2';
 const DEFAULT_LOCALE: Locale = 'en';
 const OG_IMAGE = { path: '/og-image.png', width: 1200, height: 630 };

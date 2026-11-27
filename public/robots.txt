@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://sondehubv2.vercel.app/sitemap.xml
+Sitemap: https://sondehub2.vercel.app/sitemap.xml

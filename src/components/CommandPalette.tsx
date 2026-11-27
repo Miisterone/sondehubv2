@@ -16,9 +16,9 @@ import type { LaunchSite, Listener, Sonde } from '@/lib/types';
 import { LOCALES, setLocale, useLocale, useT, type TKey } from '@/i18n';
 
 /** Window event other UI elements dispatch to open the palette. */
-export const COMMAND_EVENT = 'sondehubv2:command';
+export const COMMAND_EVENT = 'sondehub2:command';
 /** Window event asking the sidebar to switch to its "Près de moi" mode. */
-const NEARBY_EVENT = 'sondehubv2:nearby';
+const NEARBY_EVENT = 'sondehub2:nearby';
 
 const MAX_SONDES = 8;
 const MAX_FLYING = 6;
