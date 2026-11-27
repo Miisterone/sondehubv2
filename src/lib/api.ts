@@ -253,7 +253,7 @@ export async function fetchSiteForecast(site: LaunchSite, launchTime: number, si
   };
 }
 
-const HISTORY = 'https://sondehub-history.s3.amazonaws.com';
+const HISTORY = 'https://history.sondehub.org';
 
 export interface ArchivedFlight {
   key: string;

@@ -1,4 +1,4 @@
-const S3 = 'https://sondehub-history.s3.amazonaws.com';
+const S3 = 'https://history.sondehub.org';
 const DAYS = 31;
 const DAY_MS = 86_400_000;
 const CONCURRENCY = 24;
