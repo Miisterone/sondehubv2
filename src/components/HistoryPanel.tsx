@@ -45,6 +45,9 @@ const RECENT_S = 2 * 86_400;
 const STILL_FLYING_MS = 30 * 60_000;
 const MIN_FOR_STATS = 5;
 const PARTIAL_MAX_ALT = 3000;
+const RECORD_MIN_MS = 10 * 60_000;
+const RECORD_MAX_MS = 12 * 3_600_000;
+const RECORD_MAX_BURST_M = 42_000;
 
 function read<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
@@ -229,6 +232,33 @@ export function HistoryPanel({ units, me, locating, onLocate }: Props) {
     };
   }, [entries]);
 
+  const records = useMemo(() => {
+    const full = entries.filter((e) => !e.recent);
+    if (full.length < MIN_FOR_STATS) return [];
+    const best = (score: (e: HistoryEntry) => number | null) => {
+      let top: { e: HistoryEntry; v: number } | null = null;
+      for (const e of full) {
+        const v = score(e);
+        if (v !== null && (!top || v > top.v)) top = { e, v };
+      }
+      return top;
+    };
+    const duration = (e: HistoryEntry) => (e.launch ? e.last.time - e.launch.time : null);
+    const plausible = (e: HistoryEntry) => {
+      const d = duration(e);
+      const b = burstAltitude(e);
+      return d !== null && d >= RECORD_MIN_MS && d <= RECORD_MAX_MS && b !== null && b <= RECORD_MAX_BURST_M;
+    };
+    const burst = best((e) => (plausible(e) ? burstAltitude(e) : null));
+    const far = best((e) => (plausible(e) ? (drift(e)?.d ?? null) : null));
+    const long = best((e) => (plausible(e) ? duration(e) : null));
+    return [
+      burst && { id: 'burst', label: t('sidebar.history.recordBurst'), value: fmtAltShort(burst.v, units), e: burst.e },
+      far && { id: 'drift', label: t('sidebar.history.recordDrift'), value: fmtDist(far.v, units), e: far.e },
+      long && { id: 'duration', label: t('sidebar.history.recordDuration'), value: fmtDuration(long.v), e: long.e },
+    ].filter((r): r is { id: string; label: string; value: string; e: HistoryEntry } => !!r);
+  }, [entries, units, t]);
+
   const groups = useMemo(() => {
     const out: { key: string; label: string; items: HistoryEntry[] }[] = [];
     for (const e of entries) {
@@ -386,6 +416,31 @@ export function HistoryPanel({ units, me, locating, onLocate }: Props) {
             <LoaderCircle className="text-faint size-3.5 animate-spin" />
             {t('sidebar.history.loadingMore')}
           </p>
+        )}
+        {records.length > 0 && (
+          <section aria-label={t('sidebar.history.recordsTitle', { days })} className="px-5 pt-5">
+            <h2 className="pb-2 text-[14px] font-semibold">{t('sidebar.history.recordsTitle', { days })}</h2>
+            <ul className="divide-y rounded-md border">
+              {records.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    data-testid="history-record"
+                    onClick={() => openHistoryEntry(r.e)}
+                    className="hover:bg-surface focus-visible:ring-ring flex w-full items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground block truncate text-[13px] font-semibold">{r.label}</span>
+                      <span className="tabular block truncate text-[12.5px]">
+                        {t('sidebar.history.recordRow', { serial: r.e.serial, day: fmtDay(entryTime(r.e), now) })}
+                      </span>
+                    </span>
+                    <span className="tabular text-foreground shrink-0 text-[15px] font-semibold">{r.value}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         {groups.map((g) => (
           <section key={g.key} aria-label={g.label}>

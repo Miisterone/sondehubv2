@@ -18,6 +18,7 @@ import {
   PackageCheck,
   Play,
   Radio,
+  Route,
   Ruler,
   Satellite,
   Share2,
@@ -31,10 +32,11 @@ import { useStore } from '@/store/useStore';
 import { ago, fmtAlt, fmtAltShort, fmtClock, fmtCoord, fmtDateTime, fmtDist, fmtFreq, fmtHSpeed, fmtNum, fmtTemp, fmtVSpeed, relative, type Units } from '@/lib/format';
 import type { Prediction, PredictionPoint, Sonde } from '@/lib/types';
 import { bearing, cardinal, compass, distance, elevation, towards } from '@/lib/geo';
-import { buildFlight, buildSounding } from '@/lib/flight';
+import { buildFlight, buildSounding, replayAt, type FlightData } from '@/lib/flight';
+import { pageLink, shareLink } from '@/lib/share';
 import { flightInsights } from '@/lib/insights';
 import { buildProfile } from '@/lib/atmo';
-import { downloadCSV, downloadKML } from '@/lib/export';
+import { downloadCSV, downloadGPX, downloadKML } from '@/lib/export';
 import { usefulPrediction } from '@/lib/filter';
 import { findLaunch, fmtHour, isGlider, siteLabel, type Launch } from '@/lib/sonde';
 import { TrackLegend } from './TrackLegend';
@@ -63,7 +65,7 @@ const SpeedChart = lazy(() => charts().then((m) => ({ default: m.SpeedChart })))
 const ProfileChart = lazy(() => charts().then((m) => ({ default: m.ProfileChart })));
 const SoundingCharts = lazy(() => charts().then((m) => ({ default: m.SoundingCharts })));
 const FlightTable = lazy(() => charts().then((m) => ({ default: m.FlightTable })));
-const SkewT = lazy(() => import('./SkewT').then((m) => ({ default: m.SkewT })));
+const SoundingCompare = lazy(() => import('./SoundingCompare'));
 const WindProfile = lazy(() => import('./WindProfile').then((m) => ({ default: m.WindProfile })));
 const PredictionConvergence = lazy(() => import('./PredictionConvergence').then((m) => ({ default: m.PredictionConvergence })));
 
@@ -364,7 +366,7 @@ export function SondeDetail({ serial }: { serial: string }) {
             <IconButton label={t('sonde.header.center')} side="bottom" onClick={() => requestFly(f.lon, f.lat, 11)}>
               <Crosshair className="size-[18px]" />
             </IconButton>
-            <IconButton label={t('sonde.header.share')} side="bottom" onClick={() => share(sonde, landing, now, units)}>
+            <IconButton label={t('sonde.header.share')} side="bottom" onClick={() => share(sonde, landing, now, units, flight)}>
               <Share2 className="size-[18px]" />
             </IconButton>
           </>
@@ -571,7 +573,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                 )}
                 <GroundTrack d={flight} units={units} now={now} live={live} serial={sonde.serial} />
                 {replaying ? (
-                  <ReplayControls serial={sonde.serial} d={flight} units={units} />
+                  <ReplayControls serial={sonde.serial} d={flight} units={units} onShare={() => share(sonde, landing, now, units, flight)} />
                 ) : (
                   canReplay(flight) && (
                     <Button variant="outline" size="sm" className="text-[13px]" onClick={() => startReplay(sonde.serial, flight)}>
@@ -767,7 +769,7 @@ export function SondeDetail({ serial }: { serial: string }) {
                   className="border-t pt-6"
                 >
                   <Suspense fallback={<div className="h-[440px]" />}>
-                    <SkewT profile={profile} units={units} />
+                    <SoundingCompare serial={sonde.serial} siteId={launch?.siteId ?? launch?.near?.siteId ?? null} profile={profile} units={units} now={now} />
                   </Suspense>
                   <AtmoIndices profile={profile} units={units} />
                 </Section>
@@ -858,6 +860,9 @@ export function SondeDetail({ serial }: { serial: string }) {
                   <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadKML(sonde, glider ? undefined : prediction)}>
                     <FileCode2 /> {t('sonde.data.exportKml')}
                   </Button>
+                  <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadGPX(sonde)}>
+                    <Route /> {t('sonde.data.exportGpx')}
+                  </Button>
                   <Button variant="outline" size="sm" className="text-[13px]" onClick={() => downloadCSV(sonde)}>
                     <FileSpreadsheet /> {t('sonde.data.exportCsv')}
                   </Button>
@@ -888,14 +893,16 @@ function pressureSub(hPa: number | undefined): string | undefined {
     : t('sonde.atmo.pressurePct', { pct: pct < 10 ? pct.toLocaleString(intlTag(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(pct)) });
 }
 
-function sondeLink(serial: string) {
-  return `${location.origin}${location.pathname}#s=${encodeURIComponent(serial)}`;
-}
-
-async function share(sonde: Sonde, landing: PredictionPoint | null, now: number, units: Units) {
-  const url = sondeLink(sonde.serial);
-  const flying = sonde.phase === 'ascending' || sonde.phase === 'descending';
+async function share(sonde: Sonde, landing: PredictionPoint | null, now: number, units: Units, flight: FlightData) {
   const serial = sonde.serial;
+  const replay = useStore.getState().replay;
+  const at = replay?.serial === serial ? replayAt(flight, replay.t) : null;
+  const title = `${serial} · SondeHub V2`;
+  if (at) {
+    const text = t('sonde.share.instant', { serial, alt: fmtAlt(at.alt, units), time: fmtClock(at.t * 1000) });
+    return shareLink({ title, text, url: pageLink({ s: serial, t: Math.round(at.t) }) });
+  }
+  const flying = sonde.phase === 'ascending' || sonde.phase === 'descending';
   const alt = fmtAlt(sonde.last.alt, units);
   const text = flying
     ? landing
@@ -906,15 +913,7 @@ async function share(sonde: Sonde, landing: PredictionPoint | null, now: number,
     : sonde.phase === 'landed'
       ? t('sonde.share.landed', { serial, ago: ago(sonde.lastTime, now) })
       : t('sonde.share.lost', { serial, ago: ago(sonde.lastTime, now) });
-  if (typeof navigator.share === 'function') {
-    try {
-      await navigator.share({ title: `${sonde.serial} · SondeHub V2`, text, url });
-      return;
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-    }
-  }
-  await copyText(url, t('sonde.share.linkCopied'));
+  return shareLink({ title, text, url: pageLink({ s: serial }) });
 }
 
 function summarise(

@@ -71,7 +71,18 @@ function Barb({ x, y, w, colour }: { x: number; y: number; w: WindLevel; colour:
   );
 }
 
-export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
+export interface SkewTCompare {
+  profile: Profile;
+  label: string;
+}
+
+function thinned(profile: Profile, pTop: number) {
+  const lv = profile.levels.filter((l) => l.p >= pTop * 0.98);
+  const stride = Math.max(1, Math.ceil(lv.length / MAX_POINTS));
+  return lv.filter((_, i) => i % stride === 0 || i === lv.length - 1);
+}
+
+export function SkewT({ profile, units, compare }: { profile: Profile; units: Units; compare?: SkewTCompare | null }) {
   const t = useT();
   const [ref, width] = useWidth();
   const theme = useStore((s) => s.settings.theme);
@@ -114,12 +125,13 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
     const mixP = steps(P_BOTTOM, 600, 8);
     const mixing = MIXING.map((g) => ({ g, d: path(mixP.map((p) => ({ T: mixingRatioTemp(p, g / 1000), p }))), x: x(mixingRatioTemp(620, g / 1000), 620) }));
 
-    const lv = profile.levels.filter((l) => l.p >= pTop * 0.98);
-    const stride = Math.max(1, Math.ceil(lv.length / MAX_POINTS));
-    const thin = lv.filter((_, i) => i % stride === 0 || i === lv.length - 1);
+    const thin = thinned(profile, pTop);
     const temp = path(thin.map((l) => ({ T: l.t, p: l.p })));
     const dew = path(thin.map((l) => ({ T: l.td, p: l.p })));
-    const parcel = path(profile.parcel.map((q) => ({ T: q.t, p: q.p })));
+    const parcel = compare ? '' : path(profile.parcel.map((q) => ({ T: q.t, p: q.p })));
+    const other = compare ? thinned(compare.profile, pTop) : null;
+    const otherTemp = other ? path(other.map((l) => ({ T: l.t, p: l.p }))) : '';
+    const otherDew = other ? path(other.map((l) => ({ T: l.td, p: l.p }))) : '';
 
     const barbs: WindLevel[] = [];
     let lastY = Infinity;
@@ -131,8 +143,8 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
         lastY = wy;
       }
     }
-    return { pw, ph, x, y, pOf, isotherms, dry, moist, mixing, temp, dew, parcel, barbs };
-  }, [width, height, pTop, profile]);
+    return { pw, ph, x, y, pOf, isotherms, dry, moist, mixing, temp, dew, parcel, otherTemp, otherDew, barbs };
+  }, [width, height, pTop, profile, compare]);
 
   const pick = (e: PointerEvent<SVGSVGElement>) => {
     if (!geo) return;
@@ -160,6 +172,8 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
     return best && Math.abs(Math.log((best.p as number) / p)) < 0.08 ? best : null;
   }, [profile.winds, p]);
   const outside = hover !== null && hover > first.p;
+  const otherT = compare ? atPressure(compare.profile.levels, p, 't') : null;
+  const delta = otherT !== null && T !== null ? (otherT - T) * (units === 'imperial' ? 1.8 : 1) : null;
   const tropo = profile.indices.tropopause;
   const lcl = profile.indices.lcl;
 
@@ -202,6 +216,17 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
           )
         }
       />
+      {compare && !outside && (
+        <p className="tabular text-[12.5px] leading-snug">
+          {otherT !== null && delta !== null
+            ? t('charts.skewt.compareAt', {
+                label: compare.label,
+                temp: fmtTemp(otherT, units),
+                delta: `${delta > 0 ? '+' : ''}${fmtNum(delta, units === 'imperial' ? '\u00a0°F' : '\u00a0°C', 1)}`,
+              })
+            : t('charts.skewt.compareNone', { label: compare.label })}
+        </p>
+      )}
       <div ref={ref} className="relative w-full overflow-hidden rounded-md border" style={{ height }}>
         {geo && (
           <svg
@@ -250,6 +275,8 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
                 </g>
               )}
               {geo.parcel && <path d={geo.parcel} stroke={th.pred} strokeWidth={1.5} strokeDasharray="6 4" />}
+              {geo.otherDew && <path d={geo.otherDew} stroke={th.pred} strokeWidth={1.5} strokeDasharray="3 3" strokeLinejoin="round" />}
+              {geo.otherTemp && <path d={geo.otherTemp} stroke={th.pred} strokeWidth={1.75} strokeLinejoin="round" />}
               <path d={geo.dew} stroke={th.accent} strokeWidth={2} strokeLinejoin="round" />
               <path d={geo.temp} stroke={th.ink} strokeWidth={2} strokeLinejoin="round" />
               {lcl && lcl.p >= pTop && (
@@ -289,7 +316,12 @@ export function SkewT({ profile, units }: { profile: Profile; units: Units }) {
         <span className="flex items-center gap-1.5">
           <span aria-hidden className="bg-primary inline-block h-0.5 w-4 rounded-full" /> {t('charts.common.dewPoint')}
         </span>
-        {profile.parcel.length > 0 && (
+        {compare && (
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden className="inline-block h-0.5 w-4 rounded-full" style={{ background: th.pred }} /> {t('charts.skewt.compareLegend')}
+          </span>
+        )}
+        {!compare && profile.parcel.length > 0 && (
           <span className="flex items-center gap-1.5">
             <span aria-hidden className="key-dashed" /> {t('charts.common.surfaceParcel')}
           </span>

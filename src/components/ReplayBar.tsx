@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { ArrowDown, ArrowUp, Pause, Play, RotateCcw, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Pause, Play, RotateCcw, Share2, X } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { replayAt, type FlightData } from '@/lib/flight';
 import { fmtAlt, fmtDuration, fmtHSpeed, fmtTemp, fmtVSpeed, type Units } from '@/lib/format';
@@ -43,7 +43,7 @@ export function ReplayStats({ serial, d, units }: { serial: string; d: FlightDat
   );
 }
 
-export function ReplayControls({ serial, d, units }: { serial: string; d: FlightData; units: Units }) {
+export function ReplayControls({ serial, d, units, onShare }: { serial: string; d: FlightData; units: Units; onShare?: () => void }) {
   const t = useT();
   const replay = useStore((s) => (s.replay?.serial === serial ? s.replay : null));
   const { setReplay } = useStore.getState();
@@ -106,6 +106,11 @@ export function ReplayControls({ serial, d, units }: { serial: string; d: Flight
           <span>{clock(end).slice(0, 5)}</span>
         </div>
       </div>
+      {onShare && (
+        <Button variant="ghost" size="sm" className="-ml-2 text-[13px]" onClick={onShare}>
+          <Share2 /> {t('sonde.replay.shareInstant')}
+        </Button>
+      )}
     </div>
   );
 }
