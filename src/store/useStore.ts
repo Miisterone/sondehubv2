@@ -300,6 +300,16 @@ function recomputeMax(s: Sonde) {
   s.maxAltIdx = idx;
 }
 
+export function buildSonde(byTime: Record<string, Frame> | undefined): Sonde | null {
+  if (!byTime) return null;
+  const frames = pickFlight(Object.values(byTime).filter(isValidFrame).sort((a, b) => frameTime(a) - frameTime(b)));
+  if (frames.length === 0) return null;
+  let s = newSonde(frames[0]);
+  for (const f of frames) s = applyFrame(s, f, 0);
+  recomputeMax(s);
+  return s;
+}
+
 export interface SiteOverlay {
   site: string;
   forecasts: SiteForecast[];

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Bell, BellOff, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Megaphone, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
+import { Bell, BellOff, BookOpen, Check, Clock, Crosshair, Eye, EyeOff, Info, Languages, LocateFixed, MapPinned, Megaphone, Moon, Mountain, RotateCcw, Sun, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from '@/components/ui/command';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { cx } from '@/components/ui';
 import { Icon3D, SondeIcon3D } from '@/components/Icon3D';
 import { openWhatsNew } from '@/components/WhatsNew';
+import { setGlossaryOpen } from '@/components/Glossary';
 import { useStore, type Duration, type Layers } from '@/store/useStore';
 import { BASEMAPS } from '@/lib/basemaps';
 import { ago, fmtAltShort } from '@/lib/format';
@@ -15,9 +16,9 @@ import type { LaunchSite, Listener, Sonde } from '@/lib/types';
 import { LOCALES, setLocale, useLocale, useT, type TKey } from '@/i18n';
 
 /** Window event other UI elements dispatch to open the palette. */
-export const COMMAND_EVENT = 'sondehubv2:command';
+export const COMMAND_EVENT = 'sondehub2:command';
 /** Window event asking the sidebar to switch to its "Près de moi" mode. */
-const NEARBY_EVENT = 'sondehubv2:nearby';
+const NEARBY_EVENT = 'sondehub2:nearby';
 
 const MAX_SONDES = 8;
 const MAX_FLYING = 6;
@@ -357,6 +358,14 @@ function PaletteBody({ close, defer, onAbout }: { close: () => void; defer: (fn:
       keywords: `${t('app.command.whatsNew.keywords')} changelog news nouveautes`,
       icon: <Megaphone />,
       run: () => defer(openWhatsNew),
+    });
+    list.push({
+      id: 'glossary',
+      group: 'help',
+      label: t('app.glossary.title'),
+      keywords: `${t('app.command.glossary.keywords')} glossary lexique definitions`,
+      icon: <BookOpen />,
+      run: () => defer(() => setGlossaryOpen(true)),
     });
     list.push({
       id: 'intro',

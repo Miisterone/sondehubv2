@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Crosshair, ExternalLink, RotateCw } from 'lucide-react';
+import { ArrowLeft, Crosshair, ExternalLink, RotateCw, Share2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { fetchSiteForecast, siteProfile } from '@/lib/api';
 import { fetchSiteFlights, mainDirection, median, openHistoryEntry } from '@/lib/history';
 import type { LaunchSite, PastFlight, SiteForecast, Sonde } from '@/lib/types';
-import { fmtAltShort, fmtDist, fmtVSpeed, type Units } from '@/lib/format';
+import { fmtAltShort, fmtDist, fmtVSpeed, relative, type Units } from '@/lib/format';
+import { pageLink, shareLink } from '@/lib/share';
 import { bearing, cardinal, distance } from '@/lib/geo';
 import { fmtDay, fmtHour, scheduleText, siteCountry, siteLabel, sondeTypeName, upcomingLaunches } from '@/lib/sonde';
 import { PHASE_LABEL } from '@/lib/icons';
@@ -14,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { IconButton, Section, Stat, cx } from './ui';
 import { Icon3D, SondeIcon3D } from './Icon3D';
 import { HelpHint } from './HelpHint';
+import { Readout } from './ChartParts';
 import { t, useT } from '@/i18n';
 
 const HISTORY_DAYS = 30;
@@ -145,6 +147,12 @@ export function SiteDetail({ id }: { id: string }) {
   const schedule = scheduleText(site.times, now);
   const types = [...new Set(site.types.map(sondeTypeName))];
   const wmo = /^\d{5}$/.test(site.id);
+  const next = upcomingLaunches(site.times, now, undefined, 1)[0];
+  const share = () => {
+    const label = siteLabel(site.name);
+    const text = next !== undefined ? t('map.site.shareNext', { site: label, when: relative(next, now) }) : t('map.site.shareText', { site: label });
+    void shareLink({ title: `${label} · SondeHub V2`, text, url: pageLink({ site: site.id }) });
+  };
 
   return (
     <div className="animate-in flex h-full min-h-0 flex-col">
@@ -162,10 +170,16 @@ export function SiteDetail({ id }: { id: string }) {
         <IconButton label={t('map.site.centre')} side="bottom" onClick={() => requestFly(site.lon, site.lat, 8)}>
           <Crosshair className="size-[18px]" />
         </IconButton>
+        <IconButton label={t('map.site.share')} side="bottom" onClick={share}>
+          <Share2 className="size-[18px]" />
+        </IconButton>
       </div>
 
       <ScrollArea className="min-h-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:block!">
         <div className="space-y-8 px-5 pt-5 pb-10">
+          {next !== undefined && (
+            <Readout value={<span className="block first-letter:uppercase">{relative(next, now)}</span>} caption={<span className="truncate">{t('map.site.nextLaunch', { day: fmtDay(next, now), time: fmtHour(next) })}</span>} />
+          )}
           <div className="space-y-3 text-[13.5px] leading-relaxed">
             <p>{schedule ? t('map.site.introSchedule', { schedule }) : t('map.site.intro')}</p>
             {!schedule && <p>{t('map.site.noSchedule')}</p>}

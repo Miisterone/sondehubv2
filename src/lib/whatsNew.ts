@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import type { Icon3DId } from '@/components/Icon3D';
 import type { TKey } from '@/i18n';
 
-export type WhatsNewRun = 'terrain' | 'history' | 'nearby' | 'tour';
+export type WhatsNewRun = 'terrain' | 'history' | 'nearby' | 'tour' | 'glossary';
 
 export interface WhatsNewItem {
   id: string;
@@ -14,6 +14,50 @@ export interface WhatsNewItem {
 }
 
 export const WHATS_NEW: WhatsNewItem[] = [
+  {
+    id: 'sounding-compare',
+    date: '2026-11-27',
+    icon: 'ascending',
+    title: 'app.whatsNew.compare.title',
+    text: 'app.whatsNew.compare.text',
+  },
+  {
+    id: 'history-records',
+    date: '2026-11-27',
+    icon: 'burst',
+    title: 'app.whatsNew.records.title',
+    text: 'app.whatsNew.records.text',
+    action: { run: 'history', label: 'app.whatsNew.history.action' },
+  },
+  {
+    id: 'share-instant',
+    date: '2026-11-27',
+    icon: 'descending',
+    title: 'app.whatsNew.instant.title',
+    text: 'app.whatsNew.instant.text',
+  },
+  {
+    id: 'site-countdown',
+    date: '2026-11-27',
+    icon: 'launch',
+    title: 'app.whatsNew.site.title',
+    text: 'app.whatsNew.site.text',
+  },
+  {
+    id: 'export-gpx',
+    date: '2026-11-27',
+    icon: 'chase',
+    title: 'app.whatsNew.gpx.title',
+    text: 'app.whatsNew.gpx.text',
+  },
+  {
+    id: 'glossary',
+    date: '2026-11-27',
+    icon: 'guide',
+    title: 'app.whatsNew.glossary.title',
+    text: 'app.whatsNew.glossary.text',
+    action: { run: 'glossary', label: 'app.whatsNew.glossary.action' },
+  },
   {
     id: 'atmosphere-3d-v2',
     date: '2026-10-15',

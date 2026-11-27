@@ -1,7 +1,7 @@
-export const NEARBY_EVENT = 'sondehubv2:nearby';
-export const SHEET_EVENT = 'sondehubv2:sheet';
-export const TAB_EVENT = 'sondehubv2:tab';
-export const DETAIL_TAB_EVENT = 'sondehubv2:detail-tab';
+export const NEARBY_EVENT = 'sondehub2:nearby';
+export const SHEET_EVENT = 'sondehub2:sheet';
+export const TAB_EVENT = 'sondehub2:tab';
+export const DETAIL_TAB_EVENT = 'sondehub2:detail-tab';
 
 export type SheetSnap = 'peek' | 'half' | 'full';
 export type SidebarTab = 'nearby' | 'flying' | 'following' | 'history';

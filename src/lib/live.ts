@@ -72,7 +72,7 @@ export function startLiveFeed(): () => void {
     .then(({ default: mqtt }) => {
       if (stopped) return;
       client = mqtt.connect(WS_URL, {
-        clientId: `sondehubv2-${Math.random().toString(16).slice(2, 12)}`,
+        clientId: `sondehub2-${Math.random().toString(16).slice(2, 12)}`,
         reconnectPeriod: 3000,
         connectTimeout: 15_000,
         keepalive: 60,

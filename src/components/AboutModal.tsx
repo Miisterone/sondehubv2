@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { RotateCcw, X } from 'lucide-react';
+import { BookOpen, RotateCcw, X } from 'lucide-react';
 import { PHASE_LABEL, type IconId } from '@/lib/icons';
 import { useStore } from '@/store/useStore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -8,6 +8,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { Kbd } from '@/components/ui/kbd';
 import { Separator } from '@/components/ui/separator';
 import { Logo, MapIcon } from './ui';
+import { setGlossaryOpen } from './Glossary';
 import { t, Trans, useT, type TKey } from '@/i18n';
 
 const LEGEND: [IconId, () => string][] = [
@@ -91,17 +92,30 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
           <p>
             <Trans k="app.about.intro2" tags={{ a: sondehubLink }} />
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              useStore.getState().setSettings({ tutorialDone: false });
-              onClose();
-            }}
-            className={`${linkCls} inline-flex items-center gap-1.5 rounded-sm text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring`}
-          >
-            <RotateCcw className="size-3.5" />
-            {t('app.common.replayIntro')}
-          </button>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                useStore.getState().setSettings({ tutorialDone: false });
+                onClose();
+              }}
+              className={`${linkCls} inline-flex items-center gap-1.5 rounded-sm text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+            >
+              <RotateCcw className="size-3.5" />
+              {t('app.common.replayIntro')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                setGlossaryOpen(true);
+              }}
+              className={`${linkCls} inline-flex items-center gap-1.5 rounded-sm text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+            >
+              <BookOpen className="size-3.5" />
+              {t('app.glossary.title')}
+            </button>
+          </div>
         </div>
 
         <section className="mt-5">

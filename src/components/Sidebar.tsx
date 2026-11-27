@@ -38,6 +38,7 @@ import { getMap } from './MapView';
 import { CentreBar, PointEditor } from './WatchPointPicker';
 import { RadiusPicker, nextRadius } from './RadiusPicker';
 import { WhatsNew } from './WhatsNew';
+import { useIsMobile } from '@/lib/useIsMobile';
 import { NEARBY_EVENT, SHEET_EVENT, TAB_EVENT, type SheetSnap, type SidebarTab } from '@/lib/tour';
 
 const PHASES: FlightPhase[] = ['ascending', 'descending', 'landed', 'lost'];
@@ -371,17 +372,6 @@ function useUnhideOutsideSheet() {
     mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['aria-hidden', 'data-state'] });
     return () => mo.disconnect();
   }, []);
-}
-
-function useIsMobile() {
-  const [m, setM] = useState(() => window.matchMedia('(max-width: 767px)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const on = () => setM(mq.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  return m;
 }
 
 const rowId = (serial: string) => `sonde-row-${serial}`;
@@ -1025,10 +1015,10 @@ function ListPanel({ onAbout, onFocusSearch, scrollLocked, tab, onTab, geo, onLo
             <h1 className="text-[19px] leading-tight font-semibold whitespace-nowrap">SondeHub V2</h1>
             <p className="flex min-w-0 items-center gap-1.5 text-[13px] leading-snug">
               <StatusPill />
-              <span aria-hidden className="text-faint">
+              <span aria-hidden className="text-faint max-md:hidden">
                 ·
               </span>
-              <span className="truncate">{tr('sidebar.header.subtitle')}</span>
+              <span className="truncate max-md:hidden">{tr('sidebar.header.subtitle')}</span>
             </p>
           </div>
           <LanguageSelect />

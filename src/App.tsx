@@ -6,6 +6,7 @@ import { AboutModal } from './components/AboutModal';
 import { CommandPalette } from './components/CommandPalette';
 import { Notifiers } from './components/Notifiers';
 import { Tour } from './components/Tour';
+import { Glossary } from './components/Glossary';
 import { PickBanner } from './components/WatchPointPicker';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
@@ -13,9 +14,14 @@ import { useStore } from './store/useStore';
 import { fetchListeners, fetchPredictions, fetchRecoveries, fetchReverse, fetchSites, fetchTelemetry } from './lib/api';
 import { loadSondeHistory } from './lib/history';
 import { startLiveFeed } from './lib/live';
+import { siteLabel } from './lib/sonde';
 import { t, useLocale } from './i18n';
 
 const PREDICTIONS_REFRESH_MS = 60_000;
+const DEEP_LINK = (() => {
+  const hash = parseHash();
+  return { serial: hash.get('s'), site: hash.get('site'), at: Number(hash.get('t')) };
+})();
 
 function loadSelected(serial: string, signal: AbortSignal) {
   loadSondeHistory(serial, useStore.getState().sondes[serial], signal)
@@ -35,6 +41,8 @@ export default function App() {
   const theme = useStore((s) => s.settings.theme);
   const duration = useStore((s) => s.settings.duration);
   const selected = useStore((s) => s.selected);
+  const selectedSite = useStore((s) => s.selectedSite);
+  const sitesReady = useStore((s) => s.sites.length > 0);
   const showRecoveries = useStore((s) => s.settings.layers.recoveries);
   const [about, setAbout] = useState(false);
   const locale = useLocale();
@@ -109,19 +117,39 @@ export default function App() {
     return () => ctrl.abort();
   }, [showRecoveries]);
 
-  // Deep link: #s=SERIAL selects a sonde on load.
+  // Deep links: #s=SERIAL selects a sonde (&t=EPOCH opens its replay at that instant), #site=ID opens a launch site.
   useEffect(() => {
-    const serial = parseHash().get('s');
+    const { serial, site, at } = DEEP_LINK;
     if (serial) {
       useStore.getState().select(serial);
-      let done = false;
+      let flown = false;
+      let placed = !(at > 0);
       const unsub = useStore.subscribe((s) => {
         const sonde = s.sondes[serial];
-        if (!sonde || done) return;
+        if (!sonde) return;
+        if (!flown) {
+          flown = true;
+          s.requestFly(sonde.last.lon, sonde.last.lat, 10);
+        }
+        if (!placed && sonde.detailed && s.selected === serial) {
+          placed = true;
+          const first = sonde.track[0][3] / 1000;
+          s.setReplay({ serial, t: Math.min(sonde.lastTime / 1000, Math.max(first, at)), playing: false, speed: 300 });
+        }
+        if (placed) unsub();
+      });
+      return unsub;
+    }
+    if (site) {
+      let done = false;
+      const open = (s: ReturnType<typeof useStore.getState>) => {
+        if (done || !s.sites.some((x) => x.id === site)) return;
         done = true;
         unsub();
-        s.requestFly(sonde.last.lon, sonde.last.lat, 10);
-      });
+        s.selectSite(site, true);
+      };
+      const unsub = useStore.subscribe(open);
+      open(useStore.getState());
       return unsub;
     }
   }, []);
@@ -129,9 +157,19 @@ export default function App() {
   // Selection side effects: full-resolution history + URL.
   useEffect(() => {
     const p = parseHash();
+    p.delete('t');
     if (selected) p.set('s', selected);
     else p.delete('s');
+    if (selectedSite) p.set('site', selectedSite);
+    else if (sitesReady || selected) p.delete('site');
     history.replaceState(null, '', `#${p.toString().replace(/%2C/g, ',')}`);
+    if (selectedSite) {
+      const name = useStore.getState().sites.find((x) => x.id === selectedSite)?.name;
+      if (name) document.title = t('app.siteTitle', { site: siteLabel(name) });
+      return () => {
+        document.title = t('app.title');
+      };
+    }
     if (!selected) return;
     document.title = t('app.sondeTitle', { serial: selected });
     const ctrl = new AbortController();
@@ -140,7 +178,7 @@ export default function App() {
       ctrl.abort();
       document.title = t('app.title');
     };
-  }, [selected, locale]);
+  }, [selected, selectedSite, sitesReady, locale]);
 
   // Keyboard shortcuts.
   useEffect(() => {
@@ -171,6 +209,7 @@ export default function App() {
         <CommandPalette onAbout={() => setAbout(true)} />
         <Notifiers />
         <Tour />
+        <Glossary />
         <Toaster position="bottom-center" closeButton />
       </div>
     </TooltipProvider>
