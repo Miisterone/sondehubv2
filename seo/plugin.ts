@@ -87,6 +87,7 @@ function head(p: Page): string {
     `<meta name="twitter:title" content="${esc(p.title)}" />`,
     `<meta name="twitter:description" content="${esc(p.description)}" />`,
     `<meta name="twitter:image" content="${image}" />`,
+    `<meta name="twitter:image:alt" content="${esc(p.title)}" />`,
     jsonLd(p),
   ].join('\n    ');
 }

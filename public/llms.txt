@@ -1,0 +1,40 @@
+# SondeHub V2
+
+> Live tracking of weather radiosondes (weather balloons) launched every day by meteorological services worldwide: position, altitude, speed, flight path, landing prediction, burst point and receiving stations. Built on the open SondeHub network fed by radio amateurs. Free, no account, no API key.
+
+SondeHub V2 is a single-page web application (map + detail panel). Pages are client-rendered; the static HTML only contains a short description. Data is not owned by this site: it comes from the public SondeHub API (https://api.v2.sondehub.org) and its S3 archive (https://history.sondehub.org).
+
+## Pages
+
+- [Home (English)](https://sondehub2.vercel.app/): live map of radiosondes in flight and recently landed
+- [Français](https://sondehub2.vercel.app/fr/)
+- [English](https://sondehub2.vercel.app/en/)
+- [Deutsch](https://sondehub2.vercel.app/de/)
+- [Español](https://sondehub2.vercel.app/es/)
+- [Italiano](https://sondehub2.vercel.app/it/)
+- [Nederlands](https://sondehub2.vercel.app/nl/)
+- [Polski](https://sondehub2.vercel.app/pl/)
+- [Čeština](https://sondehub2.vercel.app/cs/)
+- [Português](https://sondehub2.vercel.app/pt/)
+- [Svenska](https://sondehub2.vercel.app/sv/)
+- [日本語](https://sondehub2.vercel.app/ja/)
+- [中文](https://sondehub2.vercel.app/zh/)
+- [Русский](https://sondehub2.vercel.app/ru/)
+
+## Features
+
+- Live map of radiosondes (RS41, DFM, M10, M20, iMet…), flight phase (ascent, descent, landed, lost), heading
+- Per-sonde detail: altitude, vertical and horizontal speed, temperature, humidity, pressure, battery, frequency
+- Flight path coloured by altitude, predicted trajectory, predicted and actual burst point, landing prediction
+- Atmosphere view in 3D, charts, receiving stations, history of past flights by launch site
+- 13 languages, light and dark themes, mobile layout
+
+## Data sources
+
+- [SondeHub](https://sondehub.org): open radiosonde tracking network and public API
+- [sondehub-tracker](https://github.com/projecthorus/sondehub-tracker): original tracker this project reinterprets
+
+## Optional
+
+- [Source code](https://github.com/Miisterone/sondehub2)
+- [Sitemap](https://sondehub2.vercel.app/sitemap.xml)

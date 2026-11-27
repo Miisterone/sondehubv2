@@ -2,4 +2,24 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: Meta-ExternalAgent
+User-agent: DuckAssistBot
+Allow: /
+Allow: /llms.txt
+Disallow: /api/
+
 Sitemap: https://sondehub2.vercel.app/sitemap.xml

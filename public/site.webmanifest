@@ -1,0 +1,16 @@
+{
+  "name": "SondeHub V2 — Radiosondes en temps réel",
+  "short_name": "SondeHub V2",
+  "description": "Suivi en temps réel des radiosondes météo : trajectoires, prédictions d'atterrissage, récepteurs.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d111c",
+  "theme_color": "#0d111c",
+  "categories": ["weather", "utilities", "education"],
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}
