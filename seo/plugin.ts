@@ -127,16 +127,6 @@ function render(html: string, p: Page): string {
     .replace(/<div id="root">[\s\S]*?<\/div>/, `<div id="root">${splash(p)}</div>`);
 }
 
-function sitemap(): string {
-  const today = new Date().toISOString().slice(0, 10);
-  const links = alternates()
-    .map((l) => l.replace('<link rel="alternate"', '<xhtml:link rel="alternate"'))
-    .join('\n    ');
-  const urls = [`${SITE_URL}/`, ...LOCALES.map((l) => localeUrl(l.code))].map(
-    (loc) => `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>daily</changefreq>\n    ${links}\n  </url>`,
-  );
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join('\n')}\n</urlset>\n`;
-}
 
 export function seo(): Plugin {
   let template = '';
@@ -156,7 +146,6 @@ export function seo(): Plugin {
         for (const l of LOCALES) {
           this.emitFile({ type: 'asset', fileName: `${l.code}/index.html`, source: render(template, page(l.code, true)) });
         }
-        this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap() });
       },
     },
   };
